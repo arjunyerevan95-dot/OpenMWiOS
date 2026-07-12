@@ -1,0 +1,103 @@
+name: Build iOS
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+      - "port/**"
+    paths-ignore:
+      - "**.md"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: openmw-ios-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  device-build:
+    name: arm64 iPhone build
+    runs-on: macos-15
+    timeout-minutes: 180
+
+    env:
+      CONFIGURATION: Release
+      IOS_DEPLOYMENT_TARGET: "15.0"
+      VCPKG_TRIPLET: arm64-ios-release
+
+    steps:
+      - name: Check out port repository
+        uses: actions/checkout@v4
+
+      - name: Select Xcode
+        run: |
+          sudo xcode-select -s /Applications/Xcode_16.4.app/Contents/Developer
+          xcodebuild -version
+
+      - name: Install build tools
+        run: |
+          brew install cmake ninja autoconf automake libtool pkg-config nasm yasm
+
+      - name: Cache native dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            build/vcpkg_installed
+            build/gl4es-ios
+            build/prefix
+            deps/vcpkg-pinned/downloads
+            ~/.cache/vcpkg/archives
+          key: ios-deps-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('vcpkg.json', 'versions.env', 'patches/openmw/*.patch') }}
+          restore-keys: |
+            ios-deps-${{ runner.os }}-${{ runner.arch }}-
+
+      - name: Fetch pinned sources
+        run: ./scripts/bootstrap.sh
+
+      - name: Generate Xcode project
+        run: ./scripts/build-ios.sh 2>&1 | tee build/configure.log
+
+      - name: Compile unsigned device app
+        run: |
+          set -o pipefail
+          xcodebuild \
+            -project build/ios/OpenMW.xcodeproj \
+            -target openmw \
+            -configuration "${CONFIGURATION}" \
+            -sdk iphoneos \
+            -jobs 4 \
+            -resultBundlePath build/OpenMW.xcresult \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CONFIGURATION_BUILD_DIR="${PWD}/build/device" \
+            2>&1 | tee build/xcodebuild.log
+
+      - name: Package unsigned IPA
+        run: ./scripts/package-unsigned.sh
+
+      - name: Upload unsigned app
+        uses: actions/upload-artifact@v4
+        with:
+          name: OpenMW-iOS-unsigned-${{ github.run_number }}
+          path: |
+            build/artifacts/OpenMW-iOS-unsigned.ipa
+            build/artifacts/OpenMW.app
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 14
+
+      - name: Upload diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: OpenMW-iOS-diagnostics-${{ github.run_number }}
+          path: |
+            build/configure.log
+            build/xcodebuild.log
+            build/OpenMW.xcresult
+            build/ios/CMakeCache.txt
+          if-no-files-found: warn
+          retention-days: 14
+
