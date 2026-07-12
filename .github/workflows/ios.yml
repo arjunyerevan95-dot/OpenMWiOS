@@ -5,6 +5,7 @@ on:
   push:
     branches:
       - main
+      - "agent/**"
       - "port/**"
     paths-ignore:
       - "**.md"
@@ -100,4 +101,3 @@ jobs:
             build/ios/CMakeCache.txt
           if-no-files-found: warn
           retention-days: 14
-
