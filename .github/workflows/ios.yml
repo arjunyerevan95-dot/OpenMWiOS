@@ -52,12 +52,14 @@ jobs:
           path: |
             build/vcpkg_installed
             build/gl4es-ios
+            build/luajit-ios
             build/prefix
             deps/vcpkg-pinned/downloads
             ~/.cache/vcpkg/archives
           key: ios-deps-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('vcpkg.json', 'versions.env', 'patches/openmw/*.patch') }}
           restore-keys: |
             ios-deps-${{ runner.os }}-${{ runner.arch }}-
+          save-always: true
 
       - name: Fetch pinned sources
         run: ./scripts/bootstrap.sh

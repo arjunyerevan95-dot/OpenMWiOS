@@ -13,6 +13,7 @@ clone_pinned "${OPENMW_REPOSITORY}" "${OPENMW_REVISION}" "${DEPS_DIR}/openmw"
 clone_pinned "${GL4ES_REPOSITORY}" "${GL4ES_REVISION}" "${DEPS_DIR}/gl4es"
 clone_pinned "${IOS_CMAKE_REPOSITORY}" "${IOS_CMAKE_REVISION}" "${DEPS_DIR}/ios-cmake"
 clone_pinned "${VCPKG_REPOSITORY}" "${VCPKG_REVISION}" "${DEPS_DIR}/vcpkg-pinned"
+clone_pinned "${LUAJIT_REPOSITORY}" "${LUAJIT_REVISION}" "${DEPS_DIR}/luajit"
 
 PATCH_MARKER="${DEPS_DIR}/openmw/.openmw-ios-patched"
 if [[ ! -f "${PATCH_MARKER}" ]]; then

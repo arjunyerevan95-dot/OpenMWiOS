@@ -27,6 +27,8 @@ PREFIX="${BUILD_DIR}/prefix/${VCPKG_TRIPLET}"
     --triplet="${VCPKG_TRIPLET}" \
     --x-install-root="${BUILD_DIR}/vcpkg_installed"
 
+"${ROOT_DIR}/scripts/build-luajit-ios.sh"
+
 cmake -S "${DEPS_DIR}/gl4es" -B "${BUILD_DIR}/gl4es-ios" -G Xcode \
     -DCMAKE_TOOLCHAIN_FILE="${DEPS_DIR}/ios-cmake/ios.toolchain.cmake" \
     -DPLATFORM=OS64 \

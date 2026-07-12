@@ -94,6 +94,8 @@ and Simulators window or Finder file sharing when `UIFileSharingEnabled` is on.
 
 `vcpkg` cross-compiles the conventional libraries for `arm64-ios`. GL4ES is
 built independently because it supplies the OpenGL compatibility layer.
+LuaJIT is also built directly with its upstream iOS makefile path; this keeps
+the host-side code generator and JIT-disabled target library in sync.
 OpenMW builds its own pinned OpenSceneGraph, MyGUI, Bullet, Recast, and SQLite
 copies so that its upstream patches remain intact.
 
