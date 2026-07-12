@@ -23,7 +23,9 @@ concurrency:
 jobs:
   device-build:
     name: arm64 iPhone build
-    runs-on: macos-15
+    # vcpkg's ICU cross-build misdetects arm64 iOS as native when the host is
+    # also arm64. The Intel runner gives autoconf distinct build/host triples.
+    runs-on: macos-15-intel
     timeout-minutes: 180
 
     env:
@@ -61,7 +63,9 @@ jobs:
         run: ./scripts/bootstrap.sh
 
       - name: Generate Xcode project
-        run: ./scripts/build-ios.sh 2>&1 | tee build/configure.log
+        run: |
+          set -o pipefail
+          ./scripts/build-ios.sh 2>&1 | tee build/configure.log
 
       - name: Compile unsigned device app
         run: |
