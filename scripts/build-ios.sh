@@ -52,6 +52,7 @@ cp -R "${DEPS_DIR}/gl4es/include/GL" "${PREFIX}/include/"
 VCPKG_PREFIX="${BUILD_DIR}/vcpkg_installed/${VCPKG_TRIPLET}"
 
 cmake -S "${DEPS_DIR}/openmw" -B "${BUILD_DIR}/ios" -G Xcode \
+    -DCMAKE_POLICY_VERSION_MINIMUM=3.5 \
     -DCMAKE_TOOLCHAIN_FILE="${DEPS_DIR}/ios-cmake/ios.toolchain.cmake" \
     -DPLATFORM=OS64 \
     -DDEPLOYMENT_TARGET="${IOS_DEPLOYMENT_TARGET}" \
