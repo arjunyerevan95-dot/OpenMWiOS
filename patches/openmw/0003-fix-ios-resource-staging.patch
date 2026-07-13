@@ -1,0 +1,33 @@
+diff --git a/apps/openmw/CMakeLists.txt b/apps/openmw/CMakeLists.txt
+--- a/apps/openmw/CMakeLists.txt
++++ b/apps/openmw/CMakeLists.txt
+@@ -185,7 +185,7 @@ if(BUILD_OPENMW)
+         endif()
+         add_custom_command(TARGET openmw POST_BUILD
+             COMMAND ${CMAKE_COMMAND} -E copy_directory
+-                "${OpenMW_BINARY_DIR}/resources"
++                "${OpenMW_BINARY_DIR}/$<CONFIG>/resources"
+                 "$<TARGET_BUNDLE_DIR:openmw>/resources"
+             COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                 "${OpenMW_BINARY_DIR}/defaults.bin"
+diff --git a/components/CMakeLists.txt b/components/CMakeLists.txt
+--- a/components/CMakeLists.txt
++++ b/components/CMakeLists.txt
+@@ -1,9 +1,15 @@
+ project (Components)
+ 
+-if(APPLE)
++if(APPLE AND NOT OPENMW_IOS)
+     set(BUNDLE_RESOURCES_DIR "${APP_BUNDLE_DIR}/Contents/Resources")
+     set(OPENMW_RESOURCES_ROOT ${BUNDLE_RESOURCES_DIR})
+-endif(APPLE)
++endif()
++
++if(OPENMW_IOS)
++    foreach(cfgtype ${CMAKE_CONFIGURATION_TYPES})
++        file(MAKE_DIRECTORY "${OPENMW_RESOURCES_ROOT}/${cfgtype}/resources/lua_libs")
++    endforeach()
++endif()
+ 
+ # Version file
+ set (VERSION_RESOURCE_FILE_IN "${OpenMW_SOURCE_DIR}/files/version.in")
