@@ -15,6 +15,15 @@ clone_pinned "${IOS_CMAKE_REPOSITORY}" "${IOS_CMAKE_REVISION}" "${DEPS_DIR}/ios-
 clone_pinned "${VCPKG_REPOSITORY}" "${VCPKG_REVISION}" "${DEPS_DIR}/vcpkg-pinned"
 clone_pinned "${LUAJIT_REPOSITORY}" "${LUAJIT_REVISION}" "${DEPS_DIR}/luajit"
 
+GL4ES_PATCH_MARKER="${DEPS_DIR}/gl4es/.openmw-ios-patched"
+if [[ ! -f "${GL4ES_PATCH_MARKER}" ]]; then
+    for patch_file in "${ROOT_DIR}"/patches/gl4es/*.patch; do
+        git -C "${DEPS_DIR}/gl4es" apply --check "${patch_file}"
+        git -C "${DEPS_DIR}/gl4es" apply "${patch_file}"
+    done
+    touch "${GL4ES_PATCH_MARKER}"
+fi
+
 PATCH_MARKER="${DEPS_DIR}/openmw/.openmw-ios-patched"
 if [[ ! -f "${PATCH_MARKER}" ]]; then
     if grep -q 'option(OPENMW_IOS' "${DEPS_DIR}/openmw/CMakeLists.txt"; then
