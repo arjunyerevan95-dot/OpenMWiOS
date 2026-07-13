@@ -30,6 +30,7 @@ PREFIX="${BUILD_DIR}/prefix/${VCPKG_TRIPLET}"
 "${ROOT_DIR}/scripts/build-luajit-ios.sh"
 
 cmake -S "${DEPS_DIR}/gl4es" -B "${BUILD_DIR}/gl4es-ios" -G Xcode \
+    -DCMAKE_POLICY_VERSION_MINIMUM=3.5 \
     -DCMAKE_TOOLCHAIN_FILE="${DEPS_DIR}/ios-cmake/ios.toolchain.cmake" \
     -DPLATFORM=OS64 \
     -DDEPLOYMENT_TARGET="${IOS_DEPLOYMENT_TARGET}" \
