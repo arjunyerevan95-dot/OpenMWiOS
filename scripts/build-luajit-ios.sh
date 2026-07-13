@@ -34,7 +34,7 @@ TARGET_STRIP="$(xcrun --sdk iphoneos --find strip)"
 # LuaJIT builds minilua and buildvm for the runner before cross-compiling the
 # target library. Apple Clang does not reliably infer the macOS SDK when its
 # absolute path is invoked by make, so give the host tools an explicit sysroot.
-make -C "${SOURCE_COPY}" -j "${JOBS:-4}" \
+make -C "${SOURCE_COPY}/src" -j "${JOBS:-4}" libluajit.a \
     HOST_CC="${HOST_CLANG} -isysroot ${MACOS_SDK}" \
     TARGET_CC="${TARGET_CC} -arch arm64 -isysroot ${IOS_SDK} -miphoneos-version-min=${IOS_DEPLOYMENT_TARGET}" \
     TARGET_AR="${TARGET_AR} rcus" \
