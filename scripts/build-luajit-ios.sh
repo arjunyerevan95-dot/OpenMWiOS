@@ -25,13 +25,17 @@ if [[ ! -f "${SOURCE_COPY}/Makefile" ]]; then
 fi
 
 IOS_SDK="$(xcrun --sdk iphoneos --show-sdk-path)"
-HOST_CC="$(xcrun --sdk macosx --find clang)"
+MACOS_SDK="$(xcrun --sdk macosx --show-sdk-path)"
+HOST_CLANG="$(xcrun --sdk macosx --find clang)"
 TARGET_CC="$(xcrun --sdk iphoneos --find clang)"
 TARGET_AR="$(xcrun --sdk iphoneos --find ar)"
 TARGET_STRIP="$(xcrun --sdk iphoneos --find strip)"
 
+# LuaJIT builds minilua and buildvm for the runner before cross-compiling the
+# target library. Apple Clang does not reliably infer the macOS SDK when its
+# absolute path is invoked by make, so give the host tools an explicit sysroot.
 make -C "${SOURCE_COPY}" -j "${JOBS:-4}" \
-    HOST_CC="${HOST_CC}" \
+    HOST_CC="${HOST_CLANG} -isysroot ${MACOS_SDK}" \
     TARGET_CC="${TARGET_CC} -arch arm64 -isysroot ${IOS_SDK} -miphoneos-version-min=${IOS_DEPLOYMENT_TARGET}" \
     TARGET_AR="${TARGET_AR} rcus" \
     TARGET_STRIP="${TARGET_STRIP} -x" \
