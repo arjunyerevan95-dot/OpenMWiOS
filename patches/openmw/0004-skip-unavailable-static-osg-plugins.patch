@@ -2,7 +2,7 @@ diff --git a/components/CMakeLists.txt b/components/CMakeLists.txt
 index a2131b8bf..6719baf24 100644
 --- a/components/CMakeLists.txt
 +++ b/components/CMakeLists.txt
-@@ -693,6 +693,11 @@ if(OSG_STATIC)
+@@ -693,6 +693,12 @@ if(OSG_STATIC)
      foreach(_plugin ${USED_OSG_PLUGINS})
          string(TOUPPER ${_plugin} _plugin_uc)
 +
