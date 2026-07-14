@@ -56,8 +56,9 @@ jobs:
           brew install cmake ninja autoconf automake libtool pkg-config nasm yasm \
             2>&1 | tee build/diagnostics/install-tools.log
 
-      - name: Cache native dependencies
-        uses: actions/cache@v4
+      - name: Restore native dependencies
+        id: native-deps-cache
+        uses: actions/cache/restore@v4
         with:
           path: |
             build/vcpkg_installed
@@ -66,10 +67,9 @@ jobs:
             build/prefix
             deps/vcpkg-pinned/downloads
             ~/.cache/vcpkg/archives
-          key: ios-deps-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('vcpkg.json', 'versions.env', 'patches/openmw/*.patch') }}
+          key: ios-deps-xcode-16.4-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('vcpkg.json', 'versions.env', 'triplets/**', 'patches/gl4es/*.patch', 'scripts/build-luajit-ios.sh') }}
           restore-keys: |
-            ios-deps-${{ runner.os }}-${{ runner.arch }}-
-          save-always: true
+            ios-deps-xcode-16.4-${{ runner.os }}-${{ runner.arch }}-
 
       - name: Fetch and patch pinned sources
         run: |
@@ -190,3 +190,17 @@ jobs:
             build/ios/OpenMW.xcodeproj
           if-no-files-found: error
           retention-days: 14
+
+      - name: Save native dependency cache
+        if: always() && steps.native-deps-cache.outputs.cache-hit != 'true'
+        continue-on-error: true
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            build/vcpkg_installed
+            build/gl4es-ios
+            build/luajit-ios
+            build/prefix
+            deps/vcpkg-pinned/downloads
+            ~/.cache/vcpkg/archives
+          key: ${{ steps.native-deps-cache.outputs.cache-primary-key }}
