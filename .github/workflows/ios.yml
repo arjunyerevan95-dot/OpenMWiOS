@@ -169,6 +169,9 @@ jobs:
           find build/ios -maxdepth 4 -type f -print \
             > build/diagnostics/ios-build-files.txt 2>&1
 
+          # Diagnostics must never hide the original build failure.
+          exit 0
+
       - name: Upload diagnostics
         if: always()
         uses: actions/upload-artifact@v4
