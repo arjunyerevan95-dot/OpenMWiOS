@@ -37,14 +37,24 @@ jobs:
       - name: Check out port repository
         uses: actions/checkout@v4
 
+      - name: Initialize diagnostics
+        run: mkdir -p build/diagnostics
+
       - name: Select Xcode
         run: |
-          sudo xcode-select -s /Applications/Xcode_16.4.app/Contents/Developer
-          xcodebuild -version
+          set -o pipefail
+          {
+            sudo xcode-select -s /Applications/Xcode_16.4.app/Contents/Developer
+            xcodebuild -version
+            xcrun --sdk iphoneos --show-sdk-path
+            xcrun --sdk iphoneos --show-sdk-version
+          } 2>&1 | tee build/diagnostics/xcode-environment.log
 
       - name: Install build tools
         run: |
-          brew install cmake ninja autoconf automake libtool pkg-config nasm yasm
+          set -o pipefail
+          brew install cmake ninja autoconf automake libtool pkg-config nasm yasm \
+            2>&1 | tee build/diagnostics/install-tools.log
 
       - name: Cache native dependencies
         uses: actions/cache@v4
@@ -61,8 +71,10 @@ jobs:
             ios-deps-${{ runner.os }}-${{ runner.arch }}-
           save-always: true
 
-      - name: Fetch pinned sources
-        run: ./scripts/bootstrap.sh
+      - name: Fetch and patch pinned sources
+        run: |
+          set -o pipefail
+          ./scripts/bootstrap.sh 2>&1 | tee build/bootstrap.log
 
       - name: Generate Xcode project
         run: |
@@ -98,15 +110,80 @@ jobs:
           compression-level: 0
           retention-days: 14
 
+      - name: Collect detailed diagnostics
+        if: always()
+        shell: bash
+        run: |
+          set +e
+          mkdir -p build/diagnostics
+
+          {
+            echo "UTC: $(date -u '+%Y-%m-%dT%H:%M:%SZ')"
+            echo "Workflow run: ${GITHUB_RUN_ID:-unknown}"
+            echo "Commit: ${GITHUB_SHA:-unknown}"
+            echo
+            uname -a
+            sw_vers
+            sysctl -n machdep.cpu.brand_string
+            echo
+            xcode-select -p
+            xcodebuild -version
+            xcrun --sdk iphoneos --show-sdk-path
+            xcrun --sdk iphoneos --show-sdk-version
+            xcrun --sdk iphoneos clang --version
+            cmake --version
+            ninja --version
+            git --version
+          } > build/diagnostics/environment.txt 2>&1
+
+          if [[ -d deps/openmw/.git ]]; then
+            {
+              echo "OpenMW HEAD: $(git -C deps/openmw rev-parse HEAD)"
+              echo
+              git -C deps/openmw status --short
+              echo
+              for patch_file in patches/openmw/*.patch; do
+                echo "===== ${patch_file} ====="
+                git -C deps/openmw apply --check --verbose "${PWD}/${patch_file}"
+              done
+            } > build/diagnostics/openmw-patch-state.txt 2>&1
+          fi
+
+          if [[ -d deps/gl4es/.git ]]; then
+            {
+              echo "GL4ES HEAD: $(git -C deps/gl4es rev-parse HEAD)"
+              echo
+              git -C deps/gl4es status --short
+            } > build/diagnostics/gl4es-state.txt 2>&1
+          fi
+
+          if [[ -f build/ios/CMakeCache.txt ]]; then
+            cmake -N -LAH build/ios > build/diagnostics/cmake-cache-expanded.txt 2>&1
+          fi
+
+          if [[ -d build/ios/OpenMW.xcodeproj ]]; then
+            xcodebuild -list -project build/ios/OpenMW.xcodeproj \
+              > build/diagnostics/xcode-project-list.txt 2>&1
+          fi
+
+          find build/ios -maxdepth 4 -type f -print \
+            > build/diagnostics/ios-build-files.txt 2>&1
+
       - name: Upload diagnostics
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: OpenMW-iOS-diagnostics-${{ github.run_number }}
           path: |
+            build/bootstrap.log
             build/configure.log
             build/xcodebuild.log
+            build/diagnostics
             build/OpenMW.xcresult
             build/ios/CMakeCache.txt
-          if-no-files-found: warn
+            build/ios/CMakeFiles/CMakeConfigureLog.yaml
+            build/ios/CMakeFiles/CMakeError.log
+            build/ios/CMakeFiles/CMakeOutput.log
+            build/ios/OpenMW.xcodeproj
+          if-no-files-found: error
           retention-days: 14
