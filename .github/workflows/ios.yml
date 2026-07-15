@@ -199,7 +199,7 @@ jobs:
           retention-days: 14
 
       - name: Save OpenMW object cache
-        if: always() && steps.openmw-objects-cache.outputs.cache-hit != 'true'
+        if: always() && steps.openmw-objects-cache.outcome == 'success' && steps.openmw-objects-cache.outputs.cache-hit != 'true'
         continue-on-error: true
         uses: actions/cache/save@v4
         with:
