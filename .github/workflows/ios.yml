@@ -78,7 +78,7 @@ jobs:
         id: openmw-objects-cache
         uses: actions/cache/restore@v4
         with:
-          path: build/ios/build
+          path: build/ios
           key: ios-objects-xcode-16.4-${{ runner.os }}-${{ runner.arch }}-${{ github.sha }}
           restore-keys: |
             ios-objects-xcode-16.4-${{ runner.os }}-${{ runner.arch }}-
@@ -88,10 +88,52 @@ jobs:
           set -o pipefail
           ./scripts/build-ios.sh 2>&1 | tee build/configure.log
 
+      - name: Verify staged iOS dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          required_files=(
+            "build/prefix/${VCPKG_TRIPLET}/lib/libGL.a"
+            "build/prefix/${VCPKG_TRIPLET}/lib/libluajit-5.1.a"
+            "build/prefix/${VCPKG_TRIPLET}/include/gl4es/gl4eshint.h"
+            "build/prefix/${VCPKG_TRIPLET}/include/gl4es/gl4esinit.h"
+            "build/vcpkg_installed/${VCPKG_TRIPLET}/include/boost/geometry/geometries/box.hpp"
+            "build/vcpkg_installed/${VCPKG_TRIPLET}/lib/libSDL2.a"
+            "build/vcpkg_installed/${VCPKG_TRIPLET}/lib/libboost_program_options.a"
+            "build/vcpkg_installed/${VCPKG_TRIPLET}/lib/libavcodec.a"
+          )
+
+          missing=0
+          for required_file in "${required_files[@]}"; do
+            if [[ ! -f "${required_file}" ]]; then
+              echo "error: missing staged dependency: ${required_file}" >&2
+              missing=1
+            fi
+          done
+          if (( missing != 0 )); then
+            exit 1
+          fi
+
+          printf '%s\n' \
+            '#include <boost/geometry/geometries/box.hpp>' \
+            '#include <GL/gl.h>' \
+            '#include <gl4es/gl4eshint.h>' \
+            '#include <gl4es/gl4esinit.h>' \
+            'int main() { return 0; }' \
+            | xcrun --sdk iphoneos clang++ \
+                -std=c++20 \
+                -target arm64-apple-ios"${IOS_DEPLOYMENT_TARGET}" \
+                -isysroot "$(xcrun --sdk iphoneos --show-sdk-path)" \
+                -I "build/prefix/${VCPKG_TRIPLET}/include" \
+                -I "build/vcpkg_installed/${VCPKG_TRIPLET}/include" \
+                -x c++ -fsyntax-only -
+
       - name: Compile unsigned device app
         run: |
           set -o pipefail
           xcodebuild \
+            -PBXBuildsContinueAfterErrors=1 \
             -project build/ios/OpenMW.xcodeproj \
             -target openmw \
             -configuration "${CONFIGURATION}" \
@@ -100,8 +142,16 @@ jobs:
             -resultBundlePath build/OpenMW.xcresult \
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO \
-            CONFIGURATION_BUILD_DIR="${PWD}/build/device" \
             2>&1 | tee build/xcodebuild.log
+
+          rm -rf build/device
+          mkdir -p build/device
+          APP_PATH="$(find build/ios -type d -name 'openmw.app' -print -quit)"
+          if [[ -z "${APP_PATH}" ]]; then
+            echo "error: successful build produced no openmw.app bundle" >&2
+            exit 1
+          fi
+          cp -R "${APP_PATH}" build/device/
 
       - name: Package unsigned IPA
         run: ./scripts/package-unsigned.sh
@@ -203,7 +253,7 @@ jobs:
         continue-on-error: true
         uses: actions/cache/save@v4
         with:
-          path: build/ios/build
+          path: build/ios
           key: ${{ steps.openmw-objects-cache.outputs.cache-primary-key }}
 
       - name: Save native dependency cache
