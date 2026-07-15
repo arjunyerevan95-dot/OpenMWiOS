@@ -9,7 +9,7 @@ require_macos
 require_command xcrun
 
 VCPKG_TRIPLET="${VCPKG_TRIPLET:-arm64-ios-release}"
-IOS_DEPLOYMENT_TARGET="${IOS_DEPLOYMENT_TARGET:-15.0}"
+IOS_DEPLOYMENT_TARGET="${IOS_DEPLOYMENT_TARGET:-16.3}"
 PREFIX="${BUILD_DIR}/prefix/${VCPKG_TRIPLET}"
 SOURCE_COPY="${BUILD_DIR}/luajit-ios"
 OUTPUT_LIBRARY="${PREFIX}/lib/libluajit-5.1.a"
