@@ -1,7 +1,7 @@
 diff --git a/apps/openmw/CMakeLists.txt b/apps/openmw/CMakeLists.txt
 --- a/apps/openmw/CMakeLists.txt
 +++ b/apps/openmw/CMakeLists.txt
-@@ -171,18 +171,27 @@ if(BUILD_OPENMW)
+@@ -171,16 +171,28 @@ if(BUILD_OPENMW)
          target_include_directories(openmw PRIVATE ${CMAKE_SOURCE_DIR}/ios)
          target_link_libraries(openmw
              "-framework Foundation"
