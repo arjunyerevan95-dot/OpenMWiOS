@@ -47,7 +47,12 @@ cmake --build "${BUILD_DIR}/gl4es-ios" \
     --config "${CONFIGURATION}" --target GL --parallel "${JOBS}"
 
 mkdir -p "${PREFIX}/lib" "${PREFIX}/include" "${PREFIX}/include/gl4es"
-find "${BUILD_DIR}/gl4es-ios" -name 'libGL.a' -type f -exec cp {} "${PREFIX}/lib/libGL.a" \;
+GL4ES_LIBRARY="$(find "${DEPS_DIR}/gl4es/lib" "${BUILD_DIR}/gl4es-ios" -name 'libGL.a' -type f -print -quit)"
+if [[ -z "${GL4ES_LIBRARY}" ]]; then
+    echo "error: GL4ES build completed without producing libGL.a" >&2
+    exit 1
+fi
+cp "${GL4ES_LIBRARY}" "${PREFIX}/lib/libGL.a"
 cp -R "${DEPS_DIR}/gl4es/include/GL" "${PREFIX}/include/"
 cp "${DEPS_DIR}/gl4es/include/gl4esinit.h" \
    "${DEPS_DIR}/gl4es/include/gl4eshint.h" \
