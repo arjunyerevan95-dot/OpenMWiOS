@@ -46,9 +46,12 @@ cmake -S "${DEPS_DIR}/gl4es" -B "${BUILD_DIR}/gl4es-ios" -G Xcode \
 cmake --build "${BUILD_DIR}/gl4es-ios" \
     --config "${CONFIGURATION}" --target GL --parallel "${JOBS}"
 
-mkdir -p "${PREFIX}/lib" "${PREFIX}/include"
+mkdir -p "${PREFIX}/lib" "${PREFIX}/include" "${PREFIX}/include/gl4es"
 find "${BUILD_DIR}/gl4es-ios" -name 'libGL.a' -type f -exec cp {} "${PREFIX}/lib/libGL.a" \;
 cp -R "${DEPS_DIR}/gl4es/include/GL" "${PREFIX}/include/"
+cp "${DEPS_DIR}/gl4es/include/gl4esinit.h" \
+   "${DEPS_DIR}/gl4es/include/gl4eshint.h" \
+   "${PREFIX}/include/gl4es/"
 
 VCPKG_PREFIX="${BUILD_DIR}/vcpkg_installed/${VCPKG_TRIPLET}"
 
