@@ -15,7 +15,7 @@ if [[ ! -d "${DEPS_DIR}/openmw/.git" ]]; then
     exit 1
 fi
 
-IOS_DEPLOYMENT_TARGET="${IOS_DEPLOYMENT_TARGET:-15.0}"
+IOS_DEPLOYMENT_TARGET="${IOS_DEPLOYMENT_TARGET:-16.3}"
 VCPKG_TRIPLET="${VCPKG_TRIPLET:-arm64-ios-release}"
 CONFIGURATION="${CONFIGURATION:-Release}"
 IPHONE_SDKVER="${IPHONE_SDKVER:-$(xcrun --sdk iphoneos --show-sdk-version)}"
