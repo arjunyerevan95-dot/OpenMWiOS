@@ -57,6 +57,7 @@ cmake -S "${DEPS_DIR}/openmw" -B "${BUILD_DIR}/ios" -G Xcode \
     -DCMAKE_TOOLCHAIN_FILE="${DEPS_DIR}/ios-cmake/ios.toolchain.cmake" \
     -DPLATFORM=OS64 \
     -DDEPLOYMENT_TARGET="${IOS_DEPLOYMENT_TARGET}" \
+    -DENABLE_ARC=OFF \
     -DCMAKE_PREFIX_PATH="${VCPKG_PREFIX};${PREFIX}" \
     -DCMAKE_FIND_ROOT_PATH="${VCPKG_PREFIX};${PREFIX}" \
     -DOPENGL_INCLUDE_DIR="${PREFIX}/include" \
