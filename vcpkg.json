@@ -3,6 +3,7 @@
   "name": "openmw-ios-dependencies",
   "version-string": "0.1.0",
   "dependencies": [
+    "boost-geometry",
     "boost-iostreams",
     "boost-program-options",
     {
