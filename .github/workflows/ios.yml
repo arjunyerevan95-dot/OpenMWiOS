@@ -30,7 +30,7 @@ jobs:
 
     env:
       CONFIGURATION: Release
-      IOS_DEPLOYMENT_TARGET: "15.0"
+      IOS_DEPLOYMENT_TARGET: "16.3"
       VCPKG_TRIPLET: arm64-ios-release
 
     steps:
@@ -75,6 +75,15 @@ jobs:
         run: |
           set -o pipefail
           ./scripts/bootstrap.sh 2>&1 | tee build/bootstrap.log
+
+      - name: Restore OpenMW object cache
+        id: openmw-objects-cache
+        uses: actions/cache/restore@v4
+        with:
+          path: build/ios/build
+          key: ios-objects-xcode-16.4-${{ runner.os }}-${{ runner.arch }}-${{ github.sha }}
+          restore-keys: |
+            ios-objects-xcode-16.4-${{ runner.os }}-${{ runner.arch }}-
 
       - name: Generate Xcode project
         run: |
@@ -190,6 +199,14 @@ jobs:
             build/ios/OpenMW.xcodeproj
           if-no-files-found: error
           retention-days: 14
+
+      - name: Save OpenMW object cache
+        if: always() && steps.openmw-objects-cache.outputs.cache-hit != 'true'
+        continue-on-error: true
+        uses: actions/cache/save@v4
+        with:
+          path: build/ios/build
+          key: ${{ steps.openmw-objects-cache.outputs.cache-primary-key }}
 
       - name: Save native dependency cache
         if: always() && steps.native-deps-cache.outputs.cache-hit != 'true'
