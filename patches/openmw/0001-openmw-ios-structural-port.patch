@@ -567,7 +567,7 @@ diff --git a/extern/CMakeLists.txt b/extern/CMakeLists.txt
 index 3dc1050..7f6f2c4 100644
 --- a/extern/CMakeLists.txt
 +++ b/extern/CMakeLists.txt
-@@ -136,6 +136,34 @@ if(NOT OPENMW_USE_SYSTEM_OSG)
+@@ -136,6 +136,37 @@ if(NOT OPENMW_USE_SYSTEM_OSG)
      )
      FetchContent_MakeAvailable(osg)
  
@@ -583,9 +583,12 @@ index 3dc1050..7f6f2c4 100644
 +    endforeach()
 +
 +    if(OPENMW_IOS)
-+        target_link_libraries(osgdb_png PRIVATE PNG::PNG ZLIB::ZLIB)
-+        target_link_libraries(osgdb_jpeg PRIVATE JPEG::JPEG)
-+        target_link_libraries(osgdb_freetype PRIVATE Freetype::Freetype)
++        # OSG's plugin macros use the legacy plain target_link_libraries
++        # signature. Keep that signature here while using imported targets so
++        # their static dependency closures remain part of the link interface.
++        target_link_libraries(osgdb_png PNG::PNG ZLIB::ZLIB)
++        target_link_libraries(osgdb_jpeg JPEG::JPEG)
++        target_link_libraries(osgdb_freetype Freetype::Freetype)
 +
 +        add_library(openmw_ios_osg_plugins INTERFACE)
 +        set(_openmw_ios_plugin_archives)
