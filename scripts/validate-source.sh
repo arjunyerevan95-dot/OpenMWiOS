@@ -8,6 +8,12 @@ source "$(cd "$(dirname "$0")" && pwd)/common.sh"
 require_command git
 require_command cmake
 
+actual_cmake_version="$(cmake --version | awk 'NR == 1 { print $3 }')"
+if [[ "${actual_cmake_version}" != "${CMAKE_VERSION}" ]]; then
+    echo "error: CMake ${actual_cmake_version} is active, expected pinned ${CMAKE_VERSION}" >&2
+    exit 1
+fi
+
 for script in "${ROOT_DIR}"/scripts/*.sh; do
     bash -n "${script}"
 done
@@ -16,6 +22,7 @@ if command -v shellcheck >/dev/null 2>&1; then
 fi
 
 python3 -m json.tool "${ROOT_DIR}/vcpkg.json" >/dev/null
+python3 -m unittest discover -s "${ROOT_DIR}/validation" -p 'test_*.py'
 plutil -lint "${ROOT_DIR}/ios/Info.plist.in" >/dev/null
 ruby_bin="$(command -v ruby || true)"
 if [[ -z "${ruby_bin}" ]] && command -v brew >/dev/null 2>&1; then

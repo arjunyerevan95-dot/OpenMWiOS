@@ -6,9 +6,10 @@ set -euo pipefail
 source "$(cd "$(dirname "$0")" && pwd)/common.sh"
 
 VCPKG_TRIPLET="${VCPKG_TRIPLET:-arm64-ios-openmw-release}"
+CONFIGURATION="${CONFIGURATION:-Release}"
 PREFIX="${BUILD_DIR}/prefix/${VCPKG_TRIPLET}"
 VCPKG_PREFIX="${BUILD_DIR}/vcpkg_installed/${VCPKG_TRIPLET}"
-OSG_LIB="${BUILD_DIR}/ios/_deps/osg-build/lib"
+PRODUCT_MANIFEST="${BUILD_DIR}/ios/generated/ios-archive-products-${CONFIGURATION}.tsv"
 
 required_files=(
     "${PREFIX}/lib/libGL.a"
@@ -17,21 +18,34 @@ required_files=(
     "${PREFIX}/include/gl4es/gl4esinit.h"
     "${VCPKG_PREFIX}/include/boost/geometry/geometries/box.hpp"
     "${VCPKG_PREFIX}/lib/libSDL2.a"
+    "${VCPKG_PREFIX}/lib/libSDL2main.a"
+    "${VCPKG_PREFIX}/lib/libboost_iostreams.a"
     "${VCPKG_PREFIX}/lib/libboost_program_options.a"
     "${VCPKG_PREFIX}/lib/libavcodec.a"
+    "${VCPKG_PREFIX}/lib/libavformat.a"
+    "${VCPKG_PREFIX}/lib/libavutil.a"
+    "${VCPKG_PREFIX}/lib/libswresample.a"
+    "${VCPKG_PREFIX}/lib/libswscale.a"
     "${VCPKG_PREFIX}/lib/libfreetype.a"
+    "${VCPKG_PREFIX}/lib/libicudata.a"
+    "${VCPKG_PREFIX}/lib/libicui18n.a"
+    "${VCPKG_PREFIX}/lib/libicuuc.a"
     "${VCPKG_PREFIX}/lib/libpng16.a"
     "${VCPKG_PREFIX}/lib/libjpeg.a"
+    "${VCPKG_PREFIX}/lib/liblz4.a"
+    "${VCPKG_PREFIX}/lib/libopenal.a"
+    "${VCPKG_PREFIX}/lib/libyaml-cpp.a"
     "${VCPKG_PREFIX}/lib/libz.a"
+    "${PRODUCT_MANIFEST}"
 )
 
 REGISTRAR_INVENTORY="${BUILD_DIR}/ios/required-osg-plugins.txt"
 GENERATED_REGISTRATION_HEADER="${BUILD_DIR}/ios/generated/openmw_ios_osg_plugins.hpp"
 required_files+=("${REGISTRAR_INVENTORY}" "${GENERATED_REGISTRATION_HEADER}")
 if [[ -f "${REGISTRAR_INVENTORY}" ]]; then
-    while IFS='|' read -r plugin_target registrar_symbol; do
-        [[ -n "${plugin_target}" && -n "${registrar_symbol}" ]] || continue
-        required_files+=("${OSG_LIB}/lib${plugin_target}.a")
+    while IFS='|' read -r plugin_target registrar_symbol plugin_archive; do
+        [[ -n "${plugin_target}" && -n "${registrar_symbol}" && -n "${plugin_archive}" ]] || continue
+        required_files+=("${plugin_archive}")
     done < "${REGISTRAR_INVENTORY}"
 fi
 
@@ -52,11 +66,13 @@ fi
 if [[ -f "${GENERATED_REGISTRATION_HEADER}" ]]; then
     cp "${GENERATED_REGISTRATION_HEADER}" "${BUILD_DIR}/diagnostics/openmw_ios_osg_plugins.hpp"
 fi
+if [[ -f "${PRODUCT_MANIFEST}" ]]; then
+    cp "${PRODUCT_MANIFEST}" "${BUILD_DIR}/diagnostics/"
+fi
 printf 'target\texpected_symbol\tarchive\tstatus\n' > "${REGISTRAR_REPORT}"
 if [[ -f "${REGISTRAR_INVENTORY}" ]]; then
-    while IFS='|' read -r plugin_target registrar_symbol; do
-        [[ -n "${plugin_target}" && -n "${registrar_symbol}" ]] || continue
-        archive="${OSG_LIB}/lib${plugin_target}.a"
+    while IFS='|' read -r plugin_target registrar_symbol archive; do
+        [[ -n "${plugin_target}" && -n "${registrar_symbol}" && -n "${archive}" ]] || continue
         symbol_dump="${SYMBOL_DIR}/${plugin_target}.nm.txt"
         registrar_status="passed"
         if [[ ! -f "${archive}" ]]; then

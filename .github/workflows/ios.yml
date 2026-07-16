@@ -48,12 +48,6 @@ jobs:
             xcrun --sdk iphoneos --show-sdk-version
           } 2>&1 | tee build/diagnostics/xcode-environment.log
 
-      - name: Install validation and build tools
-        run: |
-          set -o pipefail
-          brew install cmake ninja autoconf automake libtool pkg-config nasm yasm shellcheck ruby \
-            2>&1 | tee build/diagnostics/install-tools.log
-
       # Downloaded source archives are safe to reuse. No installed libraries,
       # staged prefixes, generated projects, or object files are restored.
       - name: Restore source download cache
@@ -61,7 +55,19 @@ jobs:
         uses: actions/cache/restore@v4
         with:
           path: deps/vcpkg-pinned/downloads
-          key: ios-source-downloads-v3-${{ hashFiles('versions.env', 'vcpkg.json') }}
+          key: ios-source-downloads-v4-cmake-4.3.4-${{ hashFiles('versions.env', 'vcpkg.json', 'scripts/install-pinned-cmake.sh') }}
+
+      - name: Install checksum-verified pinned CMake
+        run: |
+          set -o pipefail
+          ./scripts/install-pinned-cmake.sh \
+            2>&1 | tee build/diagnostics/install-cmake.log
+
+      - name: Install validation and build tools
+        run: |
+          set -o pipefail
+          brew install ninja autoconf automake libtool pkg-config nasm yasm shellcheck ruby \
+            2>&1 | tee build/diagnostics/install-tools.log
 
       - name: Gate 1 - validate pinned sources and patch series
         run: |
@@ -83,9 +89,11 @@ jobs:
       - name: Gate 3 - verify dependencies, deployment targets, and registrars
         run: |
           set -o pipefail
-          cmake --build build/ios --config "$CONFIGURATION" --target openmw-ios-required-osg-plugins --parallel 4 2>&1 | tee build/plugin-build.log
+          cmake --build build/ios --config "$CONFIGURATION" --target openmw-ios-required-static-dependencies --parallel 4 2>&1 | tee build/plugin-build.log
           ./scripts/validate-ios-dependencies.sh \
             2>&1 | tee build/diagnostics/dependency-validation.log
+          ./scripts/verify-no-deployment-warnings.sh \
+            build/configure.log build/plugin-build.log
 
       - name: Gate 4 - link complete iOS dependency smoke target
         run: |
@@ -94,9 +102,22 @@ jobs:
 
           SMOKE_BINARY="$(find build/ios -type f -path '*openmw-ios-link-smoke.app/openmw-ios-link-smoke' -print -quit)"
           test -n "$SMOKE_BINARY"
-          ./scripts/verify-linked-product.sh "$SMOKE_BINARY"
+          SMOKE_MAP="$(find build/ios -type f -name 'openmw-ios-link-smoke.map' -print -quit)"
+          test -n "$SMOKE_MAP"
+          PARTICIPATION_MANIFEST="build/ios/generated/ios-link-participation-${CONFIGURATION}.tsv"
+          test -f "$PARTICIPATION_MANIFEST"
+          cp "$SMOKE_MAP" build/diagnostics/openmw-ios-link-smoke.map
+          cp "$PARTICIPATION_MANIFEST" build/diagnostics/
+          ./scripts/extract-link-command.py build/link-smoke.log \
+            build/diagnostics/openmw-ios-link-smoke.final-link-command.txt
+          ./scripts/verify-link-map.py \
+            "$SMOKE_MAP" "$PARTICIPATION_MANIFEST" \
+            build/diagnostics/openmw-ios-link-smoke.archive-participation.tsv
+          ./scripts/verify-linked-product.sh "$SMOKE_BINARY" \
+            build/diagnostics/openmw-ios-link-smoke.final-link-command.txt
           ./scripts/dependency-inventory.py
-          find build/ios -name 'openmw-ios-link-smoke.map' -exec cp {} build/diagnostics/ \;
+          ./scripts/verify-no-deployment-warnings.sh \
+            build/configure.log build/plugin-build.log build/link-smoke.log
 
       - name: Gate 5 - compile and link full OpenMW app
         run: |
@@ -113,10 +134,8 @@ jobs:
       - name: Gate 6 - verify bundle and package unsigned IPA
         run: |
           set -euo pipefail
-          if grep -E "built for newer .*iOS.*version|deployment target.*newer" build/configure.log build/plugin-build.log build/link-smoke.log build/xcodebuild.log; then
-            echo "error: deployment-target mismatch warning detected" >&2
-            exit 1
-          fi
+          ./scripts/verify-no-deployment-warnings.sh \
+            build/configure.log build/plugin-build.log build/link-smoke.log build/xcodebuild.log
           ./scripts/verify-bundle.sh build/device/openmw.app
           ./scripts/package-unsigned.sh
           unzip -l build/artifacts/OpenMW-iOS-unsigned.ipa \
@@ -175,6 +194,8 @@ jobs:
           if [[ -f build/ios/generated/openmw_ios_osg_plugins.hpp ]]; then
             cp build/ios/generated/openmw_ios_osg_plugins.hpp build/diagnostics/openmw_ios_osg_plugins.hpp
           fi
+          find build/ios/generated -maxdepth 1 -type f -name 'ios-*.tsv' \
+            -exec cp {} build/diagnostics/ \; 2>/dev/null || true
           find build/ios -maxdepth 5 -type f -print \
             > build/diagnostics/ios-build-files.txt 2>&1
           exit 0
@@ -190,6 +211,7 @@ jobs:
             build/plugin-build.log
             build/link-smoke.log
             build/xcodebuild.log
+            build/diagnostics/install-cmake.log
             build/diagnostics
             build/OpenMW.xcresult
             build/ios/CMakeCache.txt

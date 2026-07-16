@@ -10,7 +10,13 @@ set(_required_files
     triplets/arm64-ios-openmw-release.cmake
     ios/CMakeLists.txt
     ios/link-smoke/CMakeLists.txt
+    scripts/dependency-inventory.py
+    scripts/extract-link-command.py
+    scripts/install-pinned-cmake.sh
     scripts/validate-ios-dependencies.sh
+    scripts/verify-link-map.py
+    scripts/verify-linked-product.sh
+    scripts/verify-no-deployment-warnings.sh
     scripts/verify-bundle.sh)
 foreach(_file IN LISTS _required_files)
     if(NOT EXISTS "${PORT_ROOT}/${_file}")
@@ -55,4 +61,53 @@ if(_smoke_source MATCHES "USE_OSGPLUGIN\\(" OR _smoke_source MATCHES "USE_SERIAL
 endif()
 if(NOT _smoke_source MATCHES "openmw_ios_osg_plugins.hpp")
     message(FATAL_ERROR "Link smoke must include the generated canonical plugin registrations")
+endif()
+foreach(_anchor IN ITEMS
+        btBoxShape btAlignedAlloc MyGUI::LogManager rcAlloc dtAlloc
+        duDumpPolyMeshToObj sqlite3_libversion avutil_version ucol_open)
+    if(NOT _smoke_source MATCHES "${_anchor}")
+        message(FATAL_ERROR "Link smoke is missing required public symbol anchor: ${_anchor}")
+    endif()
+endforeach()
+string(FIND "${_ios_cmake}" "ios-archive-products-$<CONFIG>.tsv" _product_manifest_reference)
+if(_product_manifest_reference EQUAL -1)
+    message(FATAL_ERROR "iOS CMake must generate the configuration-specific product manifest")
+endif()
+string(FIND "${_smoke}" "ios-link-participation-$<CONFIG>.tsv" _participation_manifest_reference)
+if(_participation_manifest_reference EQUAL -1)
+    message(FATAL_ERROR "Link smoke must generate the exact archive participation manifest")
+endif()
+
+file(READ "${PORT_ROOT}/scripts/dependency-inventory.py" _inventory_script)
+if(_inventory_script MATCHES "rglob\\(\"\\*\\.a\"\\)")
+    message(FATAL_ERROR "Dependency inventory must not recursively scan broad build directories")
+endif()
+if(NOT _inventory_script MATCHES "read_product_manifest")
+    message(FATAL_ERROR "Dependency inventory must consume the generated product manifest")
+endif()
+
+file(READ "${PORT_ROOT}/versions.env" _versions)
+if(NOT _versions MATCHES "CMAKE_VERSION=4\\.3\\.4")
+    message(FATAL_ERROR "CMake must remain pinned to 4.3.4")
+endif()
+if(NOT _versions MATCHES
+        "CMAKE_MACOS_SHA256=bf6647c78ac295c54dbe0a094d4428f495be93c1f810fd8bde57374e8b548523")
+    message(FATAL_ERROR "Pinned CMake checksum does not match Kitware's 4.3.4 macOS archive")
+endif()
+
+file(READ "${PORT_ROOT}/.github/workflows/ios.yml" _workflow)
+if(NOT _workflow MATCHES "install-pinned-cmake\\.sh")
+    message(FATAL_ERROR "CI must install the checksum-verified pinned CMake")
+endif()
+if(NOT _workflow MATCHES "ios-source-downloads-v4-cmake-4\\.3\\.4")
+    message(FATAL_ERROR "Source-download cache key must encode the pinned CMake version")
+endif()
+if(_workflow MATCHES "brew install cmake")
+    message(FATAL_ERROR "CI must not install unversioned Homebrew CMake")
+endif()
+if(NOT _workflow MATCHES "openmw-ios-required-static-dependencies")
+    message(FATAL_ERROR "Gate 3 must build the complete declared static dependency target set")
+endif()
+if(NOT _workflow MATCHES "verify-link-map\\.py")
+    message(FATAL_ERROR "Gate 4 must enforce exact linker-map archive participation")
 endif()
