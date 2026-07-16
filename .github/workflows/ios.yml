@@ -20,16 +20,16 @@ concurrency:
 
 jobs:
   device-build:
-    name: arm64 iPhone build
-    # vcpkg's ICU cross-build misdetects arm64 iOS as native when the host is
-    # also arm64. The Intel runner gives autoconf distinct build/host triples.
+    name: Clean gated arm64 iPhone build
     runs-on: macos-15-intel
     timeout-minutes: 180
 
     env:
       CONFIGURATION: Release
       IOS_DEPLOYMENT_TARGET: "16.3"
-      VCPKG_TRIPLET: arm64-ios-release
+      VCPKG_TRIPLET: arm64-ios-openmw-release
+      VCPKG_BINARY_SOURCES: clear
+      PRODUCT_BUNDLE_IDENTIFIER: org.openmw.ios
 
     steps:
       - name: Check out port repository
@@ -38,7 +38,7 @@ jobs:
       - name: Initialize diagnostics
         run: mkdir -p build/diagnostics
 
-      - name: Select Xcode
+      - name: Select pinned Xcode
         run: |
           set -o pipefail
           {
@@ -48,115 +48,83 @@ jobs:
             xcrun --sdk iphoneos --show-sdk-version
           } 2>&1 | tee build/diagnostics/xcode-environment.log
 
-      - name: Install build tools
+      - name: Install validation and build tools
         run: |
           set -o pipefail
-          brew install cmake ninja autoconf automake libtool pkg-config nasm yasm \
+          brew install cmake ninja autoconf automake libtool pkg-config nasm yasm shellcheck ruby \
             2>&1 | tee build/diagnostics/install-tools.log
 
-      - name: Restore native dependencies
-        id: native-deps-cache
+      # Downloaded source archives are safe to reuse. No installed libraries,
+      # staged prefixes, generated projects, or object files are restored.
+      - name: Restore source download cache
+        id: source-download-cache
         uses: actions/cache/restore@v4
         with:
-          path: |
-            build/vcpkg_installed
-            build/gl4es-ios
-            build/luajit-ios
-            build/prefix
-            deps/vcpkg-pinned/downloads
-            ~/.cache/vcpkg/archives
-          key: ios-deps-xcode-16.4-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('vcpkg.json', 'versions.env', 'triplets/**', 'patches/gl4es/*.patch', 'scripts/build-luajit-ios.sh') }}
-          restore-keys: |
-            ios-deps-xcode-16.4-${{ runner.os }}-${{ runner.arch }}-
+          path: deps/vcpkg-pinned/downloads
+          key: ios-source-downloads-v3-${{ hashFiles('versions.env', 'vcpkg.json') }}
 
-      - name: Fetch and patch pinned sources
+      - name: Gate 1 - validate pinned sources and patch series
         run: |
           set -o pipefail
           ./scripts/bootstrap.sh 2>&1 | tee build/bootstrap.log
+          ./scripts/validate-source.sh 2>&1 | tee build/diagnostics/source-validation.log
+          cmake -S validation -B build/validation -DPORT_ROOT="$PWD" \
+            2>&1 | tee build/diagnostics/cmake-validation.log
 
-      - name: Restore OpenMW object cache
-        id: openmw-objects-cache
-        uses: actions/cache/restore@v4
-        with:
-          path: build/ios
-          key: ios-objects-xcode-16.4-${{ runner.os }}-${{ runner.arch }}-${{ github.sha }}
-          restore-keys: |
-            ios-objects-xcode-16.4-${{ runner.os }}-${{ runner.arch }}-
-
-      - name: Generate Xcode project
-        run: |
-          set -o pipefail
-          ./scripts/build-ios.sh 2>&1 | tee build/configure.log
-
-      - name: Verify staged iOS dependencies
-        shell: bash
+      - name: Gate 2 - clean deterministic dependency build and configure
         run: |
           set -euo pipefail
+          rm -rf build/vcpkg_installed build/gl4es-ios build/luajit-ios build/prefix build/ios build/device build/artifacts
+          set -o pipefail
+          ./scripts/build-ios.sh 2>&1 | tee build/configure.log
+          xcodebuild -list -project build/ios/OpenMW.xcodeproj \
+            > build/diagnostics/generated-targets.txt
 
-          required_files=(
-            "build/prefix/${VCPKG_TRIPLET}/lib/libGL.a"
-            "build/prefix/${VCPKG_TRIPLET}/lib/libluajit-5.1.a"
-            "build/prefix/${VCPKG_TRIPLET}/include/gl4es/gl4eshint.h"
-            "build/prefix/${VCPKG_TRIPLET}/include/gl4es/gl4esinit.h"
-            "build/vcpkg_installed/${VCPKG_TRIPLET}/include/boost/geometry/geometries/box.hpp"
-            "build/vcpkg_installed/${VCPKG_TRIPLET}/lib/libSDL2.a"
-            "build/vcpkg_installed/${VCPKG_TRIPLET}/lib/libboost_program_options.a"
-            "build/vcpkg_installed/${VCPKG_TRIPLET}/lib/libavcodec.a"
-          )
-
-          missing=0
-          for required_file in "${required_files[@]}"; do
-            if [[ ! -f "${required_file}" ]]; then
-              echo "error: missing staged dependency: ${required_file}" >&2
-              missing=1
-            fi
-          done
-          if (( missing != 0 )); then
-            exit 1
-          fi
-
-          printf '%s\n' \
-            '#include <boost/geometry/geometries/box.hpp>' \
-            '#include <GL/gl.h>' \
-            '#include <gl4es/gl4eshint.h>' \
-            '#include <gl4es/gl4esinit.h>' \
-            'int main() { return 0; }' \
-            | xcrun --sdk iphoneos clang++ \
-                -std=c++20 \
-                -target arm64-apple-ios"${IOS_DEPLOYMENT_TARGET}" \
-                -isysroot "$(xcrun --sdk iphoneos --show-sdk-path)" \
-                -I "build/prefix/${VCPKG_TRIPLET}/include" \
-                -I "build/vcpkg_installed/${VCPKG_TRIPLET}/include" \
-                -x c++ -fsyntax-only -
-
-      - name: Compile unsigned device app
+      - name: Gate 3 - verify dependencies, deployment targets, and registrars
         run: |
           set -o pipefail
-          xcodebuild \
-            -PBXBuildsContinueAfterErrors=1 \
-            -project build/ios/OpenMW.xcodeproj \
-            -target openmw \
-            -configuration "${CONFIGURATION}" \
-            -sdk iphoneos \
-            -jobs 4 \
-            -resultBundlePath build/OpenMW.xcresult \
-            CODE_SIGNING_ALLOWED=NO \
-            CODE_SIGNING_REQUIRED=NO \
-            2>&1 | tee build/xcodebuild.log
+          cmake --build build/ios --config "$CONFIGURATION" --target osgdb_bmp osgdb_dds osgdb_freetype osgdb_jpeg osgdb_osg osgdb_png osgdb_serializers_osg osgdb_tga --parallel 4 2>&1 | tee build/plugin-build.log
+          ./scripts/validate-ios-dependencies.sh \
+            2>&1 | tee build/diagnostics/dependency-validation.log
+
+      - name: Gate 4 - link complete iOS dependency smoke target
+        run: |
+          set -o pipefail
+          xcodebuild -project build/ios/OpenMW.xcodeproj -target openmw-ios-link-smoke -configuration "$CONFIGURATION" -sdk iphoneos -jobs 4 CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO 2>&1 | tee build/link-smoke.log
+
+          SMOKE_BINARY="$(find build/ios -type f -path '*openmw-ios-link-smoke.app/openmw-ios-link-smoke' -print -quit)"
+          test -n "$SMOKE_BINARY"
+          ./scripts/verify-linked-product.sh "$SMOKE_BINARY"
+          ./scripts/dependency-inventory.py
+          find build/ios -name 'openmw-ios-link-smoke.map' -exec cp {} build/diagnostics/ \;
+
+      - name: Gate 5 - compile and link full OpenMW app
+        run: |
+          set -o pipefail
+          xcodebuild -project build/ios/OpenMW.xcodeproj -target openmw -configuration "$CONFIGURATION" -sdk iphoneos -jobs 4 -resultBundlePath build/OpenMW.xcresult CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO 2>&1 | tee build/xcodebuild.log
 
           rm -rf build/device
           mkdir -p build/device
           APP_PATH="$(find build/ios -type d -name 'openmw.app' -print -quit)"
-          if [[ -z "${APP_PATH}" ]]; then
-            echo "error: successful build produced no openmw.app bundle" >&2
+          test -n "$APP_PATH"
+          cp -R "$APP_PATH" build/device/
+          find build/ios -name 'openmw-link.map' -exec cp {} build/diagnostics/ \;
+
+      - name: Gate 6 - verify bundle and package unsigned IPA
+        run: |
+          set -euo pipefail
+          if grep -E "built for newer .*iOS.*version|deployment target.*newer" build/configure.log build/plugin-build.log build/link-smoke.log build/xcodebuild.log; then
+            echo "error: deployment-target mismatch warning detected" >&2
             exit 1
           fi
-          cp -R "${APP_PATH}" build/device/
+          ./scripts/verify-bundle.sh build/device/openmw.app
+          ./scripts/package-unsigned.sh
+          unzip -l build/artifacts/OpenMW-iOS-unsigned.ipa \
+            > build/diagnostics/ipa-contents.txt
+          unzip -Z1 build/artifacts/OpenMW-iOS-unsigned.ipa \
+            | grep -q '^Payload/OpenMW.app/openmw$'
 
-      - name: Package unsigned IPA
-        run: ./scripts/package-unsigned.sh
-
-      - name: Upload unsigned app
+      - name: Upload verified unsigned app
         uses: actions/upload-artifact@v4
         with:
           name: OpenMW-iOS-unsigned-${{ github.run_number }}
@@ -173,63 +141,38 @@ jobs:
         run: |
           set +e
           mkdir -p build/diagnostics
-
           {
             echo "UTC: $(date -u '+%Y-%m-%dT%H:%M:%SZ')"
             echo "Workflow run: ${GITHUB_RUN_ID:-unknown}"
             echo "Commit: ${GITHUB_SHA:-unknown}"
-            echo
             uname -a
             sw_vers
-            sysctl -n machdep.cpu.brand_string
-            echo
             xcode-select -p
             xcodebuild -version
-            xcrun --sdk iphoneos --show-sdk-path
             xcrun --sdk iphoneos --show-sdk-version
             xcrun --sdk iphoneos clang --version
             cmake --version
-            ninja --version
             git --version
           } > build/diagnostics/environment.txt 2>&1
 
           if [[ -d deps/openmw/.git ]]; then
             {
               echo "OpenMW HEAD: $(git -C deps/openmw rev-parse HEAD)"
-              echo
               git -C deps/openmw status --short
-              echo
-              for patch_file in patches/openmw/*.patch; do
-                echo "===== ${patch_file} ====="
-                git -C deps/openmw apply --check --verbose "${PWD}/${patch_file}"
-              done
             } > build/diagnostics/openmw-patch-state.txt 2>&1
           fi
-
-          if [[ -d deps/gl4es/.git ]]; then
-            {
-              echo "GL4ES HEAD: $(git -C deps/gl4es rev-parse HEAD)"
-              echo
-              git -C deps/gl4es status --short
-            } > build/diagnostics/gl4es-state.txt 2>&1
-          fi
-
           if [[ -f build/ios/CMakeCache.txt ]]; then
             cmake -N -LAH build/ios > build/diagnostics/cmake-cache-expanded.txt 2>&1
           fi
-
           if [[ -d build/ios/OpenMW.xcodeproj ]]; then
             xcodebuild -list -project build/ios/OpenMW.xcodeproj \
               > build/diagnostics/xcode-project-list.txt 2>&1
           fi
-
-          find build/ios -maxdepth 4 -type f -print \
+          find build/ios -maxdepth 5 -type f -print \
             > build/diagnostics/ios-build-files.txt 2>&1
-
-          # Diagnostics must never hide the original build failure.
           exit 0
 
-      - name: Upload diagnostics
+      - name: Upload complete diagnostics
         if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -237,35 +180,21 @@ jobs:
           path: |
             build/bootstrap.log
             build/configure.log
+            build/plugin-build.log
+            build/link-smoke.log
             build/xcodebuild.log
             build/diagnostics
             build/OpenMW.xcresult
             build/ios/CMakeCache.txt
             build/ios/CMakeFiles/CMakeConfigureLog.yaml
-            build/ios/CMakeFiles/CMakeError.log
-            build/ios/CMakeFiles/CMakeOutput.log
             build/ios/OpenMW.xcodeproj
-          if-no-files-found: error
+          if-no-files-found: warn
           retention-days: 14
 
-      - name: Save OpenMW object cache
-        if: always() && steps.openmw-objects-cache.outcome == 'success' && steps.openmw-objects-cache.outputs.cache-hit != 'true'
+      - name: Save source download cache
+        if: always() && steps.source-download-cache.outputs.cache-hit != 'true'
         continue-on-error: true
         uses: actions/cache/save@v4
         with:
-          path: build/ios
-          key: ${{ steps.openmw-objects-cache.outputs.cache-primary-key }}
-
-      - name: Save native dependency cache
-        if: always() && steps.native-deps-cache.outputs.cache-hit != 'true'
-        continue-on-error: true
-        uses: actions/cache/save@v4
-        with:
-          path: |
-            build/vcpkg_installed
-            build/gl4es-ios
-            build/luajit-ios
-            build/prefix
-            deps/vcpkg-pinned/downloads
-            ~/.cache/vcpkg/archives
-          key: ${{ steps.native-deps-cache.outputs.cache-primary-key }}
+          path: deps/vcpkg-pinned/downloads
+          key: ${{ steps.source-download-cache.outputs.cache-primary-key }}

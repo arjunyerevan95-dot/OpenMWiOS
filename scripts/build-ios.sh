@@ -16,7 +16,7 @@ if [[ ! -d "${DEPS_DIR}/openmw/.git" ]]; then
 fi
 
 IOS_DEPLOYMENT_TARGET="${IOS_DEPLOYMENT_TARGET:-16.3}"
-VCPKG_TRIPLET="${VCPKG_TRIPLET:-arm64-ios-release}"
+VCPKG_TRIPLET="${VCPKG_TRIPLET:-arm64-ios-openmw-release}"
 CONFIGURATION="${CONFIGURATION:-Release}"
 IPHONE_SDKVER="${IPHONE_SDKVER:-$(xcrun --sdk iphoneos --show-sdk-version)}"
 JOBS="${JOBS:-$(sysctl -n hw.logicalcpu)}"
@@ -26,6 +26,7 @@ PREFIX="${BUILD_DIR}/prefix/${VCPKG_TRIPLET}"
 "${DEPS_DIR}/vcpkg-pinned/vcpkg" install \
     --x-manifest-root="${ROOT_DIR}" \
     --triplet="${VCPKG_TRIPLET}" \
+    --overlay-triplets="${ROOT_DIR}/triplets" \
     --x-install-root="${BUILD_DIR}/vcpkg_installed"
 
 "${ROOT_DIR}/scripts/build-luajit-ios.sh"

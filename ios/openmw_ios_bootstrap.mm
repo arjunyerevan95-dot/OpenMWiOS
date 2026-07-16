@@ -1,4 +1,5 @@
 #import "openmw_ios_paths.h"
+#import "openmw_ios_logging.h"
 
 #import <Foundation/Foundation.h>
 
@@ -56,6 +57,8 @@ extern "C" void openmw_ios_prepare_environment(void)
 
         std::filesystem::create_directories(root);
         std::filesystem::create_directories(library / "OpenMW");
+        openmw_ios_log("sandbox_paths", ("documents=" + documents.string() + ";library=" + library.string()
+            + ";bundle=" + bundle.string()).c_str());
         createInitialConfig(root);
 
         setenv("HOME", library.parent_path().c_str(), 1);
@@ -63,6 +66,8 @@ extern "C" void openmw_ios_prepare_environment(void)
         setenv("OPENMW_DECOMPRESS_TEXTURES", "1", 1);
         setenv("LIBGL_ES", "2", 1);
         setenv("LIBGL_GL", "21", 1);
+        setenv("OPENMW_GLES_VERSION", "2", 1);
+        openmw_ios_log("requested_gl_profile", "OpenGL ES 2.0 through GL4ES");
 
         SDL_SetHint(SDL_HINT_ORIENTATIONS, "LandscapeLeft LandscapeRight");
         SDL_SetHint(SDL_HINT_IOS_HIDE_HOME_INDICATOR, "2");
@@ -76,10 +81,26 @@ extern "C" void openmw_ios_prepare_environment(void)
         append("--resources");
         append((bundle / "resources").string());
 
+        openmw_ios_log("config_path", (root / "openmw.cfg").c_str());
+        openmw_ios_log("resources_path", (bundle / "resources").c_str());
+        const std::filesystem::path dataFile = root / "Morrowind" / "Data Files" / "Morrowind.esm";
+        if (std::filesystem::exists(dataFile))
+            openmw_ios_log("game_data_validation", "Morrowind.esm found");
+        else
+        {
+            const std::string message = "Morrowind.esm is missing. Copy Morrowind/Data Files into Documents/OpenMW.";
+            std::ofstream(root / "MISSING_GAME_DATA.txt") << message << '\n';
+            openmw_ios_log_fatal(message.c_str());
+        }
+
         sArgumentPointers.clear();
         for (std::string& argument : sArguments)
             sArgumentPointers.push_back(argument.data());
         sArgumentPointers.push_back(nullptr);
+        std::string argvLog;
+        for (const std::string& argument : sArguments)
+            argvLog += (argvLog.empty() ? "" : " | ") + argument;
+        openmw_ios_log("generated_argv", argvLog.c_str());
     }
 }
 

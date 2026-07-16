@@ -8,21 +8,17 @@ source "$(cd "$(dirname "$0")" && pwd)/common.sh"
 require_macos
 require_command xcrun
 
-VCPKG_TRIPLET="${VCPKG_TRIPLET:-arm64-ios-release}"
+VCPKG_TRIPLET="${VCPKG_TRIPLET:-arm64-ios-openmw-release}"
 IOS_DEPLOYMENT_TARGET="${IOS_DEPLOYMENT_TARGET:-16.3}"
 PREFIX="${BUILD_DIR}/prefix/${VCPKG_TRIPLET}"
 SOURCE_COPY="${BUILD_DIR}/luajit-ios"
 OUTPUT_LIBRARY="${PREFIX}/lib/libluajit-5.1.a"
 
-if [[ -f "${OUTPUT_LIBRARY}" ]]; then
-    echo "Using cached LuaJIT iOS library: ${OUTPUT_LIBRARY}"
-    exit 0
-fi
-
+# A restored archive is not build identity. Rebuild whenever this step runs so
+# the SDK, deployment target, compiler, flags, and pinned revision are truthful.
+rm -rf "${SOURCE_COPY}"
 mkdir -p "${SOURCE_COPY}" "${PREFIX}/lib" "${PREFIX}/include/luajit-2.1"
-if [[ ! -f "${SOURCE_COPY}/Makefile" ]]; then
-    cp -R "${DEPS_DIR}/luajit/." "${SOURCE_COPY}/"
-fi
+cp -R "${DEPS_DIR}/luajit/." "${SOURCE_COPY}/"
 
 IOS_SDK="$(xcrun --sdk iphoneos --show-sdk-path)"
 MACOS_SDK="$(xcrun --sdk macosx --show-sdk-path)"

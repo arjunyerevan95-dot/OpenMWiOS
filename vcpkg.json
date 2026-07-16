@@ -16,7 +16,10 @@
         "swscale"
       ]
     },
-    "freetype",
+    {
+      "name": "freetype",
+      "default-features": false
+    },
     "icu",
     "libjpeg-turbo",
     "libpng",
