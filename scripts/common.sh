@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
 
+# This file is sourced; these shared paths are consumed by the caller scripts.
+# shellcheck disable=SC2034
+
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"

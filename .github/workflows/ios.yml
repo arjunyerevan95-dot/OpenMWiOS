@@ -192,7 +192,7 @@ jobs:
           retention-days: 14
 
       - name: Save source download cache
-        if: always() && steps.source-download-cache.outputs.cache-hit != 'true'
+        if: always() && steps.source-download-cache.outputs.cache-hit != 'true' && hashFiles('deps/vcpkg-pinned/downloads/**') != ''
         continue-on-error: true
         uses: actions/cache/save@v4
         with:
