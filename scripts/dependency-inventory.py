@@ -18,6 +18,16 @@ def run(*args: str) -> str:
                           stderr=subprocess.STDOUT).stdout.strip()
 
 
+def inspect(path: pathlib.Path, *args: str) -> tuple[str, str | None]:
+    result = subprocess.run(args, check=False, text=True, stdout=subprocess.PIPE,
+                            stderr=subprocess.STDOUT)
+    output = result.stdout.strip()
+    if result.returncode == 0:
+        return output, None
+    detail = output.splitlines()[-1] if output else f"exit code {result.returncode}"
+    return output, f"{path}: {' '.join(args[:2])} failed: {detail}"
+
+
 def file_hash(path: pathlib.Path) -> str:
     digest = hashlib.sha256()
     with path.open("rb") as stream:
@@ -82,8 +92,12 @@ archives = sorted({path.resolve() for root in roots if root.exists() for path in
 records = []
 violations = []
 for archive in archives:
-    architectures = run("xcrun", "lipo", "-archs", str(archive)).split()
-    load_commands = run("xcrun", "otool", "-l", str(archive))
+    relative_archive = archive.relative_to(ROOT)
+    lipo_output, lipo_error = inspect(relative_archive, "xcrun", "lipo", "-archs", str(archive))
+    load_commands, otool_error = inspect(relative_archive, "xcrun", "otool", "-l", str(archive))
+    inspection_errors = [error for error in (lipo_error, otool_error) if error]
+    violations.extend(inspection_errors)
+    architectures = lipo_output.split() if lipo_error is None else []
     platforms = sorted(set(re.findall(r"^\s+platform\s+([0-9]+)", load_commands, re.MULTILINE)))
     if not platforms and "LC_VERSION_MIN_IPHONEOS" in load_commands:
         platforms = ["2"]
@@ -93,13 +107,14 @@ for archive in archives:
             r"LC_VERSION_MIN_IPHONEOS(?:.|\n)*?\n\s+version\s+([0-9.]+)",
             load_commands, re.MULTILINE)))
     record = {
-        "path": str(archive.relative_to(ROOT)),
+        "path": str(relative_archive),
         "sha256": file_hash(archive),
         "architecture": architectures,
         "platforms": platforms,
         "deployment_targets": minimum_versions,
         "configuration": "Release",
         "triplet": TRIPLET,
+        "inspection_errors": inspection_errors,
     }
     records.append(record)
     if architectures != ["arm64"]:

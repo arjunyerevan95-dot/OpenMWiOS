@@ -1,5 +1,6 @@
 add_executable(openmw-ios-link-smoke MACOSX_BUNDLE EXCLUDE_FROM_ALL main.cpp)
 target_include_directories(openmw-ios-link-smoke PRIVATE
+    "${CMAKE_BINARY_DIR}/generated"
     "${OPENSCENEGRAPH_INCLUDE_DIRS}"
     "${FFmpeg_INCLUDE_DIRS}"
     "${LUA_INCLUDE_DIR}")

@@ -19,6 +19,8 @@
 #include <yaml-cpp/yaml.h>
 #include <zlib.h>
 
+#include <openmw_ios_osg_plugins.hpp>
+
 extern "C"
 {
 #include <libavcodec/avcodec.h>
@@ -26,15 +28,6 @@ extern "C"
 #include <libswresample/swresample.h>
 #include <libswscale/swscale.h>
 }
-
-USE_OSGPLUGIN(bmp)
-USE_OSGPLUGIN(dds)
-USE_OSGPLUGIN(freetype)
-USE_OSGPLUGIN(jpeg)
-USE_OSGPLUGIN(osg)
-USE_OSGPLUGIN(png)
-USE_SERIALIZER_WRAPPER_LIBRARY(osg)
-USE_OSGPLUGIN(tga)
 
 extern "C" int SDL_main(int, char**)
 {

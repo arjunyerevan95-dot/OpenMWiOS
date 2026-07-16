@@ -1,5 +1,5 @@
 diff --git a/CMakeLists.txt b/CMakeLists.txt
-index 3fc1b83..7a69849 100644
+index 3fc1b83..e91e581 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
 @@ -8,6 +8,13 @@ endif()
@@ -59,40 +59,17 @@ index 3fc1b83..7a69849 100644
      osgdb_dds
      osgdb_freetype
      osgdb_jpeg
-@@ -304,6 +312,32 @@ set(USED_OSG_PLUGINS
+@@ -304,6 +312,9 @@ set(USED_OSG_PLUGINS
      osgdb_png
      osgdb_serializers_osg
      osgdb_tga)
 +if(NOT OPENMW_IOS)
 +    list(APPEND USED_OSG_PLUGINS osgdb_dae)
 +endif()
-+if(OPENMW_IOS)
-+    set(OPENMW_REQUIRED_OSG_PLUGIN_REGISTRARS
-+        "osgdb_bmp|_osgdb_bmp"
-+        "osgdb_dds|_osgdb_dds"
-+        "osgdb_freetype|_osgdb_freetype"
-+        "osgdb_jpeg|_osgdb_jpeg"
-+        "osgdb_osg|_osgdb_osg"
-+        "osgdb_png|_osgdb_png"
-+        "osgdb_serializers_osg|_wrapper_serializer_library_osg"
-+        "osgdb_tga|_osgdb_tga")
-+    foreach(_plugin_registrar IN LISTS OPENMW_REQUIRED_OSG_PLUGIN_REGISTRARS)
-+        string(REPLACE "|" ";" _plugin_registrar_fields "${_plugin_registrar}")
-+        list(GET _plugin_registrar_fields 0 _plugin_target)
-+        if(NOT _plugin_target IN_LIST USED_OSG_PLUGINS)
-+            message(FATAL_ERROR "OSG registrar mapping is not in USED_OSG_PLUGINS: ${_plugin_target}")
-+        endif()
-+    endforeach()
-+    list(LENGTH USED_OSG_PLUGINS _plugin_count)
-+    list(LENGTH OPENMW_REQUIRED_OSG_PLUGIN_REGISTRARS _registrar_count)
-+    if(NOT _plugin_count EQUAL _registrar_count)
-+        message(FATAL_ERROR "Every required iOS OSG plugin must have exactly one registrar assertion")
-+    endif()
-+endif()
  
  if(NOT COLLADA_DOM_VERSION_MAJOR)
      set(COLLADA_DOM_VERSION_MAJOR 2)
-@@ -331,6 +365,21 @@ if (OPENMW_USE_SYSTEM_YAML_CPP)
+@@ -331,6 +342,21 @@ if (OPENMW_USE_SYSTEM_YAML_CPP)
      find_package(yaml-cpp REQUIRED)
  endif()
  
@@ -114,7 +91,7 @@ index 3fc1b83..7a69849 100644
  if ((BUILD_COMPONENTS_TESTS OR BUILD_OPENCS_TESTS OR BUILD_OPENMW_TESTS) AND OPENMW_USE_SYSTEM_GOOGLETEST)
      find_package(GTest 1.10 REQUIRED)
      find_package(GMock 1.10 REQUIRED)
-@@ -530,15 +579,15 @@ if(MYGUI_STATIC)
+@@ -530,15 +556,15 @@ if(MYGUI_STATIC)
      add_compile_definitions(MYGUI_STATIC)
  endif (MYGUI_STATIC)
  
@@ -133,7 +110,7 @@ index 3fc1b83..7a69849 100644
      set(OPENMW_RESOURCES_ROOT ${OpenMW_BINARY_DIR})
  endif ()
  
-@@ -546,17 +595,17 @@ add_subdirectory(files/)
+@@ -546,17 +572,17 @@ add_subdirectory(files/)
  
  # Specify build paths
  
@@ -154,7 +131,7 @@ index 3fc1b83..7a69849 100644
  
  # Other files
  
-@@ -566,7 +615,7 @@ pack_resource_file(${OpenMW_SOURCE_DIR}/files/settings-default.cfg
+@@ -566,7 +592,7 @@ pack_resource_file(${OpenMW_SOURCE_DIR}/files/settings-default.cfg
  configure_resource_file(${OpenMW_SOURCE_DIR}/files/openmw.appdata.xml
      "${OpenMW_BINARY_DIR}" "openmw.appdata.xml")
  
@@ -163,7 +140,7 @@ index 3fc1b83..7a69849 100644
      configure_file(${OpenMW_SOURCE_DIR}/files/openmw.cfg
          "${OpenMW_BINARY_DIR}/openmw.cfg")
  elseif (WIN32)
-@@ -675,6 +724,10 @@ if (OPENMW_CXX_FLAGS)
+@@ -675,6 +701,10 @@ if (OPENMW_CXX_FLAGS)
  endif()
  
  # Components
@@ -378,7 +355,7 @@ index 0e4a09c..6f1f723 100644
          message(FATAL_ERROR "get_whole_archive_options not implemented for CMAKE_CXX_COMPILER_ID ${CMAKE_CXX_COMPILER_ID}")
      endif()
 diff --git a/components/CMakeLists.txt b/components/CMakeLists.txt
-index a2131b8..d469d70 100644
+index a2131b8..7cfc33b 100644
 --- a/components/CMakeLists.txt
 +++ b/components/CMakeLists.txt
 @@ -1,9 +1,15 @@
@@ -408,7 +385,18 @@ index a2131b8..d469d70 100644
      add_component_dir (crashcatcher
          crashcatcher
      )
-@@ -687,22 +693,29 @@ target_compile_definitions(components PUBLIC
+@@ -586,6 +592,10 @@ endif()
+ 
+ add_library(components STATIC ${COMPONENT_FILES})
+ 
++if(OPENMW_IOS)
++    target_include_directories(components PRIVATE "${CMAKE_BINARY_DIR}/generated")
++endif()
++
+ if (ANDROID)
+     set_property(TARGET components PROPERTY POSITION_INDEPENDENT_CODE ON)
+ endif()
+@@ -687,22 +697,29 @@ target_compile_definitions(components PUBLIC
  )
  
  if(OSG_STATIC)
@@ -504,6 +492,28 @@ index 0b27d38..e034726 100644
      }
  
      std::filesystem::path MacOsPath::getGlobalDataPath() const
+diff --git a/components/resource/imagemanager.cpp b/components/resource/imagemanager.cpp
+index 082b3a2..9dbb5a1 100644
+--- a/components/resource/imagemanager.cpp
++++ b/components/resource/imagemanager.cpp
+@@ -12,6 +12,9 @@
+ #include "objectcache.hpp"
+ 
+ #ifdef OSG_LIBRARY_STATIC
++#ifdef OPENMW_IOS
++#include <openmw_ios_osg_plugins.hpp>
++#else
+ // This list of plugins should match with the list in the top-level CMakelists.txt.
+ USE_OSGPLUGIN(png)
+ USE_OSGPLUGIN(tga)
+@@ -21,6 +24,7 @@ USE_OSGPLUGIN(bmp)
+ USE_OSGPLUGIN(osg)
+ USE_SERIALIZER_WRAPPER_LIBRARY(osg)
+ #endif
++#endif
+ 
+ namespace
+ {
 diff --git a/components/sdlutil/gl4esinit.cpp b/components/sdlutil/gl4esinit.cpp
 index 13015de..89e224b 100644
 --- a/components/sdlutil/gl4esinit.cpp
@@ -564,7 +574,7 @@ index 9ff0545..8d04f11 100644
          openmw_gl4es_init(mWindow);
  #endif
 diff --git a/extern/CMakeLists.txt b/extern/CMakeLists.txt
-index 3dc1050..7f6f2c4 100644
+index 3dc1050..3daf343 100644
 --- a/extern/CMakeLists.txt
 +++ b/extern/CMakeLists.txt
 @@ -136,6 +136,37 @@ if(NOT OPENMW_USE_SYSTEM_OSG)
