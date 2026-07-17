@@ -9,7 +9,8 @@ VCPKG_TRIPLET="${VCPKG_TRIPLET:-arm64-ios-openmw-release}"
 CONFIGURATION="${CONFIGURATION:-Release}"
 PREFIX="${BUILD_DIR}/prefix/${VCPKG_TRIPLET}"
 VCPKG_PREFIX="${BUILD_DIR}/vcpkg_installed/${VCPKG_TRIPLET}"
-PRODUCT_MANIFEST="${BUILD_DIR}/ios/generated/ios-archive-products-${CONFIGURATION}.tsv"
+TEMPLATE_PRODUCT_MANIFEST="${BUILD_DIR}/ios/generated/ios-archive-products-${CONFIGURATION}.tsv"
+RESOLVED_PRODUCT_MANIFEST="${BUILD_DIR}/ios/generated/ios-archive-products-${CONFIGURATION}.resolved.tsv"
 
 required_files=(
     "${PREFIX}/lib/libGL.a"
@@ -36,7 +37,7 @@ required_files=(
     "${VCPKG_PREFIX}/lib/libopenal.a"
     "${VCPKG_PREFIX}/lib/libyaml-cpp.a"
     "${VCPKG_PREFIX}/lib/libz.a"
-    "${PRODUCT_MANIFEST}"
+    "${TEMPLATE_PRODUCT_MANIFEST}"
 )
 
 REGISTRAR_INVENTORY="${BUILD_DIR}/ios/required-osg-plugins-${CONFIGURATION}.txt"
@@ -66,8 +67,24 @@ fi
 if [[ -f "${GENERATED_REGISTRATION_HEADER}" ]]; then
     cp "${GENERATED_REGISTRATION_HEADER}" "${BUILD_DIR}/diagnostics/openmw_ios_osg_plugins.hpp"
 fi
-if [[ -f "${PRODUCT_MANIFEST}" ]]; then
-    cp "${PRODUCT_MANIFEST}" "${BUILD_DIR}/diagnostics/"
+if [[ -f "${TEMPLATE_PRODUCT_MANIFEST}" ]]; then
+    cp "${TEMPLATE_PRODUCT_MANIFEST}" \
+        "${BUILD_DIR}/diagnostics/ios-archive-products-${CONFIGURATION}.template.tsv"
+    if [[ -z "${EFFECTIVE_PLATFORM_NAME:-}" ]]; then
+        echo "error: EFFECTIVE_PLATFORM_NAME must be supplied explicitly" >&2
+        exit 1
+    fi
+    python3 "${ROOT_DIR}/scripts/resolve-xcode-manifest.py" \
+        --input "${TEMPLATE_PRODUCT_MANIFEST}" \
+        --output "${RESOLVED_PRODUCT_MANIFEST}" \
+        --define "EFFECTIVE_PLATFORM_NAME=${EFFECTIVE_PLATFORM_NAME}" \
+        --require-existing-products \
+        | tee "${BUILD_DIR}/diagnostics/ios-archive-products-${CONFIGURATION}.resolution.log"
+    cp "${RESOLVED_PRODUCT_MANIFEST}" "${BUILD_DIR}/diagnostics/"
+    shasum -a 256 \
+        "${TEMPLATE_PRODUCT_MANIFEST}" \
+        "${RESOLVED_PRODUCT_MANIFEST}" \
+        > "${BUILD_DIR}/diagnostics/ios-archive-products-${CONFIGURATION}.sha256"
 fi
 printf 'target\texpected_symbol\tarchive\tstatus\n' > "${REGISTRAR_REPORT}"
 if [[ -f "${REGISTRAR_INVENTORY}" ]]; then
@@ -93,7 +110,8 @@ if [[ -f "${REGISTRAR_INVENTORY}" ]]; then
     done < "${REGISTRAR_INVENTORY}"
 fi
 
-if ! "${ROOT_DIR}/scripts/dependency-inventory.py"; then
+if ! "${ROOT_DIR}/scripts/dependency-inventory.py" \
+        --manifest "${RESOLVED_PRODUCT_MANIFEST}"; then
     validation_status=1
 fi
 

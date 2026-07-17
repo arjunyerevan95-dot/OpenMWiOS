@@ -14,6 +14,7 @@ set(_required_files
     scripts/extract-link-command.py
     scripts/install-pinned-cmake.sh
     scripts/install-pinned-shellcheck.sh
+    scripts/resolve-xcode-manifest.py
     scripts/validate-ios-dependencies.sh
     scripts/verify-link-map.py
     scripts/verify-linked-product.sh
@@ -140,6 +141,12 @@ file(READ "${PORT_ROOT}/scripts/validate-ios-dependencies.sh" _dependency_valida
 if(NOT _dependency_validator MATCHES
         "required-osg-plugins-\\$\\{CONFIGURATION\\}\\.txt")
     message(FATAL_ERROR "Gate 3 must validate the registrar inventory for the selected configuration")
+endif()
+string(FIND "${_dependency_validator}" "resolve-xcode-manifest.py" _manifest_resolver)
+string(FIND "${_dependency_validator}" ".resolved.tsv" _resolved_manifest)
+string(FIND "${_dependency_validator}" "--manifest" _resolved_inventory)
+if(_manifest_resolver EQUAL -1 OR _resolved_manifest EQUAL -1 OR _resolved_inventory EQUAL -1)
+    message(FATAL_ERROR "Gate 3 must resolve and inventory the concrete Xcode product manifest")
 endif()
 string(FIND "${_workflow}" "build/diagnostics/openmw.final-link-command.txt" _app_link_command)
 if(_app_link_command EQUAL -1)
