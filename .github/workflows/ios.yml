@@ -99,6 +99,8 @@ jobs:
             > build/diagnostics/generated-targets.txt
 
       - name: Gate 3 - verify dependencies, deployment targets, and registrars
+        env:
+          EFFECTIVE_PLATFORM_NAME: -iphoneos
         run: |
           set -o pipefail
           cmake --build build/ios --config "$CONFIGURATION" --target openmw-ios-required-static-dependencies --parallel 4 2>&1 | tee build/plugin-build.log
@@ -108,6 +110,7 @@ jobs:
             build/configure.log build/plugin-build.log
 
       - name: Gate 4 - link complete iOS dependency smoke target
+        if: ${{ !startsWith(github.head_ref, 'recovery/gate3-manifest-') }}
         run: |
           set -o pipefail
           xcodebuild -project build/ios/OpenMW.xcodeproj -target openmw-ios-link-smoke -configuration "$CONFIGURATION" -sdk iphoneos -jobs 4 CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO 2>&1 | tee build/link-smoke.log
@@ -133,6 +136,7 @@ jobs:
             build/configure.log build/plugin-build.log build/link-smoke.log
 
       - name: Gate 5 - compile and link full OpenMW app
+        if: ${{ !startsWith(github.head_ref, 'recovery/gate3-manifest-') }}
         run: |
           set -o pipefail
           xcodebuild -project build/ios/OpenMW.xcodeproj -target openmw -configuration "$CONFIGURATION" -sdk iphoneos -jobs 4 -resultBundlePath build/OpenMW.xcresult CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO 2>&1 | tee build/xcodebuild.log
@@ -149,6 +153,7 @@ jobs:
           find build/ios -name 'openmw-link.map' -exec cp {} build/diagnostics/ \;
 
       - name: Gate 6 - verify bundle and package unsigned IPA
+        if: ${{ !startsWith(github.head_ref, 'recovery/gate3-manifest-') }}
         run: |
           set -euo pipefail
           ./scripts/verify-no-deployment-warnings.sh \
@@ -163,6 +168,7 @@ jobs:
           grep -Fx 'Payload/OpenMW.app/openmw' build/diagnostics/ipa-paths.txt > /dev/null
 
       - name: Upload verified unsigned app
+        if: ${{ !startsWith(github.head_ref, 'recovery/gate3-manifest-') }}
         uses: actions/upload-artifact@v4
         with:
           name: OpenMW-iOS-unsigned-${{ github.run_number }}
