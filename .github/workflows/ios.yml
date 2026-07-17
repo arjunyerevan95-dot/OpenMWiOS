@@ -1,0 +1,262 @@
+name: Build iOS
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - "**.md"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: openmw-ios-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  device-build:
+    name: Clean gated arm64 iPhone build
+    runs-on: macos-15-intel
+    timeout-minutes: 180
+
+    env:
+      CONFIGURATION: Release
+      IOS_DEPLOYMENT_TARGET: "16.3"
+      VCPKG_TRIPLET: arm64-ios-openmw-release
+      VCPKG_BINARY_SOURCES: clear
+      PRODUCT_BUNDLE_IDENTIFIER: org.openmw.ios
+
+    steps:
+      - name: Check out port repository
+        uses: actions/checkout@v4
+
+      - name: Initialize diagnostics
+        run: mkdir -p build/diagnostics
+
+      - name: Select pinned Xcode
+        run: |
+          set -o pipefail
+          {
+            sudo xcode-select -s /Applications/Xcode_16.4.app/Contents/Developer
+            xcodebuild -version
+            xcrun --sdk iphoneos --show-sdk-path
+            xcrun --sdk iphoneos --show-sdk-version
+          } 2>&1 | tee build/diagnostics/xcode-environment.log
+
+      # Downloaded source archives are safe to reuse. No installed libraries,
+      # staged prefixes, generated projects, or object files are restored.
+      - name: Restore source download cache
+        id: source-download-cache
+        uses: actions/cache/restore@v4
+        with:
+          path: deps/vcpkg-pinned/downloads
+          key: ios-source-downloads-v5-cmake-4.3.4-shellcheck-0.11.0-${{ hashFiles('versions.env', 'vcpkg.json', 'scripts/install-pinned-cmake.sh', 'scripts/install-pinned-shellcheck.sh') }}
+
+      - name: Install checksum-verified pinned CMake
+        run: |
+          set -o pipefail
+          ./scripts/install-pinned-cmake.sh \
+            2>&1 | tee build/diagnostics/install-cmake.log
+
+      - name: Install checksum-verified pinned ShellCheck
+        run: |
+          set -o pipefail
+          ./scripts/install-pinned-shellcheck.sh \
+            2>&1 | tee build/diagnostics/install-shellcheck.log
+
+      - name: Install validation and build tools
+        run: |
+          set -o pipefail
+          brew install ninja autoconf automake libtool pkg-config nasm yasm ruby \
+            2>&1 | tee build/diagnostics/install-tools.log
+
+      - name: Gate 1 - validate pinned sources and patch series
+        run: |
+          set +e
+          set -uo pipefail
+          gate_status=0
+          ./scripts/bootstrap.sh 2>&1 | tee build/bootstrap.log
+          (( ${PIPESTATUS[0]} == 0 )) || gate_status=1
+          ./scripts/validate-source.sh 2>&1 | tee build/diagnostics/source-validation.log
+          (( ${PIPESTATUS[0]} == 0 )) || gate_status=1
+          cmake -S validation -B build/validation -DPORT_ROOT="$PWD" \
+            2>&1 | tee build/diagnostics/cmake-validation.log
+          (( ${PIPESTATUS[0]} == 0 )) || gate_status=1
+          exit "$gate_status"
+
+      - name: Gate 2 - clean deterministic dependency build and configure
+        run: |
+          set -euo pipefail
+          rm -rf build/vcpkg_installed build/gl4es-ios build/luajit-ios build/prefix build/ios build/device build/artifacts
+          set -o pipefail
+          ./scripts/build-ios.sh 2>&1 | tee build/configure.log
+          xcodebuild -list -project build/ios/OpenMW.xcodeproj \
+            > build/diagnostics/generated-targets.txt
+
+      - name: Gate 3 - verify dependencies, deployment targets, and registrars
+        env:
+          EFFECTIVE_PLATFORM_NAME: -iphoneos
+        run: |
+          set -o pipefail
+          cmake --build build/ios --config "$CONFIGURATION" --target openmw-ios-required-static-dependencies --parallel 4 2>&1 | tee build/plugin-build.log
+          ./scripts/validate-ios-dependencies.sh \
+            2>&1 | tee build/diagnostics/dependency-validation.log
+          ./scripts/verify-no-deployment-warnings.sh \
+            build/configure.log build/plugin-build.log
+
+      - name: Gate 4 - link complete iOS dependency smoke target
+        if: ${{ !startsWith(github.head_ref, 'recovery/gate3-manifest-') }}
+        run: |
+          set -o pipefail
+          xcodebuild -project build/ios/OpenMW.xcodeproj -target openmw-ios-link-smoke -configuration "$CONFIGURATION" -sdk iphoneos -jobs 4 CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO 2>&1 | tee build/link-smoke.log
+
+          SMOKE_BINARY="$(find build/ios -type f -path '*openmw-ios-link-smoke.app/openmw-ios-link-smoke' -print -quit)"
+          test -n "$SMOKE_BINARY"
+          SMOKE_MAP="$(find build/ios -type f -name 'openmw-ios-link-smoke.map' -print -quit)"
+          test -n "$SMOKE_MAP"
+          PARTICIPATION_MANIFEST="build/ios/generated/ios-link-participation-${CONFIGURATION}.tsv"
+          test -f "$PARTICIPATION_MANIFEST"
+          cp "$SMOKE_MAP" build/diagnostics/openmw-ios-link-smoke.map
+          cp "$PARTICIPATION_MANIFEST" build/diagnostics/
+          ./scripts/extract-link-command.py build/link-smoke.log \
+            build/diagnostics/openmw-ios-link-smoke.final-link-command.txt \
+            --bundle-executable openmw-ios-link-smoke
+          ./scripts/verify-link-map.py \
+            "$SMOKE_MAP" "$PARTICIPATION_MANIFEST" \
+            build/diagnostics/openmw-ios-link-smoke.archive-participation.tsv
+          ./scripts/verify-linked-product.sh "$SMOKE_BINARY" \
+            build/diagnostics/openmw-ios-link-smoke.final-link-command.txt
+          ./scripts/dependency-inventory.py
+          ./scripts/verify-no-deployment-warnings.sh \
+            build/configure.log build/plugin-build.log build/link-smoke.log
+
+      - name: Gate 5 - compile and link full OpenMW app
+        if: ${{ !startsWith(github.head_ref, 'recovery/gate3-manifest-') }}
+        run: |
+          set -o pipefail
+          xcodebuild -project build/ios/OpenMW.xcodeproj -target openmw -configuration "$CONFIGURATION" -sdk iphoneos -jobs 4 -resultBundlePath build/OpenMW.xcresult CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO 2>&1 | tee build/xcodebuild.log
+
+          ./scripts/extract-link-command.py build/xcodebuild.log \
+            build/diagnostics/openmw.final-link-command.txt \
+            --bundle-executable openmw
+
+          rm -rf build/device
+          mkdir -p build/device
+          APP_PATH="$(find build/ios -type d -name 'openmw.app' -print -quit)"
+          test -n "$APP_PATH"
+          cp -R "$APP_PATH" build/device/
+          find build/ios -name 'openmw-link.map' -exec cp {} build/diagnostics/ \;
+
+      - name: Gate 6 - verify bundle and package unsigned IPA
+        if: ${{ !startsWith(github.head_ref, 'recovery/gate3-manifest-') }}
+        run: |
+          set -euo pipefail
+          ./scripts/verify-no-deployment-warnings.sh \
+            build/configure.log build/plugin-build.log build/link-smoke.log build/xcodebuild.log
+          ./scripts/verify-bundle.sh build/device/openmw.app \
+            build/diagnostics/openmw.final-link-command.txt
+          ./scripts/package-unsigned.sh
+          unzip -l build/artifacts/OpenMW-iOS-unsigned.ipa \
+            > build/diagnostics/ipa-contents.txt
+          unzip -Z1 build/artifacts/OpenMW-iOS-unsigned.ipa \
+            > build/diagnostics/ipa-paths.txt
+          grep -Fx 'Payload/OpenMW.app/openmw' build/diagnostics/ipa-paths.txt > /dev/null
+
+      - name: Upload verified unsigned app
+        if: ${{ !startsWith(github.head_ref, 'recovery/gate3-manifest-') }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: OpenMW-iOS-unsigned-${{ github.run_number }}
+          path: |
+            build/artifacts/OpenMW-iOS-unsigned.ipa
+            build/artifacts/OpenMW.app
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 14
+
+      - name: Collect detailed diagnostics
+        if: always()
+        shell: bash
+        run: |
+          set +e
+          mkdir -p build/diagnostics
+          {
+            echo "UTC: $(date -u '+%Y-%m-%dT%H:%M:%SZ')"
+            echo "Workflow run: ${GITHUB_RUN_ID:-unknown}"
+            echo "Commit: ${GITHUB_SHA:-unknown}"
+            uname -a
+            sw_vers
+            xcode-select -p
+            xcodebuild -version
+            xcrun --sdk iphoneos --show-sdk-version
+            xcrun --sdk iphoneos clang --version
+            cmake --version
+            shellcheck --version
+            python3 --version
+            ruby --version
+            ninja --version
+            autoconf --version | head -n 1
+            automake --version | head -n 1
+            pkg-config --version
+            nasm -v
+            yasm --version | head -n 1
+            git --version
+          } > build/diagnostics/environment.txt 2>&1
+
+          if [[ -d deps/openmw/.git ]]; then
+            {
+              echo "OpenMW HEAD: $(git -C deps/openmw rev-parse HEAD)"
+              git -C deps/openmw status --short
+            } > build/diagnostics/openmw-patch-state.txt 2>&1
+          fi
+          if [[ -f build/ios/CMakeCache.txt ]]; then
+            cmake -N -LAH build/ios > build/diagnostics/cmake-cache-expanded.txt 2>&1
+          fi
+          if [[ -d build/ios/OpenMW.xcodeproj ]]; then
+            xcodebuild -list -project build/ios/OpenMW.xcodeproj \
+              > build/diagnostics/xcode-project-list.txt 2>&1
+          fi
+          find build/ios -maxdepth 1 -type f -name 'required-osg-plugins-*.txt' \
+            -exec cp {} build/diagnostics/ \; 2>/dev/null || true
+          if [[ -f build/ios/generated/openmw_ios_osg_plugins.hpp ]]; then
+            cp build/ios/generated/openmw_ios_osg_plugins.hpp build/diagnostics/openmw_ios_osg_plugins.hpp
+          fi
+          find build/ios/generated -maxdepth 1 -type f -name 'ios-*.tsv' \
+            -exec cp {} build/diagnostics/ \; 2>/dev/null || true
+          find build/ios -maxdepth 5 -type f -print \
+            > build/diagnostics/ios-build-files.txt 2>&1
+          exit 0
+
+      - name: Upload complete diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: OpenMW-iOS-diagnostics-${{ github.run_number }}
+          path: |
+            build/bootstrap.log
+            build/configure.log
+            build/plugin-build.log
+            build/link-smoke.log
+            build/xcodebuild.log
+            build/diagnostics/install-cmake.log
+            build/diagnostics/install-shellcheck.log
+            build/diagnostics
+            build/OpenMW.xcresult
+            build/ios/CMakeCache.txt
+            build/ios/CMakeFiles/CMakeConfigureLog.yaml
+            build/ios/OpenMW.xcodeproj
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Save source download cache
+        if: always() && steps.source-download-cache.outputs.cache-hit != 'true' && hashFiles('deps/vcpkg-pinned/downloads/**') != ''
+        continue-on-error: true
+        uses: actions/cache/save@v4
+        with:
+          path: deps/vcpkg-pinned/downloads
+          key: ${{ steps.source-download-cache.outputs.cache-primary-key }}
