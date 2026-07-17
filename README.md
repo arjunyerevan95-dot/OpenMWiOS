@@ -21,7 +21,7 @@ scripts. It intentionally does not include Bethesda game data.
 
 - Apple Silicon or Intel Mac
 - Xcode with the iOS SDK and command-line tools
-- CMake 3.28+
+- The checksum-verified CMake and ShellCheck versions pinned in `versions.env`
 - Ninja
 - Git, Python 3, autoconf, automake, libtool, and pkg-config
 - An Apple development team for installation on a physical device
@@ -29,7 +29,10 @@ scripts. It intentionally does not include Bethesda game data.
 Homebrew example:
 
 ```sh
-brew install cmake ninja autoconf automake libtool pkg-config
+brew install ninja autoconf automake libtool pkg-config nasm yasm ruby
+./scripts/install-pinned-cmake.sh
+./scripts/install-pinned-shellcheck.sh
+export PATH="$PWD/build/tools/cmake-4.3.4/CMake.app/Contents/bin:$PWD/build/tools/shellcheck-0.11.0:$PATH"
 ```
 
 ## Bootstrap

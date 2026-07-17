@@ -24,7 +24,14 @@ class LinkCommandExtractorTests(unittest.TestCase):
             log.write_text(f"{compile_command}\n{link_command}\n")
 
             result = subprocess.run(
-                [sys.executable, str(EXTRACTOR), str(log), str(output)],
+                [
+                    sys.executable,
+                    str(EXTRACTOR),
+                    str(log),
+                    str(output),
+                    "--bundle-executable",
+                    "openmw-ios-link-smoke",
+                ],
                 check=False,
                 text=True,
                 stdout=subprocess.PIPE,
@@ -33,6 +40,37 @@ class LinkCommandExtractorTests(unittest.TestCase):
 
             self.assertEqual(result.returncode, 0, result.stderr)
             self.assertEqual(output.read_text(), link_command + "\n")
+
+    def test_requested_app_is_selected_from_multiple_link_commands(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = pathlib.Path(temporary)
+            log = root / "xcodebuild.log"
+            output = root / "final.txt"
+            smoke_command = (
+                "/usr/bin/clang++ /tmp/smoke.o -o "
+                "/tmp/Release-iphoneos/openmw-ios-link-smoke.app/openmw-ios-link-smoke")
+            app_command = (
+                "/usr/bin/clang++ /tmp/openmw.o -o "
+                "/tmp/Release-iphoneos/openmw.app/openmw")
+            log.write_text(f"{smoke_command}\n{app_command}\n")
+
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(EXTRACTOR),
+                    str(log),
+                    str(output),
+                    "--bundle-executable",
+                    "openmw",
+                ],
+                check=False,
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+            )
+
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(output.read_text(), app_command + "\n")
 
 
 if __name__ == "__main__":

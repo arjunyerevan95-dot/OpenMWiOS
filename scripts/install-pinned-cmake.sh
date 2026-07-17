@@ -33,7 +33,7 @@ if [[ ! -x "${cmake_bin}/cmake" ]]; then
     exit 1
 fi
 
-actual_version="$(${cmake_bin}/cmake --version | awk 'NR == 1 { print $3 }')"
+actual_version="$("${cmake_bin}/cmake" --version | awk 'NR == 1 { print $3 }')"
 if [[ "${actual_version}" != "${CMAKE_VERSION}" ]]; then
     echo "error: installed CMake ${actual_version}, expected ${CMAKE_VERSION}" >&2
     exit 1

@@ -6,6 +6,7 @@ set -euo pipefail
 source "$(cd "$(dirname "$0")" && pwd)/common.sh"
 
 APP_PATH="$1"
+LINKER_COMMAND_FILE="${2:-}"
 INFO_PLIST="${APP_PATH}/Info.plist"
 validation_status=0
 EXECUTABLE_NAME=""
@@ -31,7 +32,8 @@ else
 fi
 
 if [[ -n "${EXECUTABLE_NAME}" ]]; then
-    if ! "${ROOT_DIR}/scripts/verify-linked-product.sh" "${APP_PATH}/${EXECUTABLE_NAME}"; then
+    if ! "${ROOT_DIR}/scripts/verify-linked-product.sh" \
+            "${APP_PATH}/${EXECUTABLE_NAME}" "${LINKER_COMMAND_FILE}"; then
         validation_status=1
     fi
 fi

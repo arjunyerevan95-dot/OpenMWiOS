@@ -57,11 +57,16 @@ fi
 
 link_policy_report="${diagnostics_dir}/${product_name}.link-policy.txt"
 if [[ -n "${linker_command_file}" && -f "${linker_command_file}" ]]; then
-    cp "${linker_command_file}" "${diagnostics_dir}/${product_name}.final-link-command.txt"
+    canonical_linker_command="${diagnostics_dir}/${product_name}.final-link-command.txt"
+    source_linker_command="$(cd "$(dirname "${linker_command_file}")" && pwd)/$(basename "${linker_command_file}")"
+    canonical_linker_command="$(cd "${diagnostics_dir}" && pwd)/$(basename "${canonical_linker_command}")"
+    if [[ "${source_linker_command}" != "${canonical_linker_command}" ]]; then
+        cp "${linker_command_file}" "${canonical_linker_command}"
+    fi
     if grep -Eq -- '(dynamic_lookup|-flat_namespace|(^|[[:space:],])-U([,[:space:]]|$))' \
             "${linker_command_file}"; then
         echo "permissive undefined-symbol option detected" > "${link_policy_report}"
-        echo "error: smoke linker command permits unresolved symbols" >&2
+        echo "error: linker command permits unresolved symbols" >&2
         validation_status=1
     else
         echo "strict undefined-symbol resolution enforced" > "${link_policy_report}"

@@ -13,6 +13,7 @@ set(_required_files
     scripts/dependency-inventory.py
     scripts/extract-link-command.py
     scripts/install-pinned-cmake.sh
+    scripts/install-pinned-shellcheck.sh
     scripts/validate-ios-dependencies.sh
     scripts/verify-link-map.py
     scripts/verify-linked-product.sh
@@ -94,20 +95,46 @@ if(NOT _versions MATCHES
         "CMAKE_MACOS_SHA256=bf6647c78ac295c54dbe0a094d4428f495be93c1f810fd8bde57374e8b548523")
     message(FATAL_ERROR "Pinned CMake checksum does not match Kitware's 4.3.4 macOS archive")
 endif()
+if(NOT _versions MATCHES "SHELLCHECK_VERSION=0\\.11\\.0")
+    message(FATAL_ERROR "ShellCheck must remain pinned to 0.11.0")
+endif()
+if(NOT _versions MATCHES
+        "SHELLCHECK_DARWIN_X86_64_SHA256=3c89db4edcab7cf1c27bff178882e0f6f27f7afdf54e859fa041fca10febe4c6")
+    message(FATAL_ERROR "Pinned ShellCheck checksum does not match the official 0.11.0 macOS archive")
+endif()
 
 file(READ "${PORT_ROOT}/.github/workflows/ios.yml" _workflow)
+if(NOT _workflow MATCHES "install-pinned-shellcheck\\.sh")
+    message(FATAL_ERROR "CI must install the checksum-verified pinned ShellCheck")
+endif()
 if(NOT _workflow MATCHES "install-pinned-cmake\\.sh")
     message(FATAL_ERROR "CI must install the checksum-verified pinned CMake")
 endif()
-if(NOT _workflow MATCHES "ios-source-downloads-v4-cmake-4\\.3\\.4")
-    message(FATAL_ERROR "Source-download cache key must encode the pinned CMake version")
+if(NOT _workflow MATCHES "ios-source-downloads-v5-cmake-4\\.3\\.4-shellcheck-0\\.11\\.0")
+    message(FATAL_ERROR "Source-download cache key must encode pinned validation tool versions")
 endif()
 if(_workflow MATCHES "brew install cmake")
     message(FATAL_ERROR "CI must not install unversioned Homebrew CMake")
+endif()
+if(_workflow MATCHES "brew install[^\\n]*shellcheck")
+    message(FATAL_ERROR "CI must not install unversioned Homebrew ShellCheck")
 endif()
 if(NOT _workflow MATCHES "openmw-ios-required-static-dependencies")
     message(FATAL_ERROR "Gate 3 must build the complete declared static dependency target set")
 endif()
 if(NOT _workflow MATCHES "verify-link-map\\.py")
     message(FATAL_ERROR "Gate 4 must enforce exact linker-map archive participation")
+endif()
+string(FIND "${_workflow}" "build/diagnostics/openmw.final-link-command.txt" _app_link_command)
+if(_app_link_command EQUAL -1)
+    message(FATAL_ERROR "Gate 5 must capture the full app's exact final linker command")
+endif()
+if(NOT _workflow MATCHES
+        "verify-bundle\\.sh build/device/openmw\\.app")
+    message(FATAL_ERROR "Gate 6 must verify the full app against its captured linker command")
+endif()
+file(READ "${PORT_ROOT}/scripts/verify-bundle.sh" _verify_bundle)
+if(NOT _verify_bundle MATCHES "verify-linked-product\\.sh" OR
+        NOT _verify_bundle MATCHES "LINKER_COMMAND_FILE")
+    message(FATAL_ERROR "Bundle verification must pass the final linker command to product verification")
 endif()
