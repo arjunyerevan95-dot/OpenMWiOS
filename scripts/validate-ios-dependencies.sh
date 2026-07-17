@@ -39,7 +39,7 @@ required_files=(
     "${PRODUCT_MANIFEST}"
 )
 
-REGISTRAR_INVENTORY="${BUILD_DIR}/ios/required-osg-plugins.txt"
+REGISTRAR_INVENTORY="${BUILD_DIR}/ios/required-osg-plugins-${CONFIGURATION}.txt"
 GENERATED_REGISTRATION_HEADER="${BUILD_DIR}/ios/generated/openmw_ios_osg_plugins.hpp"
 required_files+=("${REGISTRAR_INVENTORY}" "${GENERATED_REGISTRATION_HEADER}")
 if [[ -f "${REGISTRAR_INVENTORY}" ]]; then

@@ -49,7 +49,7 @@ foreach(_plugin_target IN LISTS USED_OSG_PLUGINS)
 endforeach()
 file(GENERATE OUTPUT "${CMAKE_BINARY_DIR}/generated/openmw_ios_osg_plugins.hpp"
     CONTENT "${_registration_header}")
-file(GENERATE OUTPUT "${CMAKE_BINARY_DIR}/required-osg-plugins.txt"
+file(GENERATE OUTPUT "${CMAKE_BINARY_DIR}/required-osg-plugins-$<CONFIG>.txt"
     CONTENT "${_registrar_inventory}")
 
 # Keep Gate 3 tied to generated target products rather than every archive that

@@ -215,9 +215,8 @@ jobs:
             xcodebuild -list -project build/ios/OpenMW.xcodeproj \
               > build/diagnostics/xcode-project-list.txt 2>&1
           fi
-          if [[ -f build/ios/required-osg-plugins.txt ]]; then
-            cp build/ios/required-osg-plugins.txt build/diagnostics/required-osg-plugins.txt
-          fi
+          find build/ios -maxdepth 1 -type f -name 'required-osg-plugins-*.txt' \
+            -exec cp {} build/diagnostics/ \; 2>/dev/null || true
           if [[ -f build/ios/generated/openmw_ios_osg_plugins.hpp ]]; then
             cp build/ios/generated/openmw_ios_osg_plugins.hpp build/diagnostics/openmw_ios_osg_plugins.hpp
           fi
