@@ -176,8 +176,20 @@ jobs:
           ./scripts/verify-no-deployment-warnings.sh \
             build/configure.log build/plugin-build.log build/link-smoke.log
 
+      - name: Gate 4 evidence - retain smoke executable
+        if: ${{ success() && startsWith(github.head_ref, 'recovery/gate4-link-') }}
+        run: |
+          set -euo pipefail
+          SMOKE_BINARY="$(find build/ios -type f \
+            -path '*openmw-ios-link-smoke.app/openmw-ios-link-smoke' \
+            -print -quit)"
+          test -n "$SMOKE_BINARY"
+          cp "$SMOKE_BINARY" build/diagnostics/openmw-ios-link-smoke
+          shasum -a 256 "$SMOKE_BINARY" \
+            > build/diagnostics/openmw-ios-link-smoke.sha256
+
       - name: Gate 5 - compile and link full OpenMW app
-        if: ${{ !startsWith(github.head_ref, 'recovery/gate3-manifest-') && !startsWith(github.head_ref, 'recovery/gate4-participation-') }}
+        if: ${{ !startsWith(github.head_ref, 'recovery/gate3-manifest-') && !startsWith(github.head_ref, 'recovery/gate4-participation-') && !startsWith(github.head_ref, 'recovery/gate4-link-') }}
         run: |
           set -o pipefail
           xcodebuild -project build/ios/OpenMW.xcodeproj -target openmw -configuration "$CONFIGURATION" -sdk iphoneos -jobs 4 -resultBundlePath build/OpenMW.xcresult CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO 2>&1 | tee build/xcodebuild.log
@@ -194,7 +206,7 @@ jobs:
           find build/ios -name 'openmw-link.map' -exec cp {} build/diagnostics/ \;
 
       - name: Gate 6 - verify bundle and package unsigned IPA
-        if: ${{ !startsWith(github.head_ref, 'recovery/gate3-manifest-') && !startsWith(github.head_ref, 'recovery/gate4-participation-') }}
+        if: ${{ !startsWith(github.head_ref, 'recovery/gate3-manifest-') && !startsWith(github.head_ref, 'recovery/gate4-participation-') && !startsWith(github.head_ref, 'recovery/gate4-link-') }}
         run: |
           set -euo pipefail
           ./scripts/verify-no-deployment-warnings.sh \
@@ -209,7 +221,7 @@ jobs:
           grep -Fx 'Payload/OpenMW.app/openmw' build/diagnostics/ipa-paths.txt > /dev/null
 
       - name: Upload verified unsigned app
-        if: ${{ !startsWith(github.head_ref, 'recovery/gate3-manifest-') && !startsWith(github.head_ref, 'recovery/gate4-participation-') }}
+        if: ${{ !startsWith(github.head_ref, 'recovery/gate3-manifest-') && !startsWith(github.head_ref, 'recovery/gate4-participation-') && !startsWith(github.head_ref, 'recovery/gate4-link-') }}
         uses: actions/upload-artifact@v4
         with:
           name: OpenMW-iOS-unsigned-${{ github.run_number }}
