@@ -208,6 +208,13 @@ index 17c4e96..c19cc43 100644
      # Workaround necessary to ensure osgAnimation::MatrixLinearSampler dynamic casts work under Clang
      # NOTE: it's unclear whether the broken behavior is spec-compliant
      if (CMAKE_CXX_COMPILER_ID STREQUAL Clang)
+@@ -194,1 +233,6 @@ target_link_libraries(openmw-lib
++if(OPENMW_IOS)
++    target_include_directories(openmw-lib SYSTEM PRIVATE
++        "${OPENAL_INCLUDE_DIR}/AL")
++endif()
++
+ if (MSVC AND PRECOMPILE_HEADERS_WITH_MSVC)
 @@ -234,7 +273,7 @@ if (UNIX AND NOT APPLE)
      target_link_libraries(openmw-lib ${CMAKE_THREAD_LIBS_INIT})
  endif()
