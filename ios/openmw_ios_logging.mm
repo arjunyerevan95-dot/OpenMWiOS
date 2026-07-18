@@ -21,7 +21,7 @@ extern "C" void openmw_ios_log(const char* milestone, const char* detail)
 {
     @autoreleasepool
     {
-        NSDictionary* record = ${
+        NSDictionary* record = @{
             @"timestamp" : [[NSDate date] description],
             @"milestone" : milestone ? [NSString stringWithUTF8String:milestone] : @"unknown",
             @"detail" : detail ? [NSString stringWithUTF8String:detail] : @""
