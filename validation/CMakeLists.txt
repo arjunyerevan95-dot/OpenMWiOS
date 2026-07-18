@@ -134,6 +134,27 @@ endif()
 if(NOT _workflow MATCHES "verify-link-map\\.py")
     message(FATAL_ERROR "Gate 4 must enforce exact linker-map archive participation")
 endif()
+string(FIND "${_workflow}"
+    "Gate 4 preflight - resolve static link participation manifest"
+    _participation_preflight)
+string(FIND "${_workflow}" "--schema link-participation" _participation_schema)
+string(FIND "${_workflow}"
+    "ios-link-participation-\${CONFIGURATION}.template.tsv"
+    _participation_template_diagnostic)
+string(FIND "${_workflow}"
+    "ios-link-participation-\${CONFIGURATION}.resolved.tsv"
+    _participation_resolved_manifest)
+string(FIND "${_workflow}"
+    "ios-link-participation-\${CONFIGURATION}.sha256"
+    _participation_hashes)
+if(_participation_preflight EQUAL -1 OR
+        _participation_schema EQUAL -1 OR
+        _participation_template_diagnostic EQUAL -1 OR
+        _participation_resolved_manifest EQUAL -1 OR
+        _participation_hashes EQUAL -1)
+    message(FATAL_ERROR
+        "Gate 4 must resolve and retain the concrete link participation manifest")
+endif()
 if(NOT _workflow MATCHES "required-osg-plugins-\\*\\.txt")
     message(FATAL_ERROR "Diagnostics must preserve every configuration-specific registrar inventory")
 endif()

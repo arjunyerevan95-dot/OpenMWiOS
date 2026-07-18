@@ -109,6 +109,47 @@ jobs:
           ./scripts/verify-no-deployment-warnings.sh \
             build/configure.log build/plugin-build.log
 
+      - name: Gate 4 preflight - resolve static link participation manifest
+        env:
+          EFFECTIVE_PLATFORM_NAME: -iphoneos
+        run: |
+          set -euo pipefail
+          TEMPLATE_MANIFEST="build/ios/generated/ios-link-participation-${CONFIGURATION}.tsv"
+          RESOLVED_MANIFEST="build/ios/generated/ios-link-participation-${CONFIGURATION}.resolved.tsv"
+          RESOLUTION_LOG="build/diagnostics/ios-link-participation-${CONFIGURATION}.resolution.log"
+          test -f "$TEMPLATE_MANIFEST"
+
+          set +e
+          python3 scripts/resolve-xcode-manifest.py \
+            --schema link-participation \
+            --input "$TEMPLATE_MANIFEST" \
+            --output "$RESOLVED_MANIFEST" \
+            --define "EFFECTIVE_PLATFORM_NAME=${EFFECTIVE_PLATFORM_NAME}" \
+            --require-existing-products \
+            2>&1 | tee "$RESOLUTION_LOG"
+          resolver_status=${PIPESTATUS[0]}
+          set -e
+          test "$resolver_status" -eq 0
+
+          if grep -F '${' "$RESOLVED_MANIFEST"; then
+            echo "unresolved brace-style placeholder" >&2
+            exit 1
+          fi
+          if grep -F '$(' "$RESOLVED_MANIFEST"; then
+            echo "unresolved parenthesis-style placeholder" >&2
+            exit 1
+          fi
+
+          template_rows="$(awk 'END { print NR - 1 }' "$TEMPLATE_MANIFEST")"
+          resolved_rows="$(awk 'END { print NR - 1 }' "$RESOLVED_MANIFEST")"
+          test "$template_rows" -eq "$resolved_rows"
+
+          cp "$TEMPLATE_MANIFEST" \
+            "build/diagnostics/ios-link-participation-${CONFIGURATION}.template.tsv"
+          cp "$RESOLVED_MANIFEST" build/diagnostics/
+          shasum -a 256 "$TEMPLATE_MANIFEST" "$RESOLVED_MANIFEST" \
+            > "build/diagnostics/ios-link-participation-${CONFIGURATION}.sha256"
+
       - name: Gate 4 - link complete iOS dependency smoke target
         if: ${{ !startsWith(github.head_ref, 'recovery/gate3-manifest-') }}
         run: |
@@ -119,7 +160,7 @@ jobs:
           test -n "$SMOKE_BINARY"
           SMOKE_MAP="$(find build/ios -type f -name 'openmw-ios-link-smoke.map' -print -quit)"
           test -n "$SMOKE_MAP"
-          PARTICIPATION_MANIFEST="build/ios/generated/ios-link-participation-${CONFIGURATION}.tsv"
+          PARTICIPATION_MANIFEST="build/ios/generated/ios-link-participation-${CONFIGURATION}.resolved.tsv"
           test -f "$PARTICIPATION_MANIFEST"
           cp "$SMOKE_MAP" build/diagnostics/openmw-ios-link-smoke.map
           cp "$PARTICIPATION_MANIFEST" build/diagnostics/

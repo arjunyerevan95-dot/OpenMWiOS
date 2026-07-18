@@ -9,7 +9,12 @@ import sys
 import tempfile
 
 
-EXPECTED_HEADER = ("kind", "origin", "name", "path")
+PRODUCT_HEADER = ("kind", "origin", "name", "path")
+LINK_PARTICIPATION_HEADER = ("name", "category", "archive")
+SCHEMA_HEADERS = {
+    "product": PRODUCT_HEADER,
+    "link-participation": LINK_PARTICIPATION_HEADER,
+}
 SUPPORTED_SETTING = "EFFECTIVE_PLATFORM_NAME"
 PLACEHOLDER = re.compile(r"\$\{([^{}]+)\}|\$\(([^()]+)\)")
 
@@ -66,11 +71,20 @@ def validate_product(kind: str, product_path: str) -> None:
         raise ResolutionError(f"unsupported manifest row kind: {kind}")
 
 
+def validate_archive(archive_path: str) -> None:
+    path = pathlib.Path(archive_path)
+    if path.suffix != ".a" or not path.is_file():
+        raise ResolutionError(
+            f"archive is not an existing regular .a file: {archive_path}"
+        )
+
+
 def resolve_manifest(
     input_path: pathlib.Path,
     output_path: pathlib.Path,
     definitions: dict[str, str],
     require_existing_products: bool,
+    schema: str = "product",
 ) -> tuple[str, str]:
     if input_path.resolve() == output_path.resolve():
         raise ResolutionError("input and output manifests must be separate files")
@@ -84,20 +98,26 @@ def resolve_manifest(
     lines = template_text.splitlines()
     if not lines:
         raise ResolutionError("template manifest is empty")
-    if tuple(lines[0].split("\t")) != EXPECTED_HEADER:
+    expected_header = SCHEMA_HEADERS[schema]
+    if tuple(lines[0].split("\t")) != expected_header:
         raise ResolutionError("template manifest has an unexpected header")
 
-    resolved_lines = ["\t".join(EXPECTED_HEADER)]
+    path_index = 3 if schema == "product" else 2
+    resolved_lines = ["\t".join(expected_header)]
     for line_number, line in enumerate(lines[1:], start=2):
         fields = line.split("\t")
-        if len(fields) != len(EXPECTED_HEADER):
+        if len(fields) != len(expected_header):
             raise ResolutionError(
-                f"template row {line_number} must contain exactly four columns"
+                f"template row {line_number} must contain exactly "
+                f"{len(expected_header)} columns"
             )
-        fields[3] = resolve_path(fields[3], definitions)
+        fields[path_index] = resolve_path(fields[path_index], definitions)
         reject_remaining_placeholders(fields)
         if require_existing_products:
-            validate_product(fields[0], fields[3])
+            if schema == "product":
+                validate_product(fields[0], fields[path_index])
+            else:
+                validate_archive(fields[path_index])
         resolved_lines.append("\t".join(fields))
 
     resolved_bytes = ("\n".join(resolved_lines) + "\n").encode("utf-8")
@@ -123,7 +143,13 @@ def resolve_manifest(
 
 def parse_arguments() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Resolve explicitly supplied Xcode settings in a product manifest."
+        description="Resolve explicitly supplied Xcode settings in a manifest."
+    )
+    parser.add_argument(
+        "--schema",
+        choices=tuple(SCHEMA_HEADERS),
+        default="product",
+        help="manifest schema (default: product)",
     )
     parser.add_argument("--input", required=True, type=pathlib.Path)
     parser.add_argument("--output", required=True, type=pathlib.Path)
@@ -141,6 +167,7 @@ def main() -> int:
             arguments.output,
             definitions,
             arguments.require_existing_products,
+            arguments.schema,
         )
     except (OSError, ResolutionError) as error:
         print(f"error: {error}", file=sys.stderr)
