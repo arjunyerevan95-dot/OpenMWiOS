@@ -172,7 +172,9 @@ jobs:
             build/diagnostics/openmw-ios-link-smoke.archive-participation.tsv
           ./scripts/verify-linked-product.sh "$SMOKE_BINARY" \
             build/diagnostics/openmw-ios-link-smoke.final-link-command.txt
-          ./scripts/dependency-inventory.py
+          ./scripts/dependency-inventory.py \
+            --manifest \
+            "build/ios/generated/ios-archive-products-${CONFIGURATION}.resolved.tsv"
           ./scripts/verify-no-deployment-warnings.sh \
             build/configure.log build/plugin-build.log build/link-smoke.log
 
