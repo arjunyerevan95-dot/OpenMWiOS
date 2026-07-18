@@ -21,7 +21,7 @@ scripts. It intentionally does not include Bethesda game data.
 
 - Apple Silicon or Intel Mac
 - Xcode with the iOS SDK and command-line tools
-- CMake 3.28+
+- The checksum-verified CMake and ShellCheck versions pinned in `versions.env`
 - Ninja
 - Git, Python 3, autoconf, automake, libtool, and pkg-config
 - An Apple development team for installation on a physical device
@@ -29,7 +29,10 @@ scripts. It intentionally does not include Bethesda game data.
 Homebrew example:
 
 ```sh
-brew install cmake ninja autoconf automake libtool pkg-config
+brew install ninja autoconf automake libtool pkg-config nasm yasm ruby
+./scripts/install-pinned-cmake.sh
+./scripts/install-pinned-shellcheck.sh
+export PATH="$PWD/build/tools/cmake-4.3.4/CMake.app/Contents/bin:$PWD/build/tools/shellcheck-0.11.0:$PATH"
 ```
 
 ## Bootstrap
@@ -94,6 +97,8 @@ and Simulators window or Finder file sharing when `UIFileSharingEnabled` is on.
 
 `vcpkg` cross-compiles the conventional libraries for `arm64-ios`. GL4ES is
 built independently because it supplies the OpenGL compatibility layer.
+LuaJIT is also built directly with its upstream iOS makefile path; this keeps
+the host-side code generator and JIT-disabled target library in sync.
 OpenMW builds its own pinned OpenSceneGraph, MyGUI, Bullet, Recast, and SQLite
 copies so that its upstream patches remain intact.
 
