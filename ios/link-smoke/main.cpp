@@ -17,8 +17,13 @@
 #include <ft2build.h>
 #include FT_FREETYPE_H
 #include <jpeglib.h>
+
+extern "C"
+{
 #include <lua.h>
 #include <lauxlib.h>
+}
+
 #include <lz4.h>
 #include <osg/Group>
 #include <osgAnimation/Animation>

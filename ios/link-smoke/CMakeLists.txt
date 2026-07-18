@@ -1,3 +1,8 @@
+find_package(fmt CONFIG REQUIRED)
+if(NOT TARGET fmt::fmt)
+    message(FATAL_ERROR "The iOS link smoke requires the fmt::fmt target")
+endif()
+
 add_executable(openmw-ios-link-smoke MACOSX_BUNDLE EXCLUDE_FROM_ALL main.cpp)
 target_include_directories(openmw-ios-link-smoke PRIVATE
     "${CMAKE_BINARY_DIR}/generated"
@@ -6,7 +11,9 @@ target_include_directories(openmw-ios-link-smoke PRIVATE
     "${MyGUI_INCLUDE_DIRS}"
     "${FFmpeg_INCLUDE_DIRS}"
     "${LUA_INCLUDE_DIR}")
-target_compile_definitions(openmw-ios-link-smoke PRIVATE OSG_LIBRARY_STATIC)
+target_compile_definitions(openmw-ios-link-smoke PRIVATE
+    OSG_LIBRARY_STATIC
+    BT_USE_DOUBLE_PRECISION)
 
 target_link_libraries(openmw-ios-link-smoke PRIVATE
     openmw_ios_platform
@@ -20,6 +27,7 @@ target_link_libraries(openmw-ios-link-smoke PRIVATE
     "${ICU_LIBRARIES}"
     "${FFmpeg_LIBRARIES}"
     "${OPENAL_LIBRARY}"
+    fmt::fmt
     "${MyGUI_LIBRARIES}"
     "${BULLET_LIBRARIES}"
     RecastNavigation::DebugUtils
@@ -73,7 +81,8 @@ set(_smoke_target_archive_specs
     "ICU-i18n|package|ICU::i18n"
     "ICU-data|package|ICU::data"
     "Boost-program-options|package|Boost::program_options"
-    "Boost-iostreams|package|Boost::iostreams")
+    "Boost-iostreams|package|Boost::iostreams"
+    "fmt|package|fmt::fmt")
 
 if(TARGET yaml-cpp::yaml-cpp)
     list(APPEND _smoke_target_archive_specs "yaml-cpp|package|yaml-cpp::yaml-cpp")
