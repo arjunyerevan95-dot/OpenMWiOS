@@ -208,14 +208,42 @@ index 17c4e96..c19cc43 100644
      # Workaround necessary to ensure osgAnimation::MatrixLinearSampler dynamic casts work under Clang
      # NOTE: it's unclear whether the broken behavior is spec-compliant
      if (CMAKE_CXX_COMPILER_ID STREQUAL Clang)
-@@ -194,1 +233,6 @@ target_link_libraries(openmw-lib
+@@ -171,15 +210,26 @@ include_directories(
++set(OPENMW_OPENAL_LINK_LIBRARIES ${OPENAL_LIBRARY})
++
++if(OPENMW_IOS)
++    find_package(fmt CONFIG REQUIRED)
++    if(NOT TARGET fmt::fmt)
++        message(FATAL_ERROR
++            "Required iOS fmt target is missing: fmt::fmt")
++    endif()
++    list(APPEND OPENMW_OPENAL_LINK_LIBRARIES fmt::fmt)
++endif()
++
+ target_link_libraries(openmw-lib
+     # CMake's built-in OSG finder does not use pkgconfig, so we have to
+     # manually ensure the order is correct for inter-library dependencies.
+     # This only makes a difference with `-DOPENMW_USE_SYSTEM_OSG=ON -DOSG_STATIC=ON`.
+     # https://gitlab.kitware.com/cmake/cmake/-/issues/21701
+     ${OSGPARTICLE_LIBRARIES}
+     ${OSGVIEWER_LIBRARIES}
+     ${OSGGA_LIBRARIES}
+     ${OSGSHADOW_LIBRARIES}
+     ${OSGDB_LIBRARIES}
+     ${OSGUTIL_LIBRARIES}
+     ${OSG_LIBRARIES}
+     Boost::program_options
+-    ${OPENAL_LIBRARY}
++    ${OPENMW_OPENAL_LINK_LIBRARIES}
+     ${FFmpeg_LIBRARIES}
+@@ -194,1 +244,6 @@ target_link_libraries(openmw-lib
 +if(OPENMW_IOS)
 +    target_include_directories(openmw-lib SYSTEM PRIVATE
 +        "${OPENAL_INCLUDE_DIR}/AL")
 +endif()
 +
  if (MSVC AND PRECOMPILE_HEADERS_WITH_MSVC)
-@@ -234,7 +273,7 @@ if (UNIX AND NOT APPLE)
+@@ -234,7 +284,7 @@ if (UNIX AND NOT APPLE)
      target_link_libraries(openmw-lib ${CMAKE_THREAD_LIBS_INIT})
  endif()
  
