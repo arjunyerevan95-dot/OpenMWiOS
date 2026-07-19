@@ -193,13 +193,13 @@ index 17c4e96..c19cc43 100644
 +                "${OpenMW_BINARY_DIR}/$<CONFIG>/resources"
 +                "$<TARGET_BUNDLE_DIR:openmw>/resources"
 +            COMMAND ${CMAKE_COMMAND} -E copy_if_different
-+                "${OpenMW_BINARY_DIR}/defaults.bin"
++                "${OpenMW_BINARY_DIR}/$<CONFIG>/defaults.bin"
 +                "$<TARGET_BUNDLE_DIR:openmw>/defaults.bin"
 +            COMMAND ${CMAKE_COMMAND} -E copy_if_different
-+                "${OpenMW_BINARY_DIR}/openmw.cfg"
++                "${OpenMW_BINARY_DIR}/$<CONFIG>/openmw.cfg"
 +                "$<TARGET_BUNDLE_DIR:openmw>/openmw.cfg"
 +            COMMAND ${CMAKE_COMMAND} -E copy_if_different
-+                "${OpenMW_BINARY_DIR}/gamecontrollerdb.txt"
++                "${OpenMW_BINARY_DIR}/$<CONFIG>/gamecontrollerdb.txt"
 +                "$<TARGET_BUNDLE_DIR:openmw>/gamecontrollerdb.txt"
 +            VERBATIM
 +        )
