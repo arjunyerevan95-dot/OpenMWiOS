@@ -99,7 +99,6 @@ jobs:
             > build/diagnostics/generated-targets.txt
 
       - name: Gate 3 - verify dependencies, deployment targets, and registrars
-        if: ${{ github.head_ref != 'delivery/openmw-ios' }}
         env:
           EFFECTIVE_PLATFORM_NAME: -iphoneos
         run: |
@@ -111,7 +110,6 @@ jobs:
             build/configure.log build/plugin-build.log
 
       - name: Gate 4 preflight - resolve static link participation manifest
-        if: ${{ github.head_ref != 'delivery/openmw-ios' }}
         env:
           EFFECTIVE_PLATFORM_NAME: -iphoneos
         run: |
@@ -153,7 +151,7 @@ jobs:
             > "build/diagnostics/ios-link-participation-${CONFIGURATION}.sha256"
 
       - name: Gate 4 - link complete iOS dependency smoke target
-        if: ${{ github.head_ref != 'delivery/openmw-ios' && !startsWith(github.head_ref, 'recovery/gate3-manifest-') && !startsWith(github.head_ref, 'recovery/gate4-participation-') }}
+        if: ${{ !startsWith(github.head_ref, 'recovery/gate3-manifest-') && !startsWith(github.head_ref, 'recovery/gate4-participation-') }}
         run: |
           set -o pipefail
           xcodebuild -project build/ios/OpenMW.xcodeproj -target openmw-ios-link-smoke -configuration "$CONFIGURATION" -sdk iphoneos -jobs 4 CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO 2>&1 | tee build/link-smoke.log
