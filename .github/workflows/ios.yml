@@ -222,6 +222,94 @@ jobs:
           compression-level: 0
           retention-days: 14
 
+      - name: Configure minimal iOS bundle probe
+        if: ${{ !cancelled() && !failure() && !startsWith(github.head_ref, 'recovery/gate3-manifest-') && !startsWith(github.head_ref, 'recovery/gate4-participation-') }}
+        run: |
+          set -uo pipefail
+          PROBE_DIAGNOSTICS="build/diagnostics/bundle-probe"
+          mkdir -p "$PROBE_DIAGNOSTICS"
+          rm -rf build/bundle-probe build/bundle-probe-artifacts
+
+          cat > "$PROBE_DIAGNOSTICS/cmake-configure-command.txt" <<'EOF'
+          cmake -S ios/bundle-probe -B build/bundle-probe -G Xcode -DCMAKE_SYSTEM_NAME=iOS -DCMAKE_OSX_SYSROOT=iphoneos -DCMAKE_OSX_ARCHITECTURES=arm64 -DCMAKE_OSX_DEPLOYMENT_TARGET=16.3 -DCMAKE_BUILD_TYPE=Release
+          EOF
+
+          {
+            xcodebuild -version
+            xcrun --sdk iphoneos --show-sdk-path
+            xcrun --sdk iphoneos --show-sdk-version
+          } > "$PROBE_DIAGNOSTICS/xcode-sdk.txt" 2>&1
+
+          set +e
+          cmake -S ios/bundle-probe -B build/bundle-probe -G Xcode \
+            -DCMAKE_SYSTEM_NAME=iOS \
+            -DCMAKE_OSX_SYSROOT=iphoneos \
+            -DCMAKE_OSX_ARCHITECTURES=arm64 \
+            -DCMAKE_OSX_DEPLOYMENT_TARGET=16.3 \
+            -DCMAKE_BUILD_TYPE=Release \
+            2>&1 | tee "$PROBE_DIAGNOSTICS/cmake-configure.log"
+          configure_status=${PIPESTATUS[0]}
+          set -e
+
+          printf '%s\n' "$configure_status" \
+            > "$PROBE_DIAGNOSTICS/cmake-configure.exit-status"
+          printf '%s\n' "build/bundle-probe/OpenMWBundleProbe.xcodeproj" \
+            > "$PROBE_DIAGNOSTICS/generated-xcode-project.txt"
+          test "$configure_status" -eq 0
+          test -d build/bundle-probe/OpenMWBundleProbe.xcodeproj
+
+      - name: Build minimal iOS bundle probe
+        if: ${{ !cancelled() && !failure() && !startsWith(github.head_ref, 'recovery/gate3-manifest-') && !startsWith(github.head_ref, 'recovery/gate4-participation-') }}
+        run: |
+          set -uo pipefail
+          PROBE_DIAGNOSTICS="build/diagnostics/bundle-probe"
+          mkdir -p "$PROBE_DIAGNOSTICS"
+
+          cat > "$PROBE_DIAGNOSTICS/xcodebuild-command.txt" <<'EOF'
+          xcodebuild -project build/bundle-probe/OpenMWBundleProbe.xcodeproj -target openmw_bundle_probe -configuration Release -sdk iphoneos -arch arm64 CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO
+          EOF
+
+          set +e
+          xcodebuild \
+            -project build/bundle-probe/OpenMWBundleProbe.xcodeproj \
+            -target openmw_bundle_probe \
+            -configuration Release \
+            -sdk iphoneos \
+            -arch arm64 \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            2>&1 | tee "$PROBE_DIAGNOSTICS/xcodebuild.log"
+          build_status=${PIPESTATUS[0]}
+          set -e
+
+          printf '%s\n' "$build_status" \
+            > "$PROBE_DIAGNOSTICS/xcodebuild.exit-status"
+          test "$build_status" -eq 0
+
+      - name: Verify and package minimal iOS bundle probe
+        if: ${{ !cancelled() && !failure() && !startsWith(github.head_ref, 'recovery/gate3-manifest-') && !startsWith(github.head_ref, 'recovery/gate4-participation-') }}
+        run: |
+          set -euo pipefail
+          find build/bundle-probe -type d -name '*.app' -prune -print \
+            | LC_ALL=C sort > build/diagnostics/bundle-probe/pre-package-app-paths.txt
+          test "$(wc -l < build/diagnostics/bundle-probe/pre-package-app-paths.txt | tr -d ' ')" -eq 1
+          APP_PATH="$(cat build/diagnostics/bundle-probe/pre-package-app-paths.txt)"
+          [[ "$APP_PATH" == */OpenMW.app ]]
+          ./scripts/package-bundle-probe.sh "$APP_PATH" \
+            2>&1 | tee build/diagnostics/bundle-probe/package.log
+
+      - name: Upload minimal iOS bundle probe
+        if: ${{ !cancelled() && !failure() && !startsWith(github.head_ref, 'recovery/gate3-manifest-') && !startsWith(github.head_ref, 'recovery/gate4-participation-') }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: OpenMW-iOS-bundle-probe-${{ github.run_number }}
+          path: |
+            build/bundle-probe-artifacts/OpenMW-iOS-bundle-probe-unsigned.ipa
+            build/bundle-probe-artifacts/OpenMW.app
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 14
+
       - name: Collect detailed diagnostics
         if: always()
         shell: bash
