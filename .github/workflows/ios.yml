@@ -310,6 +310,26 @@ jobs:
           compression-level: 0
           retention-days: 14
 
+      - name: Construct and package OpenMW executable transplant
+        if: ${{ !cancelled() && !failure() && !startsWith(github.head_ref, 'recovery/gate3-manifest-') && !startsWith(github.head_ref, 'recovery/gate4-participation-') }}
+        run: |
+          set -o pipefail
+          mkdir -p build/diagnostics/executable-transplant
+          ./scripts/package-executable-transplant.sh \
+            2>&1 | tee build/diagnostics/executable-transplant/workflow.log
+
+      - name: Upload OpenMW executable transplant
+        if: ${{ !cancelled() && !failure() && !startsWith(github.head_ref, 'recovery/gate3-manifest-') && !startsWith(github.head_ref, 'recovery/gate4-participation-') }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: OpenMW-iOS-executable-transplant-${{ github.run_number }}
+          path: |
+            build/executable-transplant-artifacts/OpenMW-iOS-executable-transplant-unsigned.ipa
+            build/executable-transplant-artifacts/OpenMW.app
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 14
+
       - name: Collect detailed diagnostics
         if: always()
         shell: bash
