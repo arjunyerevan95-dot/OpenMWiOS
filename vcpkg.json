@@ -1,0 +1,32 @@
+{
+  "$schema": "https://raw.githubusercontent.com/microsoft/vcpkg-tool/main/docs/vcpkg.schema.json",
+  "name": "openmw-ios-dependencies",
+  "version-string": "0.1.0",
+  "dependencies": [
+    "boost-geometry",
+    "boost-iostreams",
+    "boost-program-options",
+    {
+      "name": "ffmpeg",
+      "default-features": false,
+      "features": [
+        "avcodec",
+        "avformat",
+        "swresample",
+        "swscale"
+      ]
+    },
+    {
+      "name": "freetype",
+      "default-features": false
+    },
+    "icu",
+    "libjpeg-turbo",
+    "libpng",
+    "lz4",
+    "openal-soft",
+    "sdl2",
+    "yaml-cpp",
+    "zlib"
+  ]
+}

@@ -1,0 +1,652 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 3fc1b83..e91e581 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -8,6 +8,13 @@ endif()
+ 
+ project(OpenMW)
+ 
++option(OPENMW_IOS "Build the OpenMW game application for iOS" OFF)
++if(OPENMW_IOS)
++    set(IOS TRUE)
++    set(OPENMW_OSX_DEPLOYMENT OFF CACHE BOOL "" FORCE)
++    add_compile_definitions(OPENMW_IOS)
++endif()
++
+ set(CMAKE_CXX_STANDARD 20)
+ set(CMAKE_CXX_STANDARD_REQUIRED ON)
+ set(CMAKE_CXX_EXTENSIONS OFF)
+@@ -63,12 +70,12 @@ IF(NOT CMAKE_BUILD_TYPE)
+     set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS None Debug Release RelWithDebInfo MinSizeRel)
+ ENDIF()
+ 
+-if (APPLE)
++if (APPLE AND NOT OPENMW_IOS)
+     set(CMAKE_FIND_FRAMEWORK LAST) # prefer dylibs over frameworks
+     set(APP_BUNDLE_NAME "${CMAKE_PROJECT_NAME}.app")
+ 
+     set(APP_BUNDLE_DIR "${OpenMW_BINARY_DIR}/${APP_BUNDLE_NAME}")
+-endif (APPLE)
++endif ()
+ 
+ set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake/)
+ 
+@@ -231,7 +238,9 @@ if (MSVC)
+ endif()
+ 
+ # Set up common paths
+-if (APPLE)
++if (OPENMW_IOS)
++    set(OPENMW_RESOURCE_FILES "resources" CACHE PATH "location of OpenMW resources files" FORCE)
++elseif (APPLE)
+     set(OPENMW_RESOURCE_FILES "../Resources/resources" CACHE PATH "location of OpenMW resources files")
+ elseif(UNIX)
+     # Paths
+@@ -263,7 +272,7 @@ if(MSVC)
+ endif()
+ 
+ # Dependencies
+-if (APPLE)
++if (APPLE AND NOT OPENMW_IOS)
+     # Force CMake to use the installed version of OpenGL on macOS
+     set(_SAVE_CMAKE_FIND_FRAMEWORK ${CMAKE_FIND_FRAMEWORK})
+     set(CMAKE_FIND_FRAMEWORK ONLY)
+@@ -296,7 +305,6 @@ set(USED_OSG_COMPONENTS
+     )
+ set(USED_OSG_PLUGINS
+     osgdb_bmp
+-    osgdb_dae
+     osgdb_dds
+     osgdb_freetype
+     osgdb_jpeg
+@@ -304,6 +312,9 @@ set(USED_OSG_PLUGINS
+     osgdb_png
+     osgdb_serializers_osg
+     osgdb_tga)
++if(NOT OPENMW_IOS)
++    list(APPEND USED_OSG_PLUGINS osgdb_dae)
++endif()
+ 
+ if(NOT COLLADA_DOM_VERSION_MAJOR)
+     set(COLLADA_DOM_VERSION_MAJOR 2)
+@@ -331,6 +342,21 @@ if (OPENMW_USE_SYSTEM_YAML_CPP)
+     find_package(yaml-cpp REQUIRED)
+ endif()
+ 
++# Bundled OSG suppresses normal PNG/JPEG discovery on Apple. iOS statically
++# registers these plugins, so make their packages explicit before OSG is
++# configured and require modern targets with complete static-link metadata.
++if(OPENMW_IOS AND NOT OPENMW_USE_SYSTEM_OSG)
++    find_package(Freetype REQUIRED)
++    find_package(PNG REQUIRED)
++    find_package(JPEG REQUIRED)
++    find_package(ZLIB REQUIRED)
++    foreach(_required_package_target Freetype::Freetype PNG::PNG JPEG::JPEG ZLIB::ZLIB)
++        if(NOT TARGET ${_required_package_target})
++            message(FATAL_ERROR "Required iOS package target is missing: ${_required_package_target}")
++        endif()
++    endforeach()
++endif()
++
+ if ((BUILD_COMPONENTS_TESTS OR BUILD_OPENCS_TESTS OR BUILD_OPENMW_TESTS) AND OPENMW_USE_SYSTEM_GOOGLETEST)
+     find_package(GTest 1.10 REQUIRED)
+     find_package(GMock 1.10 REQUIRED)
+@@ -530,15 +556,15 @@ if(MYGUI_STATIC)
+     add_compile_definitions(MYGUI_STATIC)
+ endif (MYGUI_STATIC)
+ 
+-if (APPLE)
++if (APPLE AND NOT OPENMW_IOS)
+     configure_file(${OpenMW_SOURCE_DIR}/files/mac/openmw-Info.plist.in
+         "${APP_BUNDLE_DIR}/Contents/Info.plist")
+ 
+     configure_file(${OpenMW_SOURCE_DIR}/files/mac/openmw.icns
+         "${APP_BUNDLE_DIR}/Contents/Resources/OpenMW.icns" COPYONLY)
+-endif (APPLE)
++endif ()
+ 
+-if (NOT APPLE)  # this is modified for macOS use later in "apps/open[mw|cs]/CMakeLists.txt"
++if (NOT APPLE OR OPENMW_IOS)  # this is modified for macOS use later in "apps/open[mw|cs]/CMakeLists.txt"
+     set(OPENMW_RESOURCES_ROOT ${OpenMW_BINARY_DIR})
+ endif ()
+ 
+@@ -546,17 +572,17 @@ add_subdirectory(files/)
+ 
+ # Specify build paths
+ 
+-if (APPLE)
++if (APPLE AND NOT OPENMW_IOS)
+     set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${APP_BUNDLE_DIR}/Contents/MacOS")
+     set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${APP_BUNDLE_DIR}/Contents/MacOS")
+ 
+     if (OPENMW_OSX_DEPLOYMENT)
+         SET(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
+     endif()
+-else (APPLE)
++else ()
+     set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${OpenMW_BINARY_DIR}")
+     set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${OpenMW_BINARY_DIR}")
+-endif (APPLE)
++endif ()
+ 
+ # Other files
+ 
+@@ -566,7 +592,7 @@ pack_resource_file(${OpenMW_SOURCE_DIR}/files/settings-default.cfg
+ configure_resource_file(${OpenMW_SOURCE_DIR}/files/openmw.appdata.xml
+     "${OpenMW_BINARY_DIR}" "openmw.appdata.xml")
+ 
+-if (APPLE)
++if (APPLE AND NOT OPENMW_IOS)
+     configure_file(${OpenMW_SOURCE_DIR}/files/openmw.cfg
+         "${OpenMW_BINARY_DIR}/openmw.cfg")
+ elseif (WIN32)
+@@ -675,6 +701,10 @@ if (OPENMW_CXX_FLAGS)
+ endif()
+ 
+ # Components
++if(OPENMW_IOS)
++    add_subdirectory(ios)
++endif()
++
+ add_subdirectory (components)
+ 
+ # Apps and tools
+diff --git a/apps/openmw/CMakeLists.txt b/apps/openmw/CMakeLists.txt
+index 17c4e96..c19cc43 100644
+--- a/apps/openmw/CMakeLists.txt
++++ b/apps/openmw/CMakeLists.txt
+@@ -145,6 +145,13 @@ if(BUILD_OPENMW)
+             main.cpp
+             androidmain.cpp
+         )
++    elseif(OPENMW_IOS)
++        openmw_add_executable(openmw MACOSX_BUNDLE
++            main.cpp
++            ${CMAKE_SOURCE_DIR}/ios/openmw_ios_bootstrap.mm
++            ${CMAKE_SOURCE_DIR}/ios/openmw_ios_logging.mm
++            ${CMAKE_SOURCE_DIR}/ios/openmw_ios_paths.mm
++        )
+     else()
+         openmw_add_executable(openmw
+             ${APPLE_BUNDLE_RESOURCES}
+@@ -155,6 +162,38 @@ if(BUILD_OPENMW)
+ 
+     target_link_libraries(openmw openmw-lib)
+ 
++    if(OPENMW_IOS)
++        set_target_properties(openmw PROPERTIES
++            MACOSX_BUNDLE TRUE
++            MACOSX_BUNDLE_INFO_PLIST "${CMAKE_SOURCE_DIR}/ios/Info.plist.in"
++            XCODE_ATTRIBUTE_CODE_SIGNING_ALLOWED YES
++            XCODE_ATTRIBUTE_ENABLE_BITCODE NO
++            XCODE_ATTRIBUTE_IPHONEOS_DEPLOYMENT_TARGET "${CMAKE_OSX_DEPLOYMENT_TARGET}"
++        )
++        target_include_directories(openmw PRIVATE ${CMAKE_SOURCE_DIR}/ios)
++        target_link_libraries(openmw openmw_ios_platform)
++        target_link_options(openmw PRIVATE
++            "-Wl,-map,$<TARGET_FILE_DIR:openmw>/openmw-link.map")
++        if(TARGET SDL2::SDL2main)
++            target_link_libraries(openmw SDL2::SDL2main)
++        endif()
++        add_custom_command(TARGET openmw POST_BUILD
++            COMMAND ${CMAKE_COMMAND} -E copy_directory
++                "${OpenMW_BINARY_DIR}/$<CONFIG>/resources"
++                "$<TARGET_BUNDLE_DIR:openmw>/resources"
++            COMMAND ${CMAKE_COMMAND} -E copy_if_different
++                "${OpenMW_BINARY_DIR}/$<CONFIG>/defaults.bin"
++                "$<TARGET_BUNDLE_DIR:openmw>/defaults.bin"
++            COMMAND ${CMAKE_COMMAND} -E copy_if_different
++                "${OpenMW_BINARY_DIR}/$<CONFIG>/openmw.cfg"
++                "$<TARGET_BUNDLE_DIR:openmw>/openmw.cfg"
++            COMMAND ${CMAKE_COMMAND} -E copy_if_different
++                "${OpenMW_BINARY_DIR}/$<CONFIG>/gamecontrollerdb.txt"
++                "$<TARGET_BUNDLE_DIR:openmw>/gamecontrollerdb.txt"
++            VERBATIM
++        )
++    endif()
++
+     # Workaround necessary to ensure osgAnimation::MatrixLinearSampler dynamic casts work under Clang
+     # NOTE: it's unclear whether the broken behavior is spec-compliant
+     if (CMAKE_CXX_COMPILER_ID STREQUAL Clang)
+@@ -171,15 +210,26 @@ include_directories(
++set(OPENMW_OPENAL_LINK_LIBRARIES ${OPENAL_LIBRARY})
++
++if(OPENMW_IOS)
++    find_package(fmt CONFIG REQUIRED)
++    if(NOT TARGET fmt::fmt)
++        message(FATAL_ERROR
++            "Required iOS fmt target is missing: fmt::fmt")
++    endif()
++    list(APPEND OPENMW_OPENAL_LINK_LIBRARIES fmt::fmt)
++endif()
++
+ target_link_libraries(openmw-lib
+     # CMake's built-in OSG finder does not use pkgconfig, so we have to
+     # manually ensure the order is correct for inter-library dependencies.
+     # This only makes a difference with `-DOPENMW_USE_SYSTEM_OSG=ON -DOSG_STATIC=ON`.
+     # https://gitlab.kitware.com/cmake/cmake/-/issues/21701
+     ${OSGPARTICLE_LIBRARIES}
+     ${OSGVIEWER_LIBRARIES}
+     ${OSGGA_LIBRARIES}
+     ${OSGSHADOW_LIBRARIES}
+     ${OSGDB_LIBRARIES}
+     ${OSGUTIL_LIBRARIES}
+     ${OSG_LIBRARIES}
+     Boost::program_options
+-    ${OPENAL_LIBRARY}
++    ${OPENMW_OPENAL_LINK_LIBRARIES}
+     ${FFmpeg_LIBRARIES}
+@@ -194,1 +244,6 @@ target_link_libraries(openmw-lib
++if(OPENMW_IOS)
++    target_include_directories(openmw-lib SYSTEM PRIVATE
++        "${OPENAL_INCLUDE_DIR}/AL")
++endif()
++
+ if (MSVC AND PRECOMPILE_HEADERS_WITH_MSVC)
+@@ -234,7 +284,7 @@ if (UNIX AND NOT APPLE)
+     target_link_libraries(openmw-lib ${CMAKE_THREAD_LIBS_INIT})
+ endif()
+ 
+-if(APPLE AND BUILD_OPENMW)
++if(APPLE AND NOT OPENMW_IOS AND BUILD_OPENMW)
+     set(BUNDLE_RESOURCES_DIR "${APP_BUNDLE_DIR}/Contents/Resources")
+ 
+     set(OPENMW_RESOURCES_ROOT ${BUNDLE_RESOURCES_DIR})
+diff --git a/apps/openmw/engine.cpp b/apps/openmw/engine.cpp
+index 55b8a8f..7bbe69b 100644
+--- a/apps/openmw/engine.cpp
++++ b/apps/openmw/engine.cpp
+@@ -1,5 +1,9 @@
+ #include "engine.hpp"
+ 
++#ifdef OPENMW_IOS
++#include <ios/openmw_ios_logging.h>
++#endif
++
+ #include <cerrno>
+ #include <chrono>
+ #include <future>
+@@ -393,6 +397,9 @@ OMW::Engine::Engine(Files::ConfigurationManager& configurationManager)
+         {
+             throw std::runtime_error("Could not initialize SDL! " + std::string(SDL_GetError()));
+         }
++#ifdef OPENMW_IOS
++        openmw_ios_log("sdl_initialization", "SDL video, controller, joystick, and sensor subsystems initialized");
++#endif
+     }
+ }
+ 
+@@ -560,6 +567,9 @@ void OMW::Engine::createWindow()
+                     throw std::runtime_error(error.str());
+                 }
+             }
++#ifdef OPENMW_IOS
++            openmw_ios_log("window_creation", "SDL window created");
++#endif
+         }
+ 
+         // Since we use physical resolution internally, we have to create the window with scaled resolution,
+@@ -740,6 +750,9 @@ void OMW::Engine::prepareEngine()
+ 
+     mResourceSystem = std::make_unique<Resource::ResourceSystem>(
+         mVFS.get(), Settings::cells().mCacheExpiryDelay, &mEncoder.get()->getStatelessEncoder());
++#ifdef OPENMW_IOS
++    openmw_ios_log("resource_initialization", "OpenMW resource system created");
++#endif
+     mResourceSystem->getSceneManager()->getShaderManager().setMaxTextureUnits(mGlMaxTextureImageUnits);
+     mResourceSystem->getSceneManager()->setUnRefImageDataAfterApply(
+         false); // keep to Off for now to allow better state sharing
+@@ -959,6 +972,9 @@ void OMW::Engine::go()
+     mEnvironment.setFrameRateLimit(Settings::video().mFramerateLimit);
+ 
+     prepareEngine();
++#ifdef OPENMW_IOS
++    openmw_ios_log("renderer_initialization", "viewer, graphics context, and engine managers initialized");
++#endif
+ 
+ #ifdef _WIN32
+     const auto* statsFile = _wgetenv(L"OPENMW_OSG_STATS_FILE");
+@@ -1043,6 +1059,14 @@ void OMW::Engine::go()
+             std::this_thread::sleep_for(std::chrono::milliseconds(5));
+             continue;
+         }
++#ifdef OPENMW_IOS
++        static bool loggedFirstFrame = false;
++        if (!loggedFirstFrame)
++        {
++            openmw_ios_log("first_frame", "first complete engine frame");
++            loggedFirstFrame = true;
++        }
++#endif
+         timeManager.updateIsPaused();
+         if (!timeManager.isPaused())
+         {
+diff --git a/apps/openmw/main.cpp b/apps/openmw/main.cpp
+index 70e48e0..792e5cd 100644
+--- a/apps/openmw/main.cpp
++++ b/apps/openmw/main.cpp
+@@ -12,6 +12,10 @@
+ #include "engine.hpp"
+ #include "options.hpp"
+ 
++#ifdef OPENMW_IOS
++#include <ios/openmw_ios_logging.h>
++#endif
++
+ #include <boost/program_options/variables_map.hpp>
+ 
+ #if defined(_WIN32)
+@@ -234,13 +238,29 @@ int runApplication(int argc, char* argv[])
+     return 0;
+ }
+ 
+-#ifdef ANDROID
++#ifdef OPENMW_IOS
++extern "C" void openmw_ios_prepare_environment(void);
++extern "C" int openmw_ios_argc(void);
++extern "C" char** openmw_ios_argv(void);
++#endif
++
++#if defined(ANDROID) || defined(OPENMW_IOS)
+ extern "C" int SDL_main(int argc, char** argv)
+ #else
+ int main(int argc, char** argv)
+ #endif
+ {
+-    return Debug::wrapApplication(&runApplication, argc, argv, "OpenMW");
++#ifdef OPENMW_IOS
++    openmw_ios_log("sdl_application_entry", "SDL_main entered");
++    openmw_ios_prepare_environment();
++    argc = openmw_ios_argc();
++    argv = openmw_ios_argv();
++#endif
++    const int result = Debug::wrapApplication(&runApplication, argc, argv, "OpenMW");
++#ifdef OPENMW_IOS
++    openmw_ios_log(result == 0 ? "termination" : "fatal", result == 0 ? "clean exit" : "OpenMW returned an error");
++#endif
++    return result;
+ }
+ 
+ // Platform specific for Windows when there is no console built into the executable.
+diff --git a/cmake/WholeArchive.cmake b/cmake/WholeArchive.cmake
+index 0e4a09c..6f1f723 100644
+--- a/cmake/WholeArchive.cmake
++++ b/cmake/WholeArchive.cmake
+@@ -3,7 +3,15 @@ function (get_whole_archive_options OUT_VAR)
+     if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+         set(${OUT_VAR} -Wl,--whole-archive ${ARGN} -Wl,--no-whole-archive PARENT_SCOPE)
+     elseif (CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang")
+-        set(${OUT_VAR} -Wl,-all_load ${ARGN} -Wl,-noall_load PARENT_SCOPE)
++        # Apple's linker has no inverse for -all_load. Loading it before the
++        # plugin archives therefore affects every later static library, and
++        # -noall_load is rejected by current iOS linkers. Force-load each OSG
++        # plugin archive individually instead.
++        set(_whole_archive_options)
++        foreach(_archive IN LISTS ARGN)
++            list(APPEND _whole_archive_options "-Wl,-force_load,${_archive}")
++        endforeach()
++        set(${OUT_VAR} ${_whole_archive_options} PARENT_SCOPE)
+     else ()
+         message(FATAL_ERROR "get_whole_archive_options not implemented for CMAKE_CXX_COMPILER_ID ${CMAKE_CXX_COMPILER_ID}")
+     endif()
+diff --git a/components/CMakeLists.txt b/components/CMakeLists.txt
+index a2131b8..7cfc33b 100644
+--- a/components/CMakeLists.txt
++++ b/components/CMakeLists.txt
+@@ -1,9 +1,15 @@
+ project (Components)
+ 
+-if(APPLE)
++if(APPLE AND NOT OPENMW_IOS)
+     set(BUNDLE_RESOURCES_DIR "${APP_BUNDLE_DIR}/Contents/Resources")
+     set(OPENMW_RESOURCES_ROOT ${BUNDLE_RESOURCES_DIR})
+-endif(APPLE)
++endif()
++
++if(OPENMW_IOS)
++    foreach(cfgtype ${CMAKE_CONFIGURATION_TYPES})
++        file(MAKE_DIRECTORY "${OPENMW_RESOURCES_ROOT}/${cfgtype}/resources/lua_libs")
++    endforeach()
++endif()
+ 
+ # Version file
+ set (VERSION_RESOURCE_FILE_IN "${OpenMW_SOURCE_DIR}/files/version.in")
+@@ -399,7 +405,7 @@ if(WIN32)
+         windowscrashmonitor
+         windowscrashshm
+     )
+-elseif(NOT ANDROID)
++elseif(NOT ANDROID AND NOT OPENMW_IOS)
+     add_component_dir (crashcatcher
+         crashcatcher
+     )
+@@ -586,6 +592,10 @@ endif()
+ 
+ add_library(components STATIC ${COMPONENT_FILES})
+ 
++if(OPENMW_IOS)
++    target_include_directories(components PRIVATE "${CMAKE_BINARY_DIR}/generated")
++endif()
++
+ if (ANDROID)
+     set_property(TARGET components PROPERTY POSITION_INDEPENDENT_CODE ON)
+ endif()
+@@ -687,22 +697,29 @@ target_compile_definitions(components PUBLIC
+ )
+ 
+ if(OSG_STATIC)
+-    unset(_osg_plugins_static_files)
+-    add_library(components_osg_plugins INTERFACE)
+-    foreach(_plugin ${USED_OSG_PLUGINS})
+-        string(TOUPPER ${_plugin} _plugin_uc)
+-        if(OPENMW_USE_SYSTEM_OSG)
+-            list(APPEND _osg_plugins_static_files ${${_plugin_uc}_LIBRARY})
+-        else()
+-            list(APPEND _osg_plugins_static_files $<TARGET_FILE:${${_plugin_uc}_LIBRARY}>)
+-            target_link_libraries(components_osg_plugins INTERFACE $<TARGET_PROPERTY:${${_plugin_uc}_LIBRARY},LINK_LIBRARIES>)
+-            add_dependencies(components_osg_plugins ${${_plugin_uc}_LIBRARY})
+-        endif()
+-    endforeach()
+-    # We use --whole-archive because OSG plugins use registration.
+-    get_whole_archive_options(_opts ${_osg_plugins_static_files})
+-    target_link_options(components_osg_plugins INTERFACE ${_opts})
+-    target_link_libraries(components components_osg_plugins)
++    if(OPENMW_IOS AND NOT OPENMW_USE_SYSTEM_OSG)
++        target_link_libraries(components openmw_ios_osg_plugins)
++    else()
++        unset(_osg_plugins_static_files)
++        add_library(components_osg_plugins INTERFACE)
++        foreach(_plugin ${USED_OSG_PLUGINS})
++            string(TOUPPER ${_plugin} _plugin_uc)
++            if(NOT OPENMW_USE_SYSTEM_OSG AND NOT TARGET ${${_plugin_uc}_LIBRARY})
++                message(FATAL_ERROR "Required static OSG plugin target is missing: ${${_plugin_uc}_LIBRARY}")
++            endif()
++            if(OPENMW_USE_SYSTEM_OSG)
++                list(APPEND _osg_plugins_static_files ${${_plugin_uc}_LIBRARY})
++            else()
++                list(APPEND _osg_plugins_static_files $<TARGET_FILE:${${_plugin_uc}_LIBRARY}>)
++                target_link_libraries(components_osg_plugins INTERFACE
++                    $<TARGET_PROPERTY:${${_plugin_uc}_LIBRARY},LINK_LIBRARIES>)
++                add_dependencies(components_osg_plugins ${${_plugin_uc}_LIBRARY})
++            endif()
++        endforeach()
++        get_whole_archive_options(_opts ${_osg_plugins_static_files})
++        target_link_options(components_osg_plugins INTERFACE ${_opts})
++        target_link_libraries(components components_osg_plugins)
++    endif()
+ 
+     if(OPENMW_USE_SYSTEM_OSG)
+         # OSG plugin pkgconfig files are missing these dependencies.
+diff --git a/components/debug/debugging.cpp b/components/debug/debugging.cpp
+index ff0404f..6508a2a 100644
+--- a/components/debug/debugging.cpp
++++ b/components/debug/debugging.cpp
+@@ -16,7 +16,9 @@
+ #pragma warning(pop)
+ #endif
+ 
++#ifndef OPENMW_IOS
+ #include <components/crashcatcher/crashcatcher.hpp>
++#endif
+ #include <components/files/conversion.hpp>
+ #include <components/misc/strings/conversion.hpp>
+ #include <components/misc/strings/lower.hpp>
+@@ -456,6 +458,9 @@ namespace Debug
+         int ret = 0;
+         try
+         {
++#ifdef OPENMW_IOS
++            ret = innerApplication(argc, argv);
++#else
+             if (const auto env = std::getenv("OPENMW_DISABLE_CRASH_CATCHER");
+                 env == nullptr || Misc::StringUtils::toNumeric<int>(env, 0) == 0)
+             {
+@@ -479,6 +484,7 @@ namespace Debug
+             }
+             else
+                 ret = innerApplication(argc, argv);
++#endif
+         }
+         catch (const std::exception& e)
+         {
+diff --git a/components/files/macospath.cpp b/components/files/macospath.cpp
+index 0b27d38..e034726 100644
+--- a/components/files/macospath.cpp
++++ b/components/files/macospath.cpp
+@@ -97,7 +97,13 @@ namespace Files
+ 
+     std::filesystem::path MacOsPath::getLocalPath() const
+     {
++#ifdef OPENMW_IOS
++        // iOS application bundles use a flat layout. The executable and the
++        // bundled OpenMW configuration live directly inside the .app.
++        return getBinaryPath().parent_path();
++#else
+         return getBinaryPath().parent_path().parent_path() / "Resources";
++#endif
+     }
+ 
+     std::filesystem::path MacOsPath::getGlobalDataPath() const
+diff --git a/components/resource/imagemanager.cpp b/components/resource/imagemanager.cpp
+index 082b3a2..9dbb5a1 100644
+--- a/components/resource/imagemanager.cpp
++++ b/components/resource/imagemanager.cpp
+@@ -12,6 +12,9 @@
+ #include "objectcache.hpp"
+ 
+ #ifdef OSG_LIBRARY_STATIC
++#ifdef OPENMW_IOS
++#include <openmw_ios_osg_plugins.hpp>
++#else
+ // This list of plugins should match with the list in the top-level CMakelists.txt.
+ USE_OSGPLUGIN(png)
+ USE_OSGPLUGIN(tga)
+@@ -21,6 +24,7 @@ USE_OSGPLUGIN(bmp)
+ USE_OSGPLUGIN(osg)
+ USE_SERIALIZER_WRAPPER_LIBRARY(osg)
+ #endif
++#endif
+ 
+ namespace
+ {
+diff --git a/components/sdlutil/gl4esinit.cpp b/components/sdlutil/gl4esinit.cpp
+index 13015de..89e224b 100644
+--- a/components/sdlutil/gl4esinit.cpp
++++ b/components/sdlutil/gl4esinit.cpp
+@@ -3,6 +3,10 @@
+ #ifdef OPENMW_GL4ES_MANUAL_INIT
+ #include "gl4esinit.h"
+ 
++#ifdef OPENMW_IOS
++#include <ios/openmw_ios_logging.h>
++#endif
++
+ // For glHint
+ #include <GL/gl.h>
+ 
+@@ -25,6 +29,9 @@ extern "C"
+         set_getprocaddress(SDL_GL_GetProcAddress);
+         set_getmainfbsize(openmw_gl4es_GetMainFBSize);
+         initialize_gl4es();
++#ifdef OPENMW_IOS
++        openmw_ios_log("gl4es_initialization", "GL4ES initialized with SDL context ownership");
++#endif
+ 
+         // merge glBegin/glEnd in beams and console
+         glHint(GL_BEGINEND_HINT_GL4ES, 1);
+diff --git a/components/sdlutil/sdlgraphicswindow.cpp b/components/sdlutil/sdlgraphicswindow.cpp
+index 9ff0545..8d04f11 100644
+--- a/components/sdlutil/sdlgraphicswindow.cpp
++++ b/components/sdlutil/sdlgraphicswindow.cpp
+@@ -6,6 +6,10 @@
+ #include "gl4esinit.h"
+ #endif
+ 
++#ifdef OPENMW_IOS
++#include <ios/openmw_ios_logging.h>
++#endif
++
+ namespace SDLUtil
+ {
+ 
+@@ -131,6 +135,18 @@ namespace SDLUtil
+             return;
+         }
+ 
++#ifdef OPENMW_IOS
++        int actualMajor = 0;
++        int actualMinor = 0;
++        int actualProfile = 0;
++        SDL_GL_GetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, &actualMajor);
++        SDL_GL_GetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, &actualMinor);
++        SDL_GL_GetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, &actualProfile);
++        const std::string context = "major=" + std::to_string(actualMajor) + ";minor="
++            + std::to_string(actualMinor) + ";profile=" + std::to_string(actualProfile);
++        openmw_ios_log("actual_gl_context", context.c_str());
++#endif
++
+ #ifdef OPENMW_GL4ES_MANUAL_INIT
+         openmw_gl4es_init(mWindow);
+ #endif
+diff --git a/extern/CMakeLists.txt b/extern/CMakeLists.txt
+index 3dc1050..3daf343 100644
+--- a/extern/CMakeLists.txt
++++ b/extern/CMakeLists.txt
+@@ -136,6 +136,37 @@ if(NOT OPENMW_USE_SYSTEM_OSG)
+     )
+     FetchContent_MakeAvailable(osg)
+ 
++    # USED_OSG_PLUGINS is the canonical static registration list. A required
++    # registrar without a target is a configuration error, never an optional
++    # plugin to silently omit from the final executable.
++    foreach(_plugin IN LISTS USED_OSG_PLUGINS)
++        if(NOT TARGET ${_plugin})
++            message(FATAL_ERROR
++                "Required static OSG plugin target '${_plugin}' was not generated. "
++                "Check its package discovery and BUILD_OSG_PLUGIN_* prerequisites.")
++        endif()
++    endforeach()
++
++    if(OPENMW_IOS)
++        # OSG's plugin macros use the legacy plain target_link_libraries
++        # signature. Keep that signature here while using imported targets so
++        # their static dependency closures remain part of the link interface.
++        target_link_libraries(osgdb_png PNG::PNG ZLIB::ZLIB)
++        target_link_libraries(osgdb_jpeg JPEG::JPEG)
++        target_link_libraries(osgdb_freetype Freetype::Freetype)
++
++        add_library(openmw_ios_osg_plugins INTERFACE)
++        set(_openmw_ios_plugin_archives)
++        foreach(_plugin IN LISTS USED_OSG_PLUGINS)
++            add_dependencies(openmw_ios_osg_plugins ${_plugin})
++            list(APPEND _openmw_ios_plugin_archives "$<TARGET_FILE:${_plugin}>")
++            target_link_libraries(openmw_ios_osg_plugins INTERFACE
++                "$<TARGET_PROPERTY:${_plugin},LINK_LIBRARIES>")
++        endforeach()
++        get_whole_archive_options(_openmw_ios_plugin_options ${_openmw_ios_plugin_archives})
++        target_link_options(openmw_ios_osg_plugins INTERFACE ${_openmw_ios_plugin_options})
++    endif()
++
+     set(OPENSCENEGRAPH_INCLUDE_DIRS ${osg_SOURCE_DIR}/include ${osg_BINARY_DIR}/include PARENT_SCOPE)
+     set(OSG_LIBRARIES OpenThreads osg PARENT_SCOPE)
+     foreach(_name ${USED_OSG_COMPONENTS})
