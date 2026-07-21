@@ -330,6 +330,26 @@ jobs:
           compression-level: 0
           retention-days: 14
 
+      - name: Construct, validate, and package OpenMW production plist transplant
+        if: ${{ !cancelled() && !failure() && !startsWith(github.head_ref, 'recovery/gate3-manifest-') && !startsWith(github.head_ref, 'recovery/gate4-participation-') }}
+        run: |
+          set -o pipefail
+          mkdir -p build/diagnostics/production-plist-transplant
+          ./scripts/package-production-plist-transplant.sh \
+            2>&1 | tee build/diagnostics/production-plist-transplant/workflow.log
+
+      - name: Upload OpenMW production plist transplant
+        if: ${{ !cancelled() && !failure() && !startsWith(github.head_ref, 'recovery/gate3-manifest-') && !startsWith(github.head_ref, 'recovery/gate4-participation-') }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: OpenMW-iOS-production-plist-transplant-${{ github.run_number }}
+          path: |
+            build/production-plist-transplant-artifacts/OpenMW-iOS-production-plist-transplant-unsigned.ipa
+            build/production-plist-transplant-artifacts/OpenMW.app
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 14
+
       - name: Collect detailed diagnostics
         if: always()
         shell: bash
