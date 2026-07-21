@@ -350,6 +350,26 @@ jobs:
           compression-level: 0
           retention-days: 14
 
+      - name: Compare PkgInfo and construct, validate, and package OpenMW top-level files transplant
+        if: ${{ !cancelled() && !failure() && !startsWith(github.head_ref, 'recovery/gate3-manifest-') && !startsWith(github.head_ref, 'recovery/gate4-participation-') }}
+        run: |
+          set -o pipefail
+          mkdir -p build/diagnostics/top-level-files-transplant
+          ./scripts/package-top-level-files-transplant.sh \
+            2>&1 | tee build/diagnostics/top-level-files-transplant/workflow.log
+
+      - name: Upload OpenMW top-level files transplant
+        if: ${{ !cancelled() && !failure() && !startsWith(github.head_ref, 'recovery/gate3-manifest-') && !startsWith(github.head_ref, 'recovery/gate4-participation-') }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: OpenMW-iOS-top-level-files-transplant-${{ github.run_number }}
+          path: |
+            build/top-level-files-transplant-artifacts/OpenMW-iOS-top-level-files-transplant-unsigned.ipa
+            build/top-level-files-transplant-artifacts/OpenMW.app
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 14
+
       - name: Collect detailed diagnostics
         if: always()
         shell: bash
