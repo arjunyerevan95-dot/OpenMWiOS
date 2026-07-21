@@ -23,7 +23,12 @@ mode() { stat -f '%Lp' "$1"; }
 hash() { shasum -a 256 "$1" | awk '{print $1}'; }
 
 single_app() {
-    local root="$1" name="$2" label="$3" list="${diag}/${label}-candidates.txt" count
+    local root name label list count
+
+    root="$1"
+    name="$2"
+    label="$3"
+    list="${diag}/${label}-candidates.txt"
     find "${root}" -type d -name "${name}" -prune -print 2>/dev/null | LC_ALL=C sort > "${list}"
     count="$(wc -l < "${list}" | tr -d ' ')"
     [[ "${count}" == 1 ]] || fail "expected exactly one ${label}, found ${count}"
@@ -40,7 +45,11 @@ unsigned_app() {
 }
 
 inspect_macho() {
-    local exe="$1" label="$2" platform minos sdk otool_file="${diag}/${label}-otool.txt"
+    local exe label platform minos sdk otool_file
+
+    exe="$1"
+    label="$2"
+    otool_file="${diag}/${label}-otool.txt"
     file "${exe}" | tee "${diag}/${label}-file.txt"
     lipo -info "${exe}" | tee "${diag}/${label}-lipo.txt"
     otool -l "${exe}" > "${otool_file}"
