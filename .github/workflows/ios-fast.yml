@@ -121,6 +121,7 @@ jobs:
         run: |
           set -euo pipefail
           ./scripts/install-pinned-cmake.sh 2>&1 | tee build/diagnostics/install-cmake.log
+          ./scripts/install-pinned-shellcheck.sh 2>&1 | tee build/diagnostics/install-shellcheck.log
           brew install ninja autoconf automake libtool pkg-config nasm yasm ruby \
             2>&1 | tee build/diagnostics/install-tools.log
 
