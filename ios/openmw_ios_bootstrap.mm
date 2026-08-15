@@ -79,10 +79,10 @@ extern "C" void openmw_ios_prepare_environment(void)
         append("--user-data");
         append((library / "OpenMW").string());
         append("--resources");
-        append((bundle / "resources").string());
+        append((bundle / "openmw-resources").string());
 
         openmw_ios_log("config_path", (root / "openmw.cfg").c_str());
-        openmw_ios_log("resources_path", (bundle / "resources").c_str());
+        openmw_ios_log("resources_path", (bundle / "openmw-resources").c_str());
         const std::filesystem::path dataFile = root / "Morrowind" / "Data Files" / "Morrowind.esm";
         if (std::filesystem::exists(dataFile))
             openmw_ios_log("game_data_validation", "Morrowind.esm found");

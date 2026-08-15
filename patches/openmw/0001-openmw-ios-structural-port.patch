@@ -37,7 +37,7 @@ index 3fc1b83..e91e581 100644
  # Set up common paths
 -if (APPLE)
 +if (OPENMW_IOS)
-+    set(OPENMW_RESOURCE_FILES "resources" CACHE PATH "location of OpenMW resources files" FORCE)
++    set(OPENMW_RESOURCE_FILES "openmw-resources" CACHE PATH "location of OpenMW resources files" FORCE)
 +elseif (APPLE)
      set(OPENMW_RESOURCE_FILES "../Resources/resources" CACHE PATH "location of OpenMW resources files")
  elseif(UNIX)
@@ -191,7 +191,7 @@ index 17c4e96..c19cc43 100644
 +        add_custom_command(TARGET openmw POST_BUILD
 +            COMMAND ${CMAKE_COMMAND} -E copy_directory
 +                "${OpenMW_BINARY_DIR}/$<CONFIG>/resources"
-+                "$<TARGET_BUNDLE_DIR:openmw>/resources"
++                "$<TARGET_BUNDLE_DIR:openmw>/openmw-resources"
 +            COMMAND ${CMAKE_COMMAND} -E copy_if_different
 +                "${OpenMW_BINARY_DIR}/$<CONFIG>/defaults.bin"
 +                "$<TARGET_BUNDLE_DIR:openmw>/defaults.bin"
