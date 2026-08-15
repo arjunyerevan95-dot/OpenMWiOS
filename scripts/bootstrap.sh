@@ -27,8 +27,13 @@ clone_pinned "${LUAJIT_REPOSITORY}" "${LUAJIT_REVISION}" "${DEPS_DIR}/luajit"
 GL4ES_PATCH_MARKER="${DEPS_DIR}/gl4es/.openmw-ios-patched"
 GL4ES_PATCH_FINGERPRINT="$(patch_fingerprint "${GL4ES_REVISION}" "${ROOT_DIR}/patches/gl4es")"
 if [[ -f "${GL4ES_PATCH_MARKER}" && "$(<"${GL4ES_PATCH_MARKER}")" != "${GL4ES_PATCH_FINGERPRINT}" ]]; then
-    echo "error: GL4ES patch fingerprint changed; remove deps/gl4es and rerun bootstrap" >&2
-    exit 1
+    if [[ "${OPENMW_REFRESH_PATCHES:-0}" == "1" ]]; then
+        git -C "${DEPS_DIR}/gl4es" reset --hard "${GL4ES_REVISION}"
+        rm -f "${GL4ES_PATCH_MARKER}"
+    else
+        echo "error: GL4ES patch fingerprint changed; remove deps/gl4es and rerun bootstrap" >&2
+        exit 1
+    fi
 fi
 if [[ ! -f "${GL4ES_PATCH_MARKER}" ]]; then
     for patch_file in "${ROOT_DIR}"/patches/gl4es/*.patch; do
@@ -41,8 +46,13 @@ fi
 PATCH_MARKER="${DEPS_DIR}/openmw/.openmw-ios-patched"
 PATCH_FINGERPRINT="$(patch_fingerprint "${OPENMW_REVISION}" "${ROOT_DIR}/patches/openmw")"
 if [[ -f "${PATCH_MARKER}" && "$(<"${PATCH_MARKER}")" != "${PATCH_FINGERPRINT}" ]]; then
-    echo "error: OpenMW patch fingerprint changed; remove deps/openmw and rerun bootstrap" >&2
-    exit 1
+    if [[ "${OPENMW_REFRESH_PATCHES:-0}" == "1" ]]; then
+        git -C "${DEPS_DIR}/openmw" reset --hard "${OPENMW_REVISION}"
+        rm -f "${PATCH_MARKER}"
+    else
+        echo "error: OpenMW patch fingerprint changed; remove deps/openmw and rerun bootstrap" >&2
+        exit 1
+    fi
 fi
 if [[ ! -f "${PATCH_MARKER}" ]]; then
     for patch_file in "${ROOT_DIR}"/patches/openmw/*.patch; do

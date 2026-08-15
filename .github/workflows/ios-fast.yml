@@ -1,0 +1,255 @@
+name: iOS Fast Development
+
+on:
+  workflow_dispatch:
+    inputs:
+      benchmark_mode:
+        description: Controlled incremental rebuild benchmark
+        required: true
+        default: none
+        type: choice
+        options:
+          - none
+          - openmw
+          - gl4es
+          - ios-bridge
+  pull_request:
+    paths-ignore:
+      - "**.md"
+      - "docs/**"
+  push:
+    branches-ignore:
+      - delivery/openmw-ios
+    paths-ignore:
+      - "**.md"
+      - "docs/**"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: openmw-ios-fast-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  production-build:
+    name: Real OpenMW arm64 iPhone development build
+    runs-on: macos-15-intel
+    timeout-minutes: 120
+
+    env:
+      CONFIGURATION: Release
+      IOS_DEPLOYMENT_TARGET: "16.3"
+      VCPKG_TRIPLET: arm64-ios-openmw-release
+      PRODUCT_BUNDLE_IDENTIFIER: org.openmw.ios
+      OPENMW_REFRESH_PATCHES: "1"
+      OPENMW_FAST_REUSE_LUAJIT: "1"
+      CACHE_ABI: ios-fast-v3-xcode16.4-ios16.3-arm64-${{ hashFiles('versions.env', 'vcpkg.json', 'triplets/**', 'scripts/build-ios.sh', 'scripts/build-luajit-ios.sh', 'scripts/common.sh') }}
+      CACHE_SOURCE: ${{ hashFiles('patches/openmw/**', 'patches/gl4es/**', 'ios/**') }}
+
+    steps:
+      - name: Check out port repository
+        uses: actions/checkout@v4
+
+      - name: Initialize concise diagnostics
+        run: mkdir -p build/diagnostics
+
+      - name: Select pinned Xcode
+        run: |
+          set -euo pipefail
+          sudo xcode-select -s /Applications/Xcode_16.4.app/Contents/Developer
+          xcodebuild -version | tee build/diagnostics/xcode-environment.log
+          xcrun --sdk iphoneos --show-sdk-version | tee -a build/diagnostics/xcode-environment.log
+
+      - name: Restore source downloads
+        id: source-download-cache
+        uses: actions/cache/restore@v4
+        with:
+          path: deps/vcpkg-pinned/downloads
+          key: ios-source-downloads-v5-cmake-4.3.4-${{ hashFiles('versions.env', 'vcpkg.json') }}
+
+      - name: Restore vcpkg binary cache
+        id: vcpkg-binary-cache
+        uses: actions/cache/restore@v4
+        with:
+          path: .cache/vcpkg
+          key: vcpkg-ios-v3-xcode16.4-${{ hashFiles('versions.env', 'vcpkg.json', 'triplets/**') }}
+
+      - name: Restore qualified incremental build state
+        id: build-state-cache
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            deps/openmw
+            deps/gl4es
+            deps/ios-cmake
+            deps/vcpkg-pinned
+            !deps/vcpkg-pinned/downloads
+            deps/luajit
+            build/vcpkg_installed
+            build/gl4es-ios
+            build/luajit-ios
+            build/prefix
+            build/ios
+            build/ios-fast-cache-abi.txt
+          key: ios-fast-state-v3-${{ runner.os }}-${{ runner.arch }}-${{ env.CACHE_ABI }}-${{ env.CACHE_SOURCE }}
+          restore-keys: |
+            ios-fast-state-v3-${{ runner.os }}-${{ runner.arch }}-${{ env.CACHE_ABI }}-
+
+      - name: Validate restored cache identity
+        run: |
+          set -euo pipefail
+          if [[ -e build/ios-fast-cache-abi.txt ]]; then
+            if [[ "$(cat build/ios-fast-cache-abi.txt)" != "${CACHE_ABI}" ]]; then
+              echo "Restored build cache ABI fingerprint mismatch; rejecting cache." >&2
+              rm -rf build/vcpkg_installed build/gl4es-ios build/luajit-ios build/prefix build/ios
+            fi
+          elif [[ -d build/ios || -d build/prefix ]]; then
+            echo "Restored build state has no integrity marker; rejecting cache." >&2
+            rm -rf build/vcpkg_installed build/gl4es-ios build/luajit-ios build/prefix build/ios
+          fi
+
+      - name: Install pinned build tools
+        run: |
+          set -euo pipefail
+          ./scripts/install-pinned-cmake.sh 2>&1 | tee build/diagnostics/install-cmake.log
+          brew install ninja autoconf automake libtool pkg-config nasm yasm ruby \
+            2>&1 | tee build/diagnostics/install-tools.log
+
+      - name: Bootstrap exact sources and validate patches
+        run: |
+          set -euo pipefail
+          ./scripts/bootstrap.sh 2>&1 | tee build/bootstrap.log
+          ./scripts/validate-source.sh 2>&1 | tee build/diagnostics/source-validation.log
+
+      - name: Select controlled incremental benchmark
+        env:
+          BENCHMARK_MODE: ${{ inputs.benchmark_mode || 'none' }}
+        run: |
+          set -euo pipefail
+          case "${BENCHMARK_MODE}" in
+            none) ;;
+            openmw) touch deps/openmw/components/shader/shadermanager.cpp ;;
+            gl4es) touch deps/gl4es/src/gl/shader.c ;;
+            ios-bridge) touch deps/openmw/ios/openmw_ios_bootstrap.mm ;;
+            *) echo "Unknown benchmark mode: ${BENCHMARK_MODE}" >&2; exit 1 ;;
+          esac
+          printf '%s\n' "${BENCHMARK_MODE}" > build/diagnostics/benchmark-mode.txt
+
+      - name: Incremental configure and dependency preparation
+        env:
+          VCPKG_BINARY_SOURCES: clear;files,${{ github.workspace }}/.cache/vcpkg,readwrite
+        run: |
+          set -euo pipefail
+          started="$(date +%s)"
+          ./scripts/build-ios.sh 2>&1 | tee build/configure.log
+          finished="$(date +%s)"
+          printf 'configure_and_dependencies\t%s\n' "$((finished-started))" \
+            > build/diagnostics/fast-timings.tsv
+
+      - name: Compile and link real production OpenMW
+        run: |
+          set -euo pipefail
+          started="$(date +%s)"
+          xcodebuild -project build/ios/OpenMW.xcodeproj -target openmw \
+            -configuration "${CONFIGURATION}" -sdk iphoneos -jobs 4 \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO \
+            2>&1 | tee build/xcodebuild.log
+          finished="$(date +%s)"
+          printf 'production_compile_link\t%s\n' "$((finished-started))" \
+            >> build/diagnostics/fast-timings.tsv
+          ./scripts/extract-link-command.py build/xcodebuild.log \
+            build/diagnostics/openmw.final-link-command.txt \
+            --bundle-executable openmw
+
+      - name: Stage, validate, and package one production artifact
+        run: |
+          set -euo pipefail
+          rm -rf build/device build/artifacts
+          mkdir -p build/device
+          APP_PATH="$(find build/ios -type d -name 'openmw.app' -print -quit)"
+          test -n "${APP_PATH}"
+          cp -R "${APP_PATH}" build/device/
+          find build/device/openmw.app -maxdepth 1 -type f -name 'openmw-link.map' \
+            -exec cp {} build/diagnostics/ \; -exec rm {} \;
+          ./scripts/verify-bundle.sh build/device/openmw.app \
+            build/diagnostics/openmw.final-link-command.txt
+          ./scripts/package-unsigned.sh
+          unzip -t build/artifacts/OpenMW-iOS-unsigned.ipa \
+            > build/diagnostics/ipa-test.txt
+          unzip -Z1 build/artifacts/OpenMW-iOS-unsigned.ipa \
+            > build/diagnostics/ipa-paths.txt
+          grep -Fx 'Payload/OpenMW.app/openmw' build/diagnostics/ipa-paths.txt >/dev/null
+          ! grep -Fx 'Payload/OpenMW.app/openmw-link.map' build/diagnostics/ipa-paths.txt
+          find build/device/openmw.app -print | LC_ALL=C sort \
+            > build/diagnostics/app-manifest.txt
+          shasum -a 256 build/device/openmw.app/openmw \
+            build/artifacts/OpenMW-iOS-unsigned.ipa \
+            build/diagnostics/resource-relocation/staged-manifest.tsv \
+            > build/diagnostics/product-sha256.txt
+          printf '%s\n' "${CACHE_ABI}" > build/ios-fast-cache-abi.txt
+
+      - name: Upload one verified development product
+        uses: actions/upload-artifact@v4
+        with:
+          name: OpenMW-iOS-fast-${{ github.run_number }}
+          path: |
+            build/artifacts/OpenMW-iOS-unsigned.ipa
+            build/diagnostics/app-manifest.txt
+            build/diagnostics/product-sha256.txt
+            build/diagnostics/fast-timings.tsv
+            build/diagnostics/apple-bundle-validation/summary.json
+            build/diagnostics/resource-relocation/summary.json
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 7
+
+      - name: Upload targeted failure diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: OpenMW-iOS-fast-failure-${{ github.run_number }}
+          path: |
+            build/bootstrap.log
+            build/configure.log
+            build/xcodebuild.log
+            build/diagnostics
+            build/ios/CMakeFiles/CMakeConfigureLog.yaml
+          if-no-files-found: warn
+          retention-days: 7
+
+      - name: Save source downloads
+        if: always() && steps.source-download-cache.outputs.cache-hit != 'true' && hashFiles('deps/vcpkg-pinned/downloads/**') != ''
+        continue-on-error: true
+        uses: actions/cache/save@v4
+        with:
+          path: deps/vcpkg-pinned/downloads
+          key: ${{ steps.source-download-cache.outputs.cache-primary-key }}
+
+      - name: Save vcpkg binary cache
+        if: success() && steps.vcpkg-binary-cache.outputs.cache-hit != 'true'
+        continue-on-error: true
+        uses: actions/cache/save@v4
+        with:
+          path: .cache/vcpkg
+          key: ${{ steps.vcpkg-binary-cache.outputs.cache-primary-key }}
+
+      - name: Save qualified incremental build state
+        if: success() && steps.build-state-cache.outputs.cache-hit != 'true'
+        continue-on-error: true
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            deps/openmw
+            deps/gl4es
+            deps/ios-cmake
+            deps/vcpkg-pinned
+            !deps/vcpkg-pinned/downloads
+            deps/luajit
+            build/vcpkg_installed
+            build/gl4es-ios
+            build/luajit-ios
+            build/prefix
+            build/ios
+            build/ios-fast-cache-abi.txt
+          key: ${{ steps.build-state-cache.outputs.cache-primary-key }}

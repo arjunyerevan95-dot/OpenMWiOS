@@ -14,8 +14,20 @@ PREFIX="${BUILD_DIR}/prefix/${VCPKG_TRIPLET}"
 SOURCE_COPY="${BUILD_DIR}/luajit-ios"
 OUTPUT_LIBRARY="${PREFIX}/lib/libluajit-5.1.a"
 
-# A restored archive is not build identity. Rebuild whenever this step runs so
-# the SDK, deployment target, compiler, flags, and pinned revision are truthful.
+if [[ "${OPENMW_FAST_REUSE_LUAJIT:-0}" == "1" \
+    && -f "${OUTPUT_LIBRARY}" \
+    && -f "${PREFIX}/include/luajit-2.1/luajit.h" ]]; then
+    LUAJIT_ARCHS="$(xcrun lipo -archs "${OUTPUT_LIBRARY}" 2>/dev/null || true)"
+    if [[ "${LUAJIT_ARCHS}" == "arm64" ]]; then
+        echo "Reusing qualified cached LuaJIT iOS archive: ${OUTPUT_LIBRARY}"
+        exit 0
+    fi
+    echo "Cached LuaJIT archive failed arm64 validation; rebuilding." >&2
+fi
+
+# The full qualification path reaches here without OPENMW_FAST_REUSE_LUAJIT
+# and therefore always rebuilds. The fast path only returns above after its
+# cache key and this archive-level architecture check have both succeeded.
 rm -rf "${SOURCE_COPY}"
 mkdir -p "${SOURCE_COPY}" "${PREFIX}/lib" "${PREFIX}/include/luajit-2.1"
 cp -R "${DEPS_DIR}/luajit/." "${SOURCE_COPY}/"
