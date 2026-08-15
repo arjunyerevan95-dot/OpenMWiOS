@@ -54,5 +54,20 @@ for required in defaults.bin openmw.cfg gamecontrollerdb.txt openmw-resources op
     fi
 done
 
+if (( validation_status == 0 )); then
+    resource_source="${BUILD_DIR}/ios/${CONFIGURATION:-Release}/resources"
+    if ! python3 "${ROOT_DIR}/scripts/verify-resource-relocation.py" \
+            --source "${resource_source}" \
+            --staged "${APP_PATH}/openmw-resources" \
+            --output-dir "${BUILD_DIR}/diagnostics/resource-relocation"; then
+        validation_status=1
+    fi
+    if ! "${ROOT_DIR}/scripts/validate-apple-bundle.sh" "${APP_PATH}" \
+            "${BUILD_DIR}/diagnostics/apple-bundle-validation" \
+            "${PRODUCT_BUNDLE_IDENTIFIER:-org.openmw.ios}"; then
+        validation_status=1
+    fi
+fi
+
 (( validation_status == 0 )) || exit "${validation_status}"
 echo "App bundle resources, plist, identifier, executable, architecture, and linkage passed."

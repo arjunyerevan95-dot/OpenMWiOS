@@ -207,9 +207,9 @@ if(NOT _ios_bootstrap MATCHES "bundle / \"openmw-resources\"")
     message(FATAL_ERROR "The iOS bootstrap must pass the relocated resource root to OpenMW")
 endif()
 
-string(FIND "${_workflow}" "verify-resource-relocation.py" _resource_manifest_gate)
-string(FIND "${_workflow}" "validate-apple-bundle.sh" _apple_bundle_gate)
+string(FIND "${_verify_bundle}" "verify-resource-relocation.py" _resource_manifest_gate)
+string(FIND "${_verify_bundle}" "validate-apple-bundle.sh" _apple_bundle_gate)
 if(_resource_manifest_gate EQUAL -1 OR _apple_bundle_gate EQUAL -1)
     message(FATAL_ERROR
-        "Gate 6 must validate resource preservation and Apple-native bundle identity")
+        "Bundle verification must validate resource preservation and Apple-native bundle identity")
 endif()
