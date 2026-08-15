@@ -194,7 +194,7 @@ jobs:
             > build/diagnostics/app-manifest.txt
           shasum -a 256 build/device/openmw.app/openmw \
             build/artifacts/OpenMW-iOS-unsigned.ipa \
-            build/diagnostics/resource-relocation/staged-manifest.tsv \
+            build/diagnostics/resource-relocation/staged-openmw-resources.tsv \
             > build/diagnostics/product-sha256.txt
           printf '%s\n' "${CACHE_ABI}" > build/ios-fast-cache-abi.txt
 
@@ -208,7 +208,7 @@ jobs:
             build/diagnostics/product-sha256.txt
             build/diagnostics/fast-timings.tsv
             build/diagnostics/apple-bundle-validation/summary.json
-            build/diagnostics/resource-relocation/summary.json
+            build/diagnostics/resource-relocation/resource-relocation-summary.json
           if-no-files-found: error
           compression-level: 0
           retention-days: 7
