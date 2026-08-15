@@ -1,15 +1,10 @@
-name: Build iOS
+name: iOS Full Qualification
 
 on:
   workflow_dispatch:
-  pull_request:
-    branches:
-      - main
   push:
-    branches:
-      - main
-    paths-ignore:
-      - "**.md"
+    tags:
+      - "ios-qualification-*"
 
 permissions:
   contents: read
@@ -20,7 +15,7 @@ concurrency:
 
 jobs:
   device-build:
-    name: Clean gated arm64 iPhone build
+    name: Clean fully qualified arm64 iPhone build
     runs-on: macos-15-intel
     timeout-minutes: 180
 
@@ -194,6 +189,7 @@ jobs:
           test -n "$APP_PATH"
           cp -R "$APP_PATH" build/device/
           find build/ios -name 'openmw-link.map' -exec cp {} build/diagnostics/ \;
+          find build/device/openmw.app -maxdepth 1 -type f -name 'openmw-link.map' -delete
 
       - name: Gate 6 - verify bundle and package unsigned IPA
         if: ${{ !cancelled() && !failure() && !startsWith(github.head_ref, 'recovery/gate3-manifest-') && !startsWith(github.head_ref, 'recovery/gate4-participation-') }}
@@ -351,7 +347,10 @@ jobs:
           retention-days: 14
 
       - name: Compare PkgInfo and construct, validate, and package OpenMW top-level files transplant
-        if: ${{ !cancelled() && !failure() && !startsWith(github.head_ref, 'recovery/gate3-manifest-') && !startsWith(github.head_ref, 'recovery/gate4-participation-') }}
+        # Retained as a historical forensic tool, but the Work Order 12
+        # openmw-resources layout intentionally invalidates its old four-file
+        # premise. It is not part of current full qualification.
+        if: ${{ false }}
         run: |
           set -o pipefail
           mkdir -p build/diagnostics/top-level-files-transplant
@@ -359,7 +358,7 @@ jobs:
             2>&1 | tee build/diagnostics/top-level-files-transplant/workflow.log
 
       - name: Upload OpenMW top-level files transplant
-        if: ${{ !cancelled() && !failure() && !startsWith(github.head_ref, 'recovery/gate3-manifest-') && !startsWith(github.head_ref, 'recovery/gate4-participation-') }}
+        if: ${{ false }}
         uses: actions/upload-artifact@v4
         with:
           name: OpenMW-iOS-top-level-files-transplant-${{ github.run_number }}
