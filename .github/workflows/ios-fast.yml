@@ -44,12 +44,20 @@ jobs:
       PRODUCT_BUNDLE_IDENTIFIER: org.openmw.ios
       OPENMW_REFRESH_PATCHES: "1"
       OPENMW_FAST_REUSE_LUAJIT: "1"
-      CACHE_ABI: ios-fast-v3-xcode16.4-ios16.3-arm64-${{ hashFiles('versions.env', 'vcpkg.json', 'triplets/**', 'scripts/build-ios.sh', 'scripts/build-luajit-ios.sh', 'scripts/common.sh', 'ios/patches/**') }}
-      CACHE_SOURCE: ${{ hashFiles('patches/openmw/**', 'patches/gl4es/**', 'ios/**') }}
 
     steps:
       - name: Check out port repository
         uses: actions/checkout@v4
+
+      - name: Compute cache input fingerprints
+        env:
+          CACHE_ABI_HASH: ${{ hashFiles('versions.env', 'vcpkg.json', 'triplets/**', 'scripts/build-ios.sh', 'scripts/build-luajit-ios.sh', 'scripts/common.sh', 'ios/patches/**') }}
+          CACHE_SOURCE_HASH: ${{ hashFiles('patches/openmw/**', 'patches/gl4es/**', 'ios/**') }}
+        run: |
+          set -euo pipefail
+          printf 'CACHE_ABI=ios-fast-v3-xcode16.4-ios16.3-arm64-%s\n' \
+            "${CACHE_ABI_HASH}" >> "${GITHUB_ENV}"
+          printf 'CACHE_SOURCE=%s\n' "${CACHE_SOURCE_HASH}" >> "${GITHUB_ENV}"
 
       - name: Initialize concise diagnostics
         run: mkdir -p build/diagnostics
