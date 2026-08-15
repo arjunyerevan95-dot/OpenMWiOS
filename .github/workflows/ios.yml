@@ -203,6 +203,13 @@ jobs:
             build/configure.log build/plugin-build.log build/link-smoke.log build/xcodebuild.log
           ./scripts/verify-bundle.sh build/device/openmw.app \
             build/diagnostics/openmw.final-link-command.txt
+          python3 scripts/verify-resource-relocation.py \
+            --source "build/ios/${CONFIGURATION}/resources" \
+            --staged build/device/openmw.app/openmw-resources \
+            --output-dir build/diagnostics/resource-relocation
+          ./scripts/validate-apple-bundle.sh build/device/openmw.app \
+            build/diagnostics/apple-bundle-validation \
+            "$PRODUCT_BUNDLE_IDENTIFIER"
           ./scripts/package-unsigned.sh
           unzip -l build/artifacts/OpenMW-iOS-unsigned.ipa \
             > build/diagnostics/ipa-contents.txt

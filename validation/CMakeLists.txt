@@ -16,10 +16,13 @@ set(_required_files
     scripts/install-pinned-shellcheck.sh
     scripts/resolve-xcode-manifest.py
     scripts/validate-ios-dependencies.sh
+    scripts/validate-apple-bundle.sh
+    scripts/verify-resource-relocation.py
     scripts/verify-link-map.py
     scripts/verify-linked-product.sh
     scripts/verify-no-deployment-warnings.sh
-    scripts/verify-bundle.sh)
+    scripts/verify-bundle.sh
+    validation/BundleProbe.swift)
 foreach(_file IN LISTS _required_files)
     if(NOT EXISTS "${PORT_ROOT}/${_file}")
         message(FATAL_ERROR "Required port file is missing: ${_file}")
@@ -181,4 +184,32 @@ file(READ "${PORT_ROOT}/scripts/verify-bundle.sh" _verify_bundle)
 if(NOT _verify_bundle MATCHES "verify-linked-product\\.sh" OR
         NOT _verify_bundle MATCHES "LINKER_COMMAND_FILE")
     message(FATAL_ERROR "Bundle verification must pass the final linker command to product verification")
+endif()
+
+if(NOT _verify_bundle MATCHES "openmw-resources" OR
+        NOT _verify_bundle MATCHES "collides case-insensitively")
+    message(FATAL_ERROR
+        "Bundle verification must require the relocated resources and reject the Apple Resources collision")
+endif()
+
+file(READ "${PORT_ROOT}/patches/openmw/0001-openmw-ios-structural-port.patch" _openmw_ios_patch)
+string(FIND "${_openmw_ios_patch}"
+    "OPENMW_RESOURCE_FILES \"openmw-resources\"" _configured_resource_root)
+string(FIND "${_openmw_ios_patch}"
+    "$<TARGET_BUNDLE_DIR:openmw>/openmw-resources" _staged_resource_root)
+if(_configured_resource_root EQUAL -1 OR _staged_resource_root EQUAL -1)
+    message(FATAL_ERROR
+        "The iOS patch must configure and stage the non-conflicting openmw-resources root")
+endif()
+
+file(READ "${PORT_ROOT}/ios/openmw_ios_bootstrap.mm" _ios_bootstrap)
+if(NOT _ios_bootstrap MATCHES "bundle / \"openmw-resources\"")
+    message(FATAL_ERROR "The iOS bootstrap must pass the relocated resource root to OpenMW")
+endif()
+
+string(FIND "${_workflow}" "verify-resource-relocation.py" _resource_manifest_gate)
+string(FIND "${_workflow}" "validate-apple-bundle.sh" _apple_bundle_gate)
+if(_resource_manifest_gate EQUAL -1 OR _apple_bundle_gate EQUAL -1)
+    message(FATAL_ERROR
+        "Gate 6 must validate resource preservation and Apple-native bundle identity")
 endif()

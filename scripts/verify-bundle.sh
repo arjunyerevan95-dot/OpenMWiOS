@@ -11,6 +11,15 @@ INFO_PLIST="${APP_PATH}/Info.plist"
 validation_status=0
 EXECUTABLE_NAME=""
 
+while IFS= read -r -d '' top_level_entry; do
+    top_level_name="$(basename "${top_level_entry}")"
+    folded_name="$(printf '%s' "${top_level_name}" | LC_ALL=C tr '[:upper:]' '[:lower:]')"
+    if [[ "${folded_name}" == "resources" ]]; then
+        echo "ERROR: top-level \"resources\" collides case-insensitively with Apple's reserved/conventional \"Resources\" bundle directory" >&2
+        validation_status=1
+    fi
+done < <(find "${APP_PATH}" -mindepth 1 -maxdepth 1 -print0)
+
 if [[ ! -f "${INFO_PLIST}" ]]; then
     echo "error: app bundle is missing Info.plist" >&2
     validation_status=1
@@ -38,7 +47,7 @@ if [[ -n "${EXECUTABLE_NAME}" ]]; then
     fi
 fi
 
-for required in defaults.bin openmw.cfg gamecontrollerdb.txt resources resources/version resources/lua_libs; do
+for required in defaults.bin openmw.cfg gamecontrollerdb.txt openmw-resources openmw-resources/version openmw-resources/lua_libs; do
     if [[ ! -e "${APP_PATH}/${required}" ]]; then
         echo "error: app bundle is missing ${required}" >&2
         validation_status=1
