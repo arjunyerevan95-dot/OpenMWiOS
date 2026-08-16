@@ -1,0 +1,18 @@
+diff --git a/extern/CMakeLists.txt b/extern/CMakeLists.txt
+index 1f9d76980..339548146 100644
+--- a/extern/CMakeLists.txt
++++ b/extern/CMakeLists.txt
+@@ -130,1 +130,11 @@ if(NOT OPENMW_USE_SYSTEM_OSG)
+     # OSGoS branch 3.6
++    set(_openmw_osg_patch_args)
++    if(OPENMW_IOS)
++        set(_openmw_osg_patch_args
++            PATCH_COMMAND "${CMAKE_COMMAND}"
++                -DOSG_SOURCE_DIR=<SOURCE_DIR>
++                -DOSG_PATCH_FILE=${CMAKE_SOURCE_DIR}/ios/patches/osg-route-gl-entry-points-through-gl4es.patch
++                -P ${CMAKE_SOURCE_DIR}/ios/cmake/apply-osg-patch.cmake)
++    endif()
++
+@@ -135,1 +145,2 @@ if(NOT OPENMW_USE_SYSTEM_OSG)
+         SOURCE_DIR fetched/osg
++        ${_openmw_osg_patch_args}

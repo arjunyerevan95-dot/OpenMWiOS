@@ -1,0 +1,15 @@
+diff --git a/src/osg/GLExtensions.cpp b/src/osg/GLExtensions.cpp
+index c47925740..622212d5d 100644
+--- a/src/osg/GLExtensions.cpp
++++ b/src/osg/GLExtensions.cpp
+@@ -57,1 +57,5 @@
+ #endif
++#if defined(__APPLE__) && defined(OPENMW_GL4ES_MANUAL_INIT)
++extern "C" void* gl4es_GetProcAddress(const char* name);
++#endif
++
+@@ -358,1 +362,3 @@ void* osg::getGLExtensionFuncPtr(const char *funcName)
+-        #if defined(USE_APPLE_LEGACY_NSSYMBOL)
++        #if defined(OPENMW_GL4ES_MANUAL_INIT)
++            return gl4es_GetProcAddress(funcName);
++        #elif defined(USE_APPLE_LEGACY_NSSYMBOL)
