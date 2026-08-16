@@ -1,0 +1,38 @@
+diff --git a/src/gl/shaderconv.c b/src/gl/shaderconv.c
+index 064ed2d..49979d8 100644
+--- a/src/gl/shaderconv.c
++++ b/src/gl/shaderconv.c
+@@ -1128,7 +1128,7 @@ char* ConvertShader(const char* pEntry, int isVertex, shaderconv_need_t *need)
+   } else if(isVertex && need && need->need_clipvertex) {
+     Tmp = gl4es_inplace_insert(gl4es_getline(Tmp, 2), gl4es_ClipVertex, Tmp, &tmpsize);
+     headline+=gl4es_countline(gl4es_ClipVertex);
+-    char *p = strchr(gl4es_find_string_nc(Tmp, "main"), '{'); // find the openning curly bracket of main
++    char *p = gl4es_find_string_opening_brace(Tmp, "main"); // find the opening curly bracket of main
+     if(p) {
+       // add regular clipping at start of main
+       Tmp = gl4es_inplace_insert(p+1, gl4es_ClipVertex_clip, Tmp, &tmpsize);
+diff --git a/src/gl/string_utils.c b/src/gl/string_utils.c
+index fb04824..49c996d 100644
+--- a/src/gl/string_utils.c
++++ b/src/gl/string_utils.c
+@@ -126,3 +126,8 @@ char* gl4es_find_string_nc(char* pBuffer, const char* S)
+ }
+-
++char* gl4es_find_string_opening_brace(char* pBuffer, const char* S)
++{
++    char* p = gl4es_find_string_nc(pBuffer, S);
++    return p ? strchr(p, '{') : NULL;
++}
++
+ char* gl4es_resize_if_needed(char* pBuffer, int *size, int addsize) {
+diff --git a/src/gl/string_utils.h b/src/gl/string_utils.h
+index ed01890..2a82b0b 100644
+--- a/src/gl/string_utils.h
++++ b/src/gl/string_utils.h
+@@ -6,5 +6,6 @@ extern const char* AllSeparators;
+ const char* gl4es_find_string(const char* pBuffer, const char* S);
+ char* gl4es_find_string_nc(char* pBuffer, const char* S);
++char* gl4es_find_string_opening_brace(char* pBuffer, const char* S);
+ int gl4es_count_string(const char* pBuffer, const char* S);
+ char* gl4es_resize_if_needed(char* pBuffer, int *size, int addsize);
+ char* gl4es_inplace_replace(char* pBuffer, int* size, const char* S, const char* D);
