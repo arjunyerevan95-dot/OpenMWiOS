@@ -3,11 +3,6 @@ name: iOS Fast Development
 on:
   workflow_dispatch:
     inputs:
-      source_sha:
-        description: Exact development commit to build from the canonical main-branch cache scope
-        required: false
-        default: ""
-        type: string
       benchmark_mode:
         description: Controlled incremental rebuild benchmark
         required: true
@@ -30,33 +25,12 @@ on:
       - "docs/**"
 
 concurrency:
-  group: openmw-ios-fast-${{ inputs.source_sha || github.ref }}
+  group: openmw-ios-fast-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  dispatch-canonical-build:
-    name: Dispatch canonical-scope Fast build
-    if: github.event_name == 'push' && github.ref != 'refs/heads/main'
-    runs-on: ubuntu-latest
-    permissions:
-      actions: write
-      contents: read
-    steps:
-      - name: Dispatch exact commit on the default branch
-        env:
-          GH_TOKEN: ${{ github.token }}
-          SOURCE_SHA: ${{ github.sha }}
-        run: |
-          set -euo pipefail
-          gh api --method POST \
-            "repos/${GITHUB_REPOSITORY}/actions/workflows/ios-fast.yml/dispatches" \
-            -f ref=main \
-            -f "inputs[source_sha]=${SOURCE_SHA}" \
-            -f 'inputs[benchmark_mode]=none'
-
   production-build:
     name: Real OpenMW arm64 iPhone development build
-    if: github.event_name != 'push' || github.ref == 'refs/heads/main' || inputs.source_sha != ''
     runs-on: macos-15-intel
     timeout-minutes: 120
     permissions:
@@ -73,8 +47,6 @@ jobs:
     steps:
       - name: Check out port repository
         uses: actions/checkout@v4
-        with:
-          ref: ${{ inputs.source_sha || github.sha }}
 
       - name: Compute cache input fingerprints
         env:
@@ -87,8 +59,8 @@ jobs:
           printf 'CACHE_SOURCE=%s\n' "${CACHE_SOURCE_HASH}" >> "${GITHUB_ENV}"
           mkdir -p build/diagnostics
           {
-            printf 'source_sha=%s\n' "${{ inputs.source_sha || github.sha }}"
-            printf 'canonical_cache_ref=refs/heads/main\n'
+            printf 'source_sha=%s\n' "${{ github.sha }}"
+            printf 'cache_scope_ref=%s\n' "${{ github.ref }}"
             printf 'cache_abi=%s\n' "${cache_abi}"
             printf 'cache_source=%s\n' "${CACHE_SOURCE_HASH}"
           } > build/diagnostics/cache-fingerprints.txt
