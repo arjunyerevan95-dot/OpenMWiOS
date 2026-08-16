@@ -1,0 +1,58 @@
+# Work Order 17 Handoff
+
+## Scope and starting state
+
+1. **Starting branch:** `fix/gl4es-mainless-linked-shader`
+2. **Starting HEAD:** `13e757f0ac41e183826fd359685022009f68ff4c`
+3. **Cache correction commit:** `2f84b36b2a04e24ed61f383c57e9b40b8a3f74b7`
+4. **Shader correction commit:** `6076e7b7c91f013ee801ef0abeb3e0037cc4dd90`; fixture-warning follow-up `6c5d37a178f7bf72cb4245e467e2638a14992b40`
+
+## Track A — cache validation
+
+5. **Cache-key design inspected:** `CACHE_ABI` fingerprints `versions.env`, `vcpkg.json`, triplets, build scripts, iOS patches, deployment target, architecture, and pinned Xcode identity. `CACHE_SOURCE` fingerprints OpenMW/GL4ES patch sets and iOS sources. The proposed workflow attempted to execute feature commits in the default-branch cache scope.
+6. **Cross-branch restore result:** **failed qualification**. Push run `31954340510` failed in `Dispatch canonical-scope Fast build`; the default `main` branch is the repository default but contains no registered `.github/workflows/ios-fast.yml`, so the canonical dispatch target does not exist. A CI-only fallback commit `ab02614b1bd19488b084a0b0ae6ede750239798e` restored direct feature-branch Fast execution. The parent branch owns v3 caches, while the Work Order 17 branch reported no visible caches; commit `2f84b36` also changed the cache generation to v4, preventing reuse by key even if scope were visible.
+7. **Restored dependencies:** none from a qualified binary cache. GitHub's restore actions executed successfully, but the branch began with zero visible caches; the completed run created all three v4 cache entries on this branch. A successful restore step invocation is not a cache hit.
+8. **Rebuilt dependencies:** cold dependency preparation ran for 2,065 seconds. The cache miss required reconstruction of the qualified dependency/build state rather than the intended narrow shader-related GL4ES rebuild and OpenMW relink. Exact per-library timing was not independently instrumented.
+9. **Total Fast build duration:** run `31955120420`, `2026-08-16T15:15:42Z` through `16:31:55Z`: **1h16m13s**. Dependency preparation was 34m25s; real production compile/link was 36m44s; stage/validation/package was 29s.
+10. **Full Qualification:** did not run.
+
+## Track B — shader evidence and correction
+
+11. **Original debug vertex shader:** `files/shaders/compatibility/debug.vert`, GLSL 1.20. It declares `uniform bool useAdvancedShader = false;` at source line 9 and branches on it at line 16.
+12. **Original debug fragment shader:** `files/shaders/compatibility/debug.frag`, GLSL 1.20. It declares `uniform bool useAdvancedShader = false;` at source line 7 and branches on it at line 15.
+13. **Converted vertex shader before fix:** the native diagnostic maps the unchanged declaration to line 9: `Initializer not allowed`, followed by line 16: `Use of undeclared identifier 'useAdvancedShader'`. Work Order 15 did not capture the entire converted byte stream.
+14. **Converted fragment shader before fix:** the native diagnostic maps the unchanged declaration to line 7: `Initializer not allowed`, followed by line 15: `Use of undeclared identifier 'useAdvancedShader'`. Work Order 15 did not capture the entire converted byte stream.
+15. **Original declaration:** `uniform bool useAdvancedShader = false;` in both stages. `components/debug/debugdraw.cpp` creates an OSG uniform named `useAdvancedShader` with runtime value `true`.
+16. **Initializer semantics:** GLES uniforms are zero-initialized when a program successfully links; removing the declaration initializer preserves its false default. OpenMW subsequently uploads the actual runtime value through OSG, so the correction does not force or remove advanced-shader behavior.
+17. **Android comparison:** recent working Android fork `sisah2/Ng-gl4es` commit `72d0029baf1de0b6a85244680316132a4c244164` contains the exact conversion rule `uniform bool useAdvancedShader = false;` → `uniform bool useAdvancedShader;` in `src/gl/vgpu/shaderconv.c`.
+18. **Chosen fix owner:** GL4ES's existing `ShaderHacks` compatibility-normalization stage, which runs before preprocessing and already contains an OpenMW `simpleWater` uniform-initializer normalization. OpenMW shader semantics and source remain unchanged.
+19. **Exact correction:** patch `patches/gl4es/0003-normalize-openmw-debug-uniform-initializer.patch` adds the exact Android-proven replacement. Patch `0004-log-openmw-debug-shader-boundary-once.patch` logs one matching vertex and one matching fragment original/native-submitted source plus native compile status.
+20. **Regression fixture:** `validation/fixtures/gl4es_debug_uniform_initializer.c`, driven by `validation/test_gl4es_debug_uniform_initializer.py`, invokes the production `ShaderHacks` implementation for representative vertex and fragment sources.
+21. **Fixture before result:** without patch 0003 the fixture returns failure because the illegal initializer remains.
+22. **Fixture after result:** passed on the GitHub-hosted macOS Fast runner during run `31955120420`; both stage declarations were normalized, their references remained, and all sequential GL4ES patch checks passed.
+23. **Converted vertex shader after fix:** the regression fixture proves that GL4ES's production `ShaderHacks` stage emits `uniform bool useAdvancedShader;` and retains all downstream references. The complete device-side post-conversion byte stream was not recovered: the bounded diagnostic used `printf`, which did not enter Apple's unified device log. This limitation does not weaken the native compile result below.
+24. **Converted fragment shader after fix:** same bounded result as the vertex stage: the illegal initializer is absent, the declaration remains, and references remain. The complete post-conversion byte stream was not present in unified logging for the same `printf` reason.
+25. **Native compile result:** **success for the corrected debug-shader boundary.** The fresh device log contains zero `Initializer not allowed`, zero undeclared `useAdvancedShader`, and zero `glCompileShader ... FAILED` diagnostics. Processing advances to native program linking.
+26. **Debug/program link result:** compilation advances, but four programs fail to link at `22:24:23.090` through `22:24:23.123` with the new diagnostic `ERROR: No definition of modelToClip in vertex shader`. This is the next shader boundary; no correction was attempted.
+
+## Build product and device validation
+
+27. **Executable SHA-256:** `438D9EEAFB7030EFA9C9BA01BE6E933CB2B10FAFC396859200A3EEFBC6BEFFEB`.
+28. **IPA SHA-256:** `EB9F5F9F1FB2B2D22864A0E94610B6284A853BD223C68B0E48609ED1D000B0B8`; size `39,054,879` bytes; local path `build/work-order-17/gha/run-31955120420/artifacts/OpenMW-iOS-unsigned.ipa`. Tempfile server-side hash and size match exactly at `https://tempfile.org/mpGYeMPyPMQ/download`.
+29. **Current data-container UUID:** `8E750DFC-822F-4A9A-9A24-119FB9B685A8`.
+30. **Current cfg data path:** `/var/mobile/Containers/Data/Application/8E750DFC-822F-4A9A-9A24-119FB9B685A8/Documents/OpenMW/Morrowind/Data Files`. The pre-launch cfg contained stale UUID `A5BFE920-162C-494B-8A96-5E88EF0A62D6`; the single managed `data=` line was updated and read back with SHA-256 `A57598E22891E972B3375B3BD4B4E17585FFB966BD430A3CB7FD3451DB7ABB23` before launch. This was temporary test preparation, not the deferred permanent path design.
+31. **Device logging state:** Apple usbmux Network/Wi-Fi connection was live. A bounded UTF-8 unified-log capture was active before launch at `build/work-order-17/device/logs/wo17-controlled-launch-syslog-part4.jsonl` and stopped after the run; post-run app logs were recovered through House Arrest/AFC.
+32. **User launch timestamp:** OpenMW log begins `2026-08-16 22:24:22.204` local time; process PID was `21655`.
+33. **Loading-screen behavior:** recognizable Morrowind/Bloodmoon loading artwork rendered at 22:24. At 22:25 the app invoked the native iOS keyboard over the rendered surface, demonstrating additional UI/input progress. A later 22:28 screenshot was black. No claim is made that the later black frame represents a crash because native diagnostics and the engine log do not show one.
+34. **Music behavior:** yes. `morrowind title.mp3` began at `22:24:23.070` and the user reported music during the run.
+35. **Survival duration:** approximately 45 seconds in the captured engine session (`22:24:22.204` to the orderly quit at `22:25:07.292`), far beyond the historical 1–2 second native-crash boundary.
+36. **Crash status:** no new crash report and no jetsam report. The recovered engine log ends with `Quitting peacefully`; only historical Work Order 15 crash reports remained on the device.
+37. **Debug shader error status:** **eliminated.** `Initializer not allowed` changed from 2 occurrences in Work Order 16 to 0; undeclared `useAdvancedShader` changed from 2 to 0; failed shader compilation changed from 2 to 0.
+38. **GL error status:** the fresh log retains four program-link failures and four `GL_INVALID_OPERATION` occurrences (plus one `GL_INVALID_ENUM`). The primary diagnostic attached to all four link failures is now missing vertex definition `modelToClip`; it is no longer the initializer/undeclared-uniform failure.
+39. **Viewport status:** still tiny. Loading artwork is confined to a small rectangle within the landscape display; the native keyboard is much larger but also presented in a centered subregion. No viewport change was made.
+40. **Lua error status:** persistent and secondary. `Misc::Color(std::string_view)` still receives nil while starting the menu, with dependent MWUI/Settings failures. It was not changed.
+41. **Stale VFS warning status:** persistent and secondary: `App.app/./resources/vfs-mw` is still reported missing. It was not changed.
+42. **Highest runtime boundary:** corrected debug vertex/fragment shaders reach native compilation successfully; program linking is now the first graphics blocker, specifically unresolved `modelToClip`. On-device execution also advances through loading artwork and native keyboard presentation without a native crash.
+43. **Stop condition:** **Condition D — debug shader compiles.** The required single device run exposed a Condition-E-class next shader failure (`modelToClip`) and work stopped without stacking a second fix.
+44. **Strongest causal conclusion:** the illegal desktop uniform initializer was exactly responsible for the prior paired Apple compiler diagnostics. The Android-proven GL4ES normalization preserves the uniform's default/runtime semantics and removes both diagnostics on iOS. It does not solve the distinct linked-shader-library definition problem now exposed at `modelToClip`.
+45. **Recommended Work Order 18:** investigate only how `modelToClip` is declared/defined across OpenMW's linked vertex shader units and how GL4ES converts and combines those units. Capture the exact converted entry-point and library shaders at the link boundary, compare the working Android path, and correct only the proven symbol-propagation/combination defect. Keep viewport, Lua, stale VFS, and permanent sandbox-path work separate. In a separate CI-only commit, replace the unqualified `2f84b36` cache dispatcher with either a Fast workflow registered on the default branch or immutable per-component dependency artifacts keyed by exact ABI/source fingerprints; validate naturally on the next run without Full Qualification.
