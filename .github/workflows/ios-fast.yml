@@ -17,15 +17,9 @@ on:
     paths-ignore:
       - "**.md"
       - "docs/**"
-  push:
-    branches-ignore:
-      - delivery/openmw-ios
-    paths-ignore:
-      - "**.md"
-      - "docs/**"
 
 concurrency:
-  group: openmw-ios-fast-${{ github.ref }}
+  group: openmw-ios-fast-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -61,6 +55,7 @@ jobs:
           {
             printf 'source_sha=%s\n' "${{ github.sha }}"
             printf 'cache_scope_ref=%s\n' "${{ github.ref }}"
+            printf 'cache_base_ref=%s\n' "${{ github.base_ref }}"
             printf 'cache_abi=%s\n' "${cache_abi}"
             printf 'cache_source=%s\n' "${CACHE_SOURCE_HASH}"
           } > build/diagnostics/cache-fingerprints.txt
@@ -109,6 +104,17 @@ jobs:
           key: ios-fast-state-v4-${{ runner.os }}-${{ runner.arch }}-${{ env.CACHE_ABI }}-${{ env.CACHE_SOURCE }}
           restore-keys: |
             ios-fast-state-v4-${{ runner.os }}-${{ runner.arch }}-${{ env.CACHE_ABI }}-
+
+      - name: Record cache restore resolution
+        run: |
+          {
+            printf 'source_download_cache_hit=%s\n' '${{ steps.source-download-cache.outputs.cache-hit }}'
+            printf 'source_download_cache_key=%s\n' '${{ steps.source-download-cache.outputs.cache-matched-key }}'
+            printf 'vcpkg_cache_hit=%s\n' '${{ steps.vcpkg-binary-cache.outputs.cache-hit }}'
+            printf 'vcpkg_cache_key=%s\n' '${{ steps.vcpkg-binary-cache.outputs.cache-matched-key }}'
+            printf 'build_state_cache_hit=%s\n' '${{ steps.build-state-cache.outputs.cache-hit }}'
+            printf 'build_state_cache_key=%s\n' '${{ steps.build-state-cache.outputs.cache-matched-key }}'
+          } >> build/diagnostics/cache-fingerprints.txt
 
       - name: Validate restored cache identity
         run: |
