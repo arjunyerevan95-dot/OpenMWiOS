@@ -26,6 +26,7 @@ class Gl4esDebugUniformInitializerTests(unittest.TestCase):
                 "-Wall",
                 "-Wextra",
                 "-Werror",
+                "-Wno-sign-compare",
                 str(FIXTURE),
                 str(GL4ES_GL / "shader_hacks.c"),
                 str(GL4ES_GL / "string_utils.c"),
