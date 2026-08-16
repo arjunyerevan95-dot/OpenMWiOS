@@ -3,6 +3,11 @@ name: iOS Fast Development
 on:
   workflow_dispatch:
     inputs:
+      source_sha:
+        description: Exact development commit to build from the canonical main-branch cache scope
+        required: false
+        default: ""
+        type: string
       benchmark_mode:
         description: Controlled incremental rebuild benchmark
         required: true
@@ -24,18 +29,38 @@ on:
       - "**.md"
       - "docs/**"
 
-permissions:
-  contents: read
-
 concurrency:
-  group: openmw-ios-fast-${{ github.ref }}
+  group: openmw-ios-fast-${{ inputs.source_sha || github.ref }}
   cancel-in-progress: true
 
 jobs:
+  dispatch-canonical-build:
+    name: Dispatch canonical-scope Fast build
+    if: github.event_name == 'push' && github.ref != 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+      contents: read
+    steps:
+      - name: Dispatch exact commit on the default branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SOURCE_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          gh api --method POST \
+            "repos/${GITHUB_REPOSITORY}/actions/workflows/ios-fast.yml/dispatches" \
+            -f ref=main \
+            -f "inputs[source_sha]=${SOURCE_SHA}" \
+            -f 'inputs[benchmark_mode]=none'
+
   production-build:
     name: Real OpenMW arm64 iPhone development build
+    if: github.event_name != 'push' || github.ref == 'refs/heads/main' || inputs.source_sha != ''
     runs-on: macos-15-intel
     timeout-minutes: 120
+    permissions:
+      contents: read
 
     env:
       CONFIGURATION: Release
@@ -48,6 +73,8 @@ jobs:
     steps:
       - name: Check out port repository
         uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.source_sha || github.sha }}
 
       - name: Compute cache input fingerprints
         env:
@@ -55,9 +82,16 @@ jobs:
           CACHE_SOURCE_HASH: ${{ hashFiles('patches/openmw/**', 'patches/gl4es/**', 'ios/**') }}
         run: |
           set -euo pipefail
-          printf 'CACHE_ABI=ios-fast-v3-xcode16.4-ios16.3-arm64-%s\n' \
-            "${CACHE_ABI_HASH}" >> "${GITHUB_ENV}"
+          cache_abi="ios-fast-v4-xcode16.4-ios16.3-arm64-${CACHE_ABI_HASH}"
+          printf 'CACHE_ABI=%s\n' "${cache_abi}" >> "${GITHUB_ENV}"
           printf 'CACHE_SOURCE=%s\n' "${CACHE_SOURCE_HASH}" >> "${GITHUB_ENV}"
+          mkdir -p build/diagnostics
+          {
+            printf 'source_sha=%s\n' "${{ inputs.source_sha || github.sha }}"
+            printf 'canonical_cache_ref=refs/heads/main\n'
+            printf 'cache_abi=%s\n' "${cache_abi}"
+            printf 'cache_source=%s\n' "${CACHE_SOURCE_HASH}"
+          } > build/diagnostics/cache-fingerprints.txt
 
       - name: Initialize concise diagnostics
         run: mkdir -p build/diagnostics
@@ -81,7 +115,7 @@ jobs:
         uses: actions/cache/restore@v4
         with:
           path: .cache/vcpkg
-          key: vcpkg-ios-v3-xcode16.4-${{ hashFiles('versions.env', 'vcpkg.json', 'triplets/**') }}
+          key: vcpkg-ios-v4-${{ env.CACHE_ABI }}
 
       - name: Restore qualified incremental build state
         id: build-state-cache
@@ -100,17 +134,25 @@ jobs:
             build/prefix
             build/ios
             build/ios-fast-cache-abi.txt
-          key: ios-fast-state-v3-${{ runner.os }}-${{ runner.arch }}-${{ env.CACHE_ABI }}-${{ env.CACHE_SOURCE }}
+          key: ios-fast-state-v4-${{ runner.os }}-${{ runner.arch }}-${{ env.CACHE_ABI }}-${{ env.CACHE_SOURCE }}
           restore-keys: |
-            ios-fast-state-v3-${{ runner.os }}-${{ runner.arch }}-${{ env.CACHE_ABI }}-
+            ios-fast-state-v4-${{ runner.os }}-${{ runner.arch }}-${{ env.CACHE_ABI }}-
 
       - name: Validate restored cache identity
         run: |
           set -euo pipefail
           if [[ -e build/ios-fast-cache-abi.txt ]]; then
-            if [[ "$(cat build/ios-fast-cache-abi.txt)" != "${CACHE_ABI}" ]]; then
+            restored_abi="$(sed -n '1p' build/ios-fast-cache-abi.txt)"
+            restored_source="$(sed -n '2p' build/ios-fast-cache-abi.txt)"
+            if [[ "${restored_abi}" != "${CACHE_ABI}" ]]; then
               echo "Restored build cache ABI fingerprint mismatch; rejecting cache." >&2
               rm -rf build/vcpkg_installed build/gl4es-ios build/luajit-ios build/prefix build/ios
+            elif [[ -n "${restored_source}" && "${restored_source}" != "${CACHE_SOURCE}" ]]; then
+              echo "Restored ABI-identical incremental base from a different source fingerprint."
+              echo "Bootstrap and the real production build will rebuild source-invalidated components."
+              printf 'incremental_source_delta=%s->%s\n' \
+                "${restored_source}" "${CACHE_SOURCE}" \
+                >> build/diagnostics/cache-fingerprints.txt
             fi
           elif [[ -d build/ios || -d build/prefix ]]; then
             echo "Restored build state has no integrity marker; rejecting cache." >&2
@@ -196,7 +238,8 @@ jobs:
             build/artifacts/OpenMW-iOS-unsigned.ipa \
             build/diagnostics/resource-relocation/staged-openmw-resources.tsv \
             > build/diagnostics/product-sha256.txt
-          printf '%s\n' "${CACHE_ABI}" > build/ios-fast-cache-abi.txt
+          printf '%s\n%s\n' "${CACHE_ABI}" "${CACHE_SOURCE}" \
+            > build/ios-fast-cache-abi.txt
 
       - name: Upload one verified development product
         uses: actions/upload-artifact@v4
@@ -207,6 +250,7 @@ jobs:
             build/diagnostics/app-manifest.txt
             build/diagnostics/product-sha256.txt
             build/diagnostics/fast-timings.tsv
+            build/diagnostics/cache-fingerprints.txt
             build/diagnostics/apple-bundle-validation/summary.json
             build/diagnostics/resource-relocation/resource-relocation-summary.json
           if-no-files-found: error
