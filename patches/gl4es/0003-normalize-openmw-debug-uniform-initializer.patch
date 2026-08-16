@@ -1,0 +1,14 @@
+diff --git a/src/gl/shader_hacks.c b/src/gl/shader_hacks.c
+index 7ca44c9..d5a14df 100644
+--- a/src/gl/shader_hacks.c
++++ b/src/gl/shader_hacks.c
+@@ -196,6 +196,9 @@ static const hack_t gl4es_hacks[] = {
+ {"uniform bool simpleWater = false;",
+ 1, {"uniform bool simpleWater;"}},
+ 
++{"uniform bool useAdvancedShader = false;",
++1, {"uniform bool useAdvancedShader;"}},
++
+ // for Lethal League
+ {"uniform vec4 Color = vec4(1.0, 1.0, 1.0, 1.0);",
+ 1, {"uniform vec4 Color;"}},

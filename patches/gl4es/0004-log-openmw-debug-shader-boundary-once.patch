@@ -1,0 +1,41 @@
+diff --git a/src/gl/shader.c b/src/gl/shader.c
+index f4eb950..d831985 100644
+--- a/src/gl/shader.c
++++ b/src/gl/shader.c
+@@ -115,6 +115,9 @@ void APIENTRY_GL4ES gl4es_glDeleteShader(GLuint shader) {
+     }
+ }
+ 
++static int wo17_debug_vertex_logged = 0;
++static int wo17_debug_fragment_logged = 0;
++
+ void APIENTRY_GL4ES gl4es_glCompileShader(GLuint shader) {
+     DBG(printf("glCompileShader(%d)\n", shader);)
+     // look for the shader
+@@ -125,6 +128,26 @@ void APIENTRY_GL4ES gl4es_glCompileShader(GLuint shader) {
+     if(gles_glCompileShader) {
+         gles_glCompileShader(glshader->id);
+         errorGL();
++        int *wo17_logged = glshader->type==GL_VERTEX_SHADER
++            ? &wo17_debug_vertex_logged : &wo17_debug_fragment_logged;
++        if(!*wo17_logged && glshader->source && glshader->converted
++                && strstr(glshader->source, "uniform bool useAdvancedShader")) {
++            LOAD_GLES2(glGetShaderiv);
++            LOAD_GLES2(glGetShaderInfoLog);
++            GLint wo17_status = 0;
++            GLint wo17_length = 0;
++            char wo17_log[500] = {0};
++            gles_glGetShaderiv(glshader->id, GL_COMPILE_STATUS, &wo17_status);
++            gles_glGetShaderInfoLog(glshader->id, sizeof(wo17_log), &wo17_length, wo17_log);
++            printf("WO17 DEBUG SHADER %s ORIGINAL BEGIN\n%s\nWO17 DEBUG SHADER ORIGINAL END\n",
++                glshader->type==GL_VERTEX_SHADER ? "VERTEX" : "FRAGMENT", glshader->source);
++            printf("WO17 DEBUG SHADER %s NATIVE-SUBMITTED BEGIN\n%s\nWO17 DEBUG SHADER NATIVE-SUBMITTED END\n",
++                glshader->type==GL_VERTEX_SHADER ? "VERTEX" : "FRAGMENT", glshader->converted);
++            printf("WO17 DEBUG SHADER %s COMPILE status=%d log=%.*s\n",
++                glshader->type==GL_VERTEX_SHADER ? "VERTEX" : "FRAGMENT",
++                wo17_status, wo17_length, wo17_log);
++            *wo17_logged = 1;
++        }
+         if(globals4es.logshader) {
+             // get compile status and print shaders sources if compile fail...
+             LOAD_GLES2(glGetShaderiv);
