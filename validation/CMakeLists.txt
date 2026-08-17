@@ -214,6 +214,29 @@ if(NOT _ios_drawable_patch MATCHES "SDL_GL_GetDrawableSize\\(gWindow, width, hei
     message(FATAL_ERROR "GL4ES main framebuffer sizing must use SDL drawable pixels")
 endif()
 
+file(READ "${PORT_ROOT}/patches/openmw/0006-ios-reconcile-post-context-drawable.patch"
+    _ios_post_context_drawable_patch)
+string(FIND "${_ios_post_context_drawable_patch}" "SDL_GL_CreateContext(mWindow)" _context_create)
+string(FIND "${_ios_post_context_drawable_patch}"
+    "SDL_GL_GetDrawableSize(mWindow, &drawableWidth, &drawableHeight)" _post_context_query)
+string(FIND "${_ios_post_context_drawable_patch}" "_traits->width = drawableWidth" _traits_width)
+string(FIND "${_ios_post_context_drawable_patch}" "_traits->height = drawableHeight" _traits_height)
+string(FIND "${_ios_post_context_drawable_patch}"
+    "Settings::video().mResolutionX.set(drawableWidth)" _settings_width)
+string(FIND "${_ios_post_context_drawable_patch}"
+    "Settings::video().mResolutionY.set(drawableHeight)" _settings_height)
+if(_context_create EQUAL -1 OR _post_context_query EQUAL -1 OR
+        _traits_width EQUAL -1 OR _traits_height EQUAL -1 OR
+        _settings_width EQUAL -1 OR _settings_height EQUAL -1)
+    message(FATAL_ERROR
+        "The iOS renderer must reconcile OSG and OpenMW dimensions from the post-context SDL drawable")
+endif()
+foreach(_fixed_dimension IN ITEMS 480 320 800 600 1440 960)
+    if(_ios_post_context_drawable_patch MATCHES "\\+[^\n]*\\b${_fixed_dimension}\\b")
+        message(FATAL_ERROR "Post-context drawable reconciliation must not hard-code device dimensions")
+    endif()
+endforeach()
+
 file(READ "${PORT_ROOT}/patches/openmw/0001-openmw-ios-structural-port.patch" _openmw_ios_patch)
 string(FIND "${_openmw_ios_patch}"
     "OPENMW_RESOURCE_FILES \"openmw-resources\"" _configured_resource_root)

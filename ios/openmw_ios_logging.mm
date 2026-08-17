@@ -1,6 +1,7 @@
 #import "openmw_ios_logging.h"
 
 #import <Foundation/Foundation.h>
+#import <UIKit/UIKit.h>
 
 namespace
 {
@@ -50,4 +51,48 @@ extern "C" void openmw_ios_log(const char* milestone, const char* detail)
 extern "C" void openmw_ios_log_fatal(const char* detail)
 {
     openmw_ios_log("fatal", detail);
+}
+
+extern "C" void openmw_ios_log_view_metrics(const char* milestone)
+{
+    @autoreleasepool
+    {
+        UIWindow* window = nil;
+        if (@available(iOS 13.0, *))
+        {
+            for (UIScene* scene in UIApplication.sharedApplication.connectedScenes)
+            {
+                if (scene.activationState != UISceneActivationStateUnattached
+                    && [scene isKindOfClass:UIWindowScene.class])
+                {
+                    UIWindowScene* windowScene = (UIWindowScene*)scene;
+                    window = windowScene.windows.firstObject;
+                    if (window)
+                        break;
+                }
+            }
+        }
+        if (!window)
+            window = UIApplication.sharedApplication.keyWindow;
+
+        UIView* view = window.rootViewController.view;
+        UIScreen* screen = window.screen ?: UIScreen.mainScreen;
+        if (!view)
+        {
+            openmw_ios_log(milestone, "view=unavailable");
+            return;
+        }
+
+        const CGRect bounds = view.bounds;
+        const UIEdgeInsets safeArea = view.safeAreaInsets;
+        NSInteger orientation = 0;
+        if (@available(iOS 13.0, *))
+            orientation = window.windowScene.interfaceOrientation;
+        NSString* metrics = [NSString stringWithFormat:
+            @"view_class=%@;bounds=%.0fx%.0f;content_scale=%.3f;screen_scale=%.3f;native_scale=%.3f;safe_area=%.0f,%.0f,%.0f,%.0f;orientation=%ld",
+            NSStringFromClass(view.class), CGRectGetWidth(bounds), CGRectGetHeight(bounds), view.contentScaleFactor,
+            screen.scale, screen.nativeScale, safeArea.top, safeArea.left, safeArea.bottom, safeArea.right,
+            (long)orientation];
+        openmw_ios_log(milestone, metrics.UTF8String);
+    }
 }
