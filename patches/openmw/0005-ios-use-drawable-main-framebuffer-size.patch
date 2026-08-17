@@ -1,0 +1,78 @@
+diff --git a/apps/openmw/engine.cpp b/apps/openmw/engine.cpp
+index 55b8a8f68..e7303e03e 100644
+--- a/apps/openmw/engine.cpp
++++ b/apps/openmw/engine.cpp
+@@ -578,6 +578,12 @@ void OMW::Engine::createWindow()
+         osg::ref_ptr<osg::GraphicsContext::Traits> traits = new osg::GraphicsContext::Traits;
+         SDL_GetWindowPosition(mWindow, &traits->x, &traits->y);
+         SDL_GL_GetDrawableSize(mWindow, &traits->width, &traits->height);
++#ifdef OPENMW_IOS
++        const std::string dimensions = "window=" + std::to_string(w) + "x" + std::to_string(h)
++            + ";drawable=" + std::to_string(dw) + "x" + std::to_string(dh) + ";traits="
++            + std::to_string(traits->width) + "x" + std::to_string(traits->height);
++        openmw_ios_log("render_dimensions", dimensions.c_str());
++#endif
+         traits->windowName = SDL_GetWindowTitle(mWindow);
+         traits->windowDecoration = !(SDL_GetWindowFlags(mWindow) & SDL_WINDOW_BORDERLESS);
+         traits->screenNum = SDL_GetWindowDisplayIndex(mWindow);
+@@ -616,3 +622,8 @@ void OMW::Engine::createWindow()
+     osg::ref_ptr<osg::Camera> camera = mViewer->getCamera();
+     camera->setGraphicsContext(graphicsWindow);
+     camera->setViewport(0, 0, graphicsWindow->getTraits()->width, graphicsWindow->getTraits()->height);
++#ifdef OPENMW_IOS
++    const std::string viewport = "camera=0,0," + std::to_string(graphicsWindow->getTraits()->width) + "x"
++        + std::to_string(graphicsWindow->getTraits()->height);
++    openmw_ios_log("osg_camera_viewport", viewport.c_str());
++#endif
+diff --git a/components/sdlutil/gl4esinit.cpp b/components/sdlutil/gl4esinit.cpp
+index 13015dee8..b10f7665d 100644
+--- a/components/sdlutil/gl4esinit.cpp
++++ b/components/sdlutil/gl4esinit.cpp
+@@ -2,3 +2,5 @@
+ // Instead, we initialize gl4es manually.
+ #ifdef OPENMW_GL4ES_MANUAL_INIT
+ #include "gl4esinit.h"
++
++#include <string>
+@@ -17,4 +19,18 @@ extern "C"
+     void openmw_gl4es_GetMainFBSize(int* width, int* height)
+     {
+-        SDL_GetWindowSize(gWindow, width, height);
++        SDL_GL_GetDrawableSize(gWindow, width, height);
++#ifdef OPENMW_IOS
++        static bool logged = false;
++        if (!logged)
++        {
++            int windowWidth = 0;
++            int windowHeight = 0;
++            SDL_GetWindowSize(gWindow, &windowWidth, &windowHeight);
++            const std::string dimensions = "window=" + std::to_string(windowWidth) + "x"
++                + std::to_string(windowHeight) + ";drawable=" + std::to_string(*width) + "x"
++                + std::to_string(*height);
++            openmw_ios_log("gl4es_main_framebuffer_size", dimensions.c_str());
++            logged = true;
++        }
++#endif
+     }
+diff --git a/components/sdlutil/sdlgraphicswindow.cpp b/components/sdlutil/sdlgraphicswindow.cpp
+index 9ff054593..62df88630 100644
+--- a/components/sdlutil/sdlgraphicswindow.cpp
++++ b/components/sdlutil/sdlgraphicswindow.cpp
+@@ -233,2 +233,16 @@ namespace SDLUtil
+-        SDL_GL_SwapWindow(mWindow);
++#ifdef OPENMW_IOS
++        static bool loggedViewport = false;
++        if (!loggedViewport)
++        {
++            GLint viewport[4] = { 0, 0, 0, 0 };
++            glGetIntegerv(GL_VIEWPORT, viewport);
++            const std::string dimensions = "viewport=" + std::to_string(viewport[0]) + ","
++                + std::to_string(viewport[1]) + "," + std::to_string(viewport[2]) + "x"
++                + std::to_string(viewport[3]);
++            openmw_ios_log("native_gl_viewport", dimensions.c_str());
++            loggedViewport = true;
++        }
++#endif
++
++        SDL_GL_SwapWindow(mWindow);
+     }

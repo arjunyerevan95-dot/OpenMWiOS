@@ -207,6 +207,13 @@ if(NOT _ios_vfs_patch MATCHES "if \\(OPENMW_IOS\\)" OR
     message(FATAL_ERROR "The iOS runtime config patch must configure the relocatable global template")
 endif()
 
+file(READ "${PORT_ROOT}/patches/openmw/0005-ios-use-drawable-main-framebuffer-size.patch"
+    _ios_drawable_patch)
+if(NOT _ios_drawable_patch MATCHES "SDL_GL_GetDrawableSize\\(gWindow, width, height\\)" OR
+        _ios_drawable_patch MATCHES "\\+.*SDL_GetWindowSize\\(gWindow, width, height\\)")
+    message(FATAL_ERROR "GL4ES main framebuffer sizing must use SDL drawable pixels")
+endif()
+
 file(READ "${PORT_ROOT}/patches/openmw/0001-openmw-ios-structural-port.patch" _openmw_ios_patch)
 string(FIND "${_openmw_ios_patch}"
     "OPENMW_RESOURCE_FILES \"openmw-resources\"" _configured_resource_root)
@@ -220,6 +227,10 @@ endif()
 file(READ "${PORT_ROOT}/ios/openmw_ios_bootstrap.mm" _ios_bootstrap)
 if(NOT _ios_bootstrap MATCHES "bundle / \"openmw-resources\"")
     message(FATAL_ERROR "The iOS bootstrap must pass the relocated resource root to OpenMW")
+endif()
+if(NOT _ios_bootstrap MATCHES "uikit_display_metrics" OR
+        NOT _ios_bootstrap MATCHES "nativeBounds")
+    message(FATAL_ERROR "The bounded iOS display diagnostic must preserve point and native-pixel dimensions")
 endif()
 
 string(FIND "${_verify_bundle}" "verify-resource-relocation.py" _resource_manifest_gate)
