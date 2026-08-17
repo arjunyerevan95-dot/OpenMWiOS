@@ -47,12 +47,26 @@ if [[ -n "${EXECUTABLE_NAME}" ]]; then
     fi
 fi
 
-for required in defaults.bin openmw.cfg gamecontrollerdb.txt openmw-resources openmw-resources/version openmw-resources/lua_libs; do
+for required in defaults.bin openmw.cfg gamecontrollerdb.txt openmw-resources openmw-resources/version \
+        openmw-resources/lua_libs openmw-resources/vfs-mw/scripts/omw/esmfallbacks.lua; do
     if [[ ! -e "${APP_PATH}/${required}" ]]; then
         echo "error: app bundle is missing ${required}" >&2
         validation_status=1
     fi
 done
+
+if [[ -f "${APP_PATH}/openmw.cfg" ]]; then
+    for expected_config_line in \
+            'resources=openmw-resources' \
+            'data=openmw-resources/vfs-mw' \
+            'fallback=FontColor_color_header,223,201,159' \
+            'fallback=FontColor_color_normal,202,165,96'; do
+        if ! grep -Fx "${expected_config_line}" "${APP_PATH}/openmw.cfg" >/dev/null; then
+            echo "error: bundled openmw.cfg is missing '${expected_config_line}'" >&2
+            validation_status=1
+        fi
+    done
+fi
 
 if (( validation_status == 0 )); then
     resource_source="${BUILD_DIR}/ios/${CONFIGURATION:-Release}/resources"

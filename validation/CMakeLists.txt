@@ -192,6 +192,21 @@ if(NOT _verify_bundle MATCHES "openmw-resources" OR
         "Bundle verification must require the relocated resources and reject the Apple Resources collision")
 endif()
 
+if(NOT _verify_bundle MATCHES "openmw-resources/vfs-mw/scripts/omw/esmfallbacks\\.lua" OR
+        NOT _verify_bundle MATCHES "data=openmw-resources/vfs-mw" OR
+        NOT _verify_bundle MATCHES "FontColor_color_header")
+    message(FATAL_ERROR
+        "Bundle verification must require the relocated vfs-mw fallback bridge and runtime config")
+endif()
+
+file(READ "${PORT_ROOT}/patches/openmw/0004-ios-configure-relocated-vfs-mw-path.patch"
+    _ios_vfs_patch)
+if(NOT _ios_vfs_patch MATCHES "if \\(OPENMW_IOS\\)" OR
+        NOT _ios_vfs_patch MATCHES "files/openmw\\.cfg" OR
+        _ios_vfs_patch MATCHES "files/openmw\\.cfg\\.local")
+    message(FATAL_ERROR "The iOS runtime config patch must configure the relocatable global template")
+endif()
+
 file(READ "${PORT_ROOT}/patches/openmw/0001-openmw-ios-structural-port.patch" _openmw_ios_patch)
 string(FIND "${_openmw_ios_patch}"
     "OPENMW_RESOURCE_FILES \"openmw-resources\"" _configured_resource_root)

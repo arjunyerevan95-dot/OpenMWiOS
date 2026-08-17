@@ -1,0 +1,15 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 3fc1b8321..b6bf7fb7b 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -567,6 +567,9 @@ configure_resource_file(${OpenMW_SOURCE_DIR}/files/openmw.appdata.xml
+ configure_resource_file(${OpenMW_SOURCE_DIR}/files/openmw.appdata.xml
+     "${OpenMW_BINARY_DIR}" "openmw.appdata.xml")
+-if (APPLE AND NOT OPENMW_IOS)
++if (OPENMW_IOS)
++    configure_resource_file(${OpenMW_SOURCE_DIR}/files/openmw.cfg
++        "${OpenMW_BINARY_DIR}" "openmw.cfg")
++elseif (APPLE)
+     configure_file(${OpenMW_SOURCE_DIR}/files/openmw.cfg
+         "${OpenMW_BINARY_DIR}/openmw.cfg")
+ elseif (WIN32)
