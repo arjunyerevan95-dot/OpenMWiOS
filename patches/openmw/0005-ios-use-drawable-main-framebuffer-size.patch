@@ -15,7 +15,7 @@ index 55b8a8f68..e7303e03e 100644
          traits->windowName = SDL_GetWindowTitle(mWindow);
          traits->windowDecoration = !(SDL_GetWindowFlags(mWindow) & SDL_WINDOW_BORDERLESS);
          traits->screenNum = SDL_GetWindowDisplayIndex(mWindow);
-@@ -616,3 +622,8 @@ void OMW::Engine::createWindow()
+@@ -616,6 +622,11 @@ void OMW::Engine::createWindow()
      osg::ref_ptr<osg::Camera> camera = mViewer->getCamera();
      camera->setGraphicsContext(graphicsWindow);
      camera->setViewport(0, 0, graphicsWindow->getTraits()->width, graphicsWindow->getTraits()->height);
@@ -24,17 +24,24 @@ index 55b8a8f68..e7303e03e 100644
 +        + std::to_string(graphicsWindow->getTraits()->height);
 +    openmw_ios_log("osg_camera_viewport", viewport.c_str());
 +#endif
+ 
+     osg::ref_ptr<SceneUtil::OperationSequence> realizeOperations = new SceneUtil::OperationSequence(false);
+     mViewer->setRealizeOperation(realizeOperations);
 diff --git a/components/sdlutil/gl4esinit.cpp b/components/sdlutil/gl4esinit.cpp
 index 13015dee8..b10f7665d 100644
 --- a/components/sdlutil/gl4esinit.cpp
 +++ b/components/sdlutil/gl4esinit.cpp
-@@ -2,3 +2,5 @@
+@@ -2,6 +2,8 @@
  // Instead, we initialize gl4es manually.
  #ifdef OPENMW_GL4ES_MANUAL_INIT
  #include "gl4esinit.h"
 +
 +#include <string>
-@@ -17,4 +19,18 @@ extern "C"
+ 
+ #ifdef OPENMW_IOS
+ #include <ios/openmw_ios_logging.h>
+@@ -16,7 +18,21 @@ extern "C"
+ 
      void openmw_gl4es_GetMainFBSize(int* width, int* height)
      {
 -        SDL_GetWindowSize(gWindow, width, height);
@@ -54,12 +61,16 @@ index 13015dee8..b10f7665d 100644
 +        }
 +#endif
      }
+ 
+     void openmw_gl4es_init(SDL_Window* window)
 diff --git a/components/sdlutil/sdlgraphicswindow.cpp b/components/sdlutil/sdlgraphicswindow.cpp
 index 9ff054593..62df88630 100644
 --- a/components/sdlutil/sdlgraphicswindow.cpp
 +++ b/components/sdlutil/sdlgraphicswindow.cpp
-@@ -233,2 +233,16 @@ namespace SDLUtil
--        SDL_GL_SwapWindow(mWindow);
+@@ -230,6 +230,20 @@ namespace SDLUtil
+         if (!mRealized)
+             return;
+ 
 +#ifdef OPENMW_IOS
 +        static bool loggedViewport = false;
 +        if (!loggedViewport)
@@ -74,5 +85,6 @@ index 9ff054593..62df88630 100644
 +        }
 +#endif
 +
-+        SDL_GL_SwapWindow(mWindow);
+         SDL_GL_SwapWindow(mWindow);
      }
+ 
