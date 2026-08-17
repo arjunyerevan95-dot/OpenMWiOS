@@ -2,6 +2,7 @@
 #import "openmw_ios_logging.h"
 
 #import <Foundation/Foundation.h>
+#import <UIKit/UIKit.h>
 
 #include <SDL.h>
 
@@ -54,6 +55,15 @@ extern "C" void openmw_ios_prepare_environment(void)
         const std::filesystem::path library(openmw_ios_library_path());
         const std::filesystem::path bundle(openmw_ios_bundle_path());
         const std::filesystem::path root = documents / "OpenMW";
+
+        UIScreen* screen = UIScreen.mainScreen;
+        const CGRect screenBounds = screen.bounds;
+        const CGRect nativeBounds = screen.nativeBounds;
+        NSString* displayMetrics = [NSString stringWithFormat:
+            @"screen_points=%.0fx%.0f;native_pixels=%.0fx%.0f;scale=%.3f;native_scale=%.3f",
+            CGRectGetWidth(screenBounds), CGRectGetHeight(screenBounds), CGRectGetWidth(nativeBounds),
+            CGRectGetHeight(nativeBounds), screen.scale, screen.nativeScale];
+        openmw_ios_log("uikit_display_metrics", displayMetrics.UTF8String);
 
         std::filesystem::create_directories(root);
         std::filesystem::create_directories(library / "OpenMW");
