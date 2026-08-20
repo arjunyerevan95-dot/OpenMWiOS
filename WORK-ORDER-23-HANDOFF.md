@@ -1,0 +1,78 @@
+# OpenMW iOS Work Order 23 Handoff
+
+## Outcome
+
+Work Order 23 stopped at the Fast Development source-validation gate before production compilation. The Android-backed fragment-link correction and bounded diagnostics both applied cleanly to the pinned OpenMW source, and 13 focused local tests passed. The GitHub runner then failed one regression test because that test read the locally cloned comparison repository `deps/openmw-android-docker`, which is not a checked-in or bootstrapped CI dependency. No executable, IPA, installation, or device launch was produced. This is a regression-fixture portability defect; it is not runtime evidence for or against the fragment correction.
+
+1. **Starting branch:** `codex/wo22-presentation-fbo`; Work Order 23 work proceeded on `codex/wo23-white-world`.
+2. **Starting HEAD:** `41c07093a7eaa95aea6f64c84674498af23056a5`.
+3. **Work Order 22 qualified baseline:** commits `64abdaef1e51ae6e6009e8c5ef148e9a362b9aee` and `41c07093a7eaa95aea6f64c84674498af23056a5`; executable SHA-256 `9484F228CB4D1F2275754EE789C81E7975A2E8A69C2C9859BECCF7B662A5F1D5`; IPA SHA-256 `527F2BD0B38C45ECBD3AAFE8D2F50BDD8295A9B8F0493AE2B46F01071970F663`. The physical iPhone reached the full OpenMW main menu and live Jiub/new-game state with working camera/input, crosshair, labels, tutorial UI, and audio, but the 3D world was flat white.
+4. **Exact visible white-world baseline:** the `800x600` logical scene was presented inside the qualified `1440x960` SDL drawable. The world color was a uniform light gray/white field; MyGUI/HUD overlays remained correctly colored and responsive. There was no crash or jetsam.
+5. **Two failed program IDs/names:** native program pointer `0x12107f100` reported `No definition of main in fragment shader`; pointer `0x1278eac00` reported `No definition of samplerLastShader in fragment shader`. Work Order 22 did not log OpenMW program names. Source/timing reconstruction identifies the `samplerLastShader` failure as the `fullscreen_tri.frag` fallback copy family and the missing-main failure as a scene/object-family candidate, but the latter exact runtime name remains **NOT RECORDED**.
+6. **Each failed program's render purpose:** `fullscreen_tri.frag` samples `lastShader` and is used by `PingPongCanvas` to copy the scene to the current destination when no enabled postprocess chain replaces it; this is presentation/scene-copy critical. The missing-main program begins at Jiub-cell entry and is consistent with the base object fragment architecture, but its exact pass purpose remains **NOT CAPTURED** because the Work Order 23 runtime inventory build was not produced.
+7. **Each target FBO:** `fullscreen_tri` targets the current PingPong/final destination, eventually logical framebuffer zero remapped by the qualified Work Order 22 path to SDL's native FBO 1. The numeric FBO for the missing-main program remains **NOT CAPTURED**.
+8. **Attached fragment units before conversion:** pinned `fragment.h.glsl` emitted `@link "lib/core/fragment.glsl"` (or multiview equivalent), declared helper prototypes, and was included by entry shaders such as `compatibility/fullscreen_tri.frag` and `compatibility/objects.frag`. OpenMW `ShaderManager::getLinkedShaders` constructed a separate same-stage helper shader object; `getProgram` attached the entry fragment shader and linked helper units.
+9. **Attached fragment units after conversion:** baseline GL4ES converted and submitted the attached fragment objects independently. Exact Work Order 22 post-conversion source dumps were **NOT CAPTURED**. The two native linker messages prove the entry/main and helper-definition relationship did not survive as a usable Apple GLES program. The proposed correction makes each fragment entry unit self-contained before GL4ES conversion.
+10. **Missing-main root cause:** strongest source-supported model: OpenMW's desktop multi-unit fragment-library structure reaches Apple GLES as independently converted same-stage objects, including a legitimate helper object without `main()`. The native linked set does not preserve the expected desktop linkage semantics. Exact runtime attachment inventory was prepared but not executed, so this causal mapping remains source-supported rather than device-revalidated in Work Order 23.
+11. **`samplerLastShader` origin:** `files/shaders/lib/core/fragment.glsl`; it is a function, not a uniform or macro: `vec4 samplerLastShader(vec2 uv) { return texture2D(lastShader, uv); }`.
+12. **`samplerLastShader` definition/reference chain:** definition in `lib/core/fragment.glsl` -> prototype and `@link` in `fragment.h.glsl` -> call from `compatibility/fullscreen_tri.frag::main()` -> ShaderManager attaches entry and helper objects -> GL4ES converts separately -> Apple GLES linker reports no definition.
+13. **`samplerLastShader` failure mechanism:** the definition remains in a separate attached fragment-library object while the entry unit references it. The native link rejects the cross-object relationship after GL4ES's independent conversion/submission.
+14. **Does fragment cross-unit linkage match the `modelToClip` class?** Yes at the architectural level: both use OpenMW desktop same-stage library units that become separate GL4ES-converted Apple GLES shader objects; Android solves both by making entry units self-contained. The exact symbols/stages differ.
+15. **Android comparison:** `modding-openmw/openmw-android-docker` 2.7.4, commit/tag `5b02e847dc646c9f10cd66001e4d65c5274dde49`, removes fragment `@link` directives and inlines the core helper uniforms/functions, including `samplerLastShader`, into `fragment.h.glsl`. Work Order 23 correction `bcdb6c4` backports this architecture without upgrading OpenMW or GL4ES.
+16. **`ColorMaski` call sites:** OpenMW `ShaderVisitor::createProgram` applies `osg::ColorMaski(1, false, false, false, false)` for alpha-blended requirements when the normals RT is supported; `SceneManager::setUpNormalsRTForStateSet` controls indexed mask state for attachment 1. OSG applies it through `osg::ColorMaski::apply`.
+17. **Distinct `ColorMaski` argument patterns:** current source evidence covers attachment index `1` with writes either fully disabled or enabled for the normals render target. Baseline log count was `66,881`. Per-frame argument grouping was not added because the source paths and null function-pointer behavior were decisive.
+18. **Target FBO/draw-buffer state:** indexed mask state addresses color attachment/draw buffer 1 (normals), not base color attachment 0. Exact runtime FBO IDs for each warning remain **NOT CAPTURED**.
+19. **Native GLES capability:** the active backend is GLES2. The resolved indexed `glColorMaski` entry point is unavailable in pinned OSG's extension table on device; per-target color masks are not provided by ordinary GLES2 core semantics.
+20. **GL4ES `ColorMaski` behavior:** OSG 3.6.5 checks its `glColorMaski` function pointer. With the pointer null, `ColorMaski::apply` logs `glColorMaski not supported by OpenGL driver` and makes no GL call. It is therefore not a GL4ES-emulated write-mask operation in the current runtime.
+21. **`ColorMaski` -> GL-error correlation:** not causal on present evidence. Because OSG makes no GL call when the pointer is null, those warning events cannot directly emit the observed invalid-enumerant/invalid-operation errors. The invalid enumerants cluster around transparent-depth activity but remain unattributed.
+22. **Is `ColorMaski` causally required for the white scene?** Not proven and classified as an independent renderer limitation. It controls attachment 1 normals state, while the white-world symptom concerns base color attachment 0. No workaround was implemented.
+23. **Scene color readback result:** **NOT CAPTURED**. A bounded five-pixel pre-UI readback was prepared in patch `0010`, but no executable was produced.
+24. **Depth variation result:** **NOT CAPTURED**. Depth readback was intentionally not added before establishing a safe GLES2-compatible method.
+25. **Pre-UI scene result:** baseline physical evidence says final presented scene before UI is white; the prepared targeted numeric sample did not run.
+26. **Texture/binding findings:** no new runtime texture-binding capture occurred. Source tracing confirms `fullscreen_tri` expects `lastShader` and calls `samplerLastShader(uv)`. Baseline UI texture rendering remains a known-good control.
+27. **Active scene program findings:** exact active native program IDs at the white-scene readback boundary are **NOT CAPTURED** because the build stopped during source validation.
+28. **White-world causal graph:** `fragment.h.glsl @link` -> separate entry and helper fragment objects -> independent GL4ES conversion/native attachment -> missing fragment `main` and `samplerLastShader` link definitions -> scene/base-copy programs unavailable -> base scene remains clear white -> MyGUI/HUD composites correctly. This is the strongest supported model, but physical confirmation remains pending because CI produced no artifact.
+29. **Issue classifications:** fragment multi-unit linkage = **PRIMARY WHITE-WORLD BLOCKER candidate with Android/source precedent**; `samplerLastShader` error = **dependent symptom**; missing fragment `main` = **dependent symptom/candidate of the same structure**; `ColorMaski` = **independent graphics issue, not proven base-color causal**; invalid enumerants = **unknown**; regression-test external-path dependency = **production-build gate blocker**.
+30. **Authorized correction set:** only inline the Android-proven core fragment helpers in `fragment.h.glsl` and remove separate fragment `@link`; add bounded, read-only runtime evidence. No `ColorMaski`, FBO, viewport, 800x600 resolution, UI, VFS, input, audio, or presentation change.
+31. **Correction commit 1:** `bcdb6c4ebc23c6b9cdb7c86c904801486661dbaa` (`bcdb6c4`) — `fix(ios): inline fragment shader helpers for GLES`.
+32. **Correction commit 2 if needed:** no second runtime correction. Separate diagnostics commit `913e1b0ba4e5dc5d8841ce34c04ed43c0caee26a` (`913e1b0`) — `diag(ios): bound white-world shader and scene probes`.
+33. **Regression fixtures:** `validation/test_openmw_fragment_linkage.py` covers the failing separate-library baseline, self-contained header, entry `main`, helper-definition/reference ordering, semantic parity with the original library, and Android precedent. `validation/test_wo23_bounded_diagnostics.py` verifies pinned OSG 3.6.5 accessors, hard caps, and absence of framebuffer mutations. Locally, 13 focused tests passed; a fresh pinned OpenMW tree accepted patches 0001-0010 and `git diff --check` passed. CI applied patches 0009 and 0010 successfully, then the Android-precedent test failed because the comparison repository was absent.
+34. **Fast Development run:** `32403134101`, job `96535829570`, failed at `Bootstrap exact sources and validate patches`: <https://github.com/arjunyerevan95-dot/OpenMWiOS/actions/runs/32403134101>.
+35. **Proof Full Qualification did not run:** the branch/head run inventory contains only `iOS Fast Development`, event `pull_request`, for head `913e1b0ba4e5dc5d8841ce34c04ed43c0caee26a`. Full Qualification remains manual/tag-only and did not launch.
+36. **Cache behavior:** all three caches missed. ABI fingerprint: `ios-fast-v4-xcode16.4-ios16.3-arm64-edd5fbcd7e18a5d33a4de616e039704d860dd513c9140bfb34ccbee5f1003987`; source fingerprint: `882a11f90c40b753818dcb62a6223ade19a1f7e5a0342031747dbbf7edc0d287`. Source-download key, vcpkg key, and qualified-state exact/prefix keys reported `Cache not found`. The run stopped before dependency preparation, so no dependency rebuild occurred.
+37. **Build duration:** job `18:25:50Z` to `18:27:45Z`, approximately `1m55s`; bootstrap/validation ran `33s`. Production configure/compile/link/package were skipped.
+38. **Executable SHA-256:** **NOT APPLICABLE — no executable produced**.
+39. **IPA SHA-256:** **NOT APPLICABLE — no IPA produced**.
+40. **Content-path validation:** **NOT APPLICABLE — no installation/device test**. The last qualified Work Order 22 data path ended in `Documents/OpenMW/Morrowind/Data Files` in container `59CD7257-06AC-4EC3-AD07-B8AB374BA162`.
+41. **Logging readiness:** **NOT APPLICABLE — device logging was not started because no artifact existed**.
+42. **User launch timestamp:** **NOT APPLICABLE**.
+43. **Main-menu result:** no Work Order 23 run. Work Order 22 full-menu baseline remains authoritative.
+44. **New Game result:** no Work Order 23 run. Work Order 22 live New Game/Jiub baseline remains authoritative.
+45. **Jiub scene result:** no Work Order 23 run. Work Order 22 white-world Jiub state remains authoritative.
+46. **World-render classification A/B/C/D:** **NOT TESTED**; baseline remains **A — world flat white, UI/input/audio operational**.
+47. **Before screenshot:** Work Order 22 white-world screenshot SHA-256 `21ADEB40B555291C097A2539C5B4102F3200E7F9A8D65B331DB415B890A33477`.
+48. **After screenshot:** **NOT APPLICABLE — no device run**.
+49. **UI overlay status:** not retested; Work Order 22 overlays are correct.
+50. **Camera/input status:** not retested; Work Order 22 camera/input are correct.
+51. **Audio status:** not retested; Work Order 22 audio is correct.
+52. **Fragment-link error count before/after:** before `2`; after **NOT MEASURED**.
+53. **`ColorMaski` count before/after:** before `66,881`; after **NOT MEASURED**.
+54. **GL invalid-enumerant count before/after:** before `3,402`; after **NOT MEASURED**.
+55. **GL invalid-operation count before/after:** before `26`; after **NOT MEASURED**.
+56. **Crash/jetsam status:** no Work Order 23 device run. Work Order 22 had none.
+57. **Highest observable runtime milestone:** unchanged qualified Work Order 22 milestone: full main menu and live Jiub/new-game state with working UI/input/audio, but white 3D world.
+58. **Stop condition:** production validation/build gate failure before compile; equivalent to the work order's build-stop boundary. No device test was authorized after the failed Fast run.
+59. **Strongest causal conclusion:** OpenMW's fragment helper linkage is the fragment-stage analogue of the previously corrected vertex multi-unit problem, and recent Android's self-contained fragment header is the narrow architectural precedent. `ColorMaski` warnings do not directly block base-color writes because the unsupported OSG state targets normals attachment 1 and does not issue a GL call. The proposed correction remains unqualified solely because its CI regression test depended on a local comparison checkout absent from the runner.
+60. **Precise recommended Work Order 24:** make the Android-precedent regression test hermetic by checking a repository-owned immutable fixture/snippet/hash rather than reading `deps/openmw-android-docker`, without changing `0009` or the Work Order 22 presentation path. Re-run Fast Development once, require production compile/link/package, then perform one controlled device launch and measure fragment-link errors `2 -> ?`, white-world output, bounded pre-UI samples, `ColorMaski`, invalid-enumerant, invalid-operation, crash/jetsam, and physical Jiub-scene visibility. Do not modify `ColorMaski` unless the fragment correction is device-tested and independent evidence proves indexed masking is still scene-critical.
+
+## Evidence locations
+
+- `.tmp/wo23-causal-analysis.md`
+- `.tmp/wo23-patchcheck-2/`
+- `patches/openmw/0009-ios-inline-core-fragment-helpers.patch`
+- `patches/openmw/0010-ios-bound-white-world-diagnostics.patch`
+- `validation/test_openmw_fragment_linkage.py`
+- `validation/test_wo23_bounded_diagnostics.py`
+- GitHub Fast run `32403134101`
+- `WORK-ORDER-22-HANDOFF.md`
+
