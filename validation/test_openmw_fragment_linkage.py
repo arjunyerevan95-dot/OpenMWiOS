@@ -7,9 +7,13 @@ HEADER = ROOT / "deps" / "openmw" / "files" / "shaders" / "lib" / "core" / "frag
 LIBRARY = ROOT / "deps" / "openmw" / "files" / "shaders" / "lib" / "core" / "fragment.glsl"
 FULLSCREEN = ROOT / "deps" / "openmw" / "files" / "shaders" / "compatibility" / "fullscreen_tri.frag"
 OBJECTS = ROOT / "deps" / "openmw" / "files" / "shaders" / "compatibility" / "objects.frag"
-ANDROID_PATCH = (
-    ROOT / "deps" / "openmw-android-docker" / "patches" / "openmw" / "ng-gl4es.patch"
-)
+RUNTIME_PATCH = ROOT / "patches" / "openmw" / "0009-ios-inline-core-fragment-helpers.patch"
+
+# Provenance for the known-working architecture compared during Work Order 23:
+# repository: https://gitlab.com/modding-openmw/openmw-android-docker
+# release: 2.7.4; commit: 5b02e847dc646c9f10cd66001e4d65c5274dde49
+# source path: patches/openmw/ng-gl4es.patch
+ANDROID_REFERENCE = "openmw-android-docker/2.7.4@5b02e847:patches/openmw/ng-gl4es.patch"
 
 BASELINE_HEADER = """\
 #ifndef OPENMW_FRAGMENT_H_GLSL
@@ -79,8 +83,12 @@ class OpenMWFragmentLinkageTests(unittest.TestCase):
             self.assertIn(statement, library)
             self.assertIn(statement, header)
 
-    def test_recent_android_gl4es_patch_uses_the_same_fix_architecture(self) -> None:
-        patch = ANDROID_PATCH.read_text(encoding="utf-8")
+    def test_runtime_patch_preserves_documented_android_fix_architecture(self) -> None:
+        patch = RUNTIME_PATCH.read_text(encoding="utf-8")
+        self.assertEqual(
+            ANDROID_REFERENCE,
+            "openmw-android-docker/2.7.4@5b02e847:patches/openmw/ng-gl4es.patch",
+        )
         self.assertIn('-@link "lib/core/fragment.glsl"', patch)
         self.assertIn("+vec4 samplerLastShader(vec2 uv)", patch)
         self.assertIn("+    return texture2D(lastShader, uv);", patch)
