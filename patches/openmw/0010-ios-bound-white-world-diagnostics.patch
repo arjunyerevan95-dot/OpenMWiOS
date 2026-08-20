@@ -1,0 +1,109 @@
+diff --git a/apps/openmw/mwrender/pingpongcanvas.cpp b/apps/openmw/mwrender/pingpongcanvas.cpp
+index a4f940be3..87ac6cfbf 100644
+--- a/apps/openmw/mwrender/pingpongcanvas.cpp
++++ b/apps/openmw/mwrender/pingpongcanvas.cpp
+@@ -2,6 +2,7 @@
+ 
+ #include <cassert>
+ 
++#include <components/debug/debuglog.hpp>
+ #include <components/shader/shadermanager.hpp>
+ #include <components/stereo/multiview.hpp>
+ #include <components/stereo/stereomanager.hpp>
+@@ -10,7 +11,56 @@
+ #include "postprocessor.hpp"
+ 
+ namespace MWRender
+ {
++    namespace
++    {
++        void logBoundedSceneReadback(osg::State& state)
++        {
++            static std::size_t nextSample = 0;
++            constexpr std::array<unsigned int, 3> sampleFrames{ 600, 1200, 1800 };
++            if (nextSample >= sampleFrames.size() || !state.getFrameStamp()
++                || state.getFrameStamp()->getFrameNumber() < sampleFrames[nextSample])
++                return;
++
++            GLint viewport[4]{};
++            glGetIntegerv(GL_VIEWPORT, viewport);
++            const std::array<std::array<GLint, 2>, 5> coordinates{ {
++                { viewport[0] + viewport[2] / 2, viewport[1] + viewport[3] / 2 },
++                { viewport[0] + viewport[2] / 4, viewport[1] + viewport[3] / 4 },
++                { viewport[0] + viewport[2] * 3 / 4, viewport[1] + viewport[3] / 4 },
++                { viewport[0] + viewport[2] / 4, viewport[1] + viewport[3] * 3 / 4 },
++                { viewport[0] + viewport[2] * 3 / 4, viewport[1] + viewport[3] * 3 / 4 },
++            } };
++            std::array<std::array<GLubyte, 4>, 5> pixels{};
++            for (std::size_t i = 0; i < coordinates.size(); ++i)
++                glReadPixels(coordinates[i][0], coordinates[i][1], 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, pixels[i].data());
++
++            Log(Debug::Info) << "WO23 pre-UI scene sample frame=" << state.getFrameStamp()->getFrameNumber()
++                             << " viewport=" << viewport[0] << ',' << viewport[1] << ',' << viewport[2] << ','
++                             << viewport[3] << " rgba=" << static_cast<unsigned int>(pixels[0][0]) << ','
++                             << static_cast<unsigned int>(pixels[0][1]) << ','
++                             << static_cast<unsigned int>(pixels[0][2]) << ','
++                             << static_cast<unsigned int>(pixels[0][3]) << " | "
++                             << static_cast<unsigned int>(pixels[1][0]) << ','
++                             << static_cast<unsigned int>(pixels[1][1]) << ','
++                             << static_cast<unsigned int>(pixels[1][2]) << ','
++                             << static_cast<unsigned int>(pixels[1][3]) << " | "
++                             << static_cast<unsigned int>(pixels[2][0]) << ','
++                             << static_cast<unsigned int>(pixels[2][1]) << ','
++                             << static_cast<unsigned int>(pixels[2][2]) << ','
++                             << static_cast<unsigned int>(pixels[2][3]) << " | "
++                             << static_cast<unsigned int>(pixels[3][0]) << ','
++                             << static_cast<unsigned int>(pixels[3][1]) << ','
++                             << static_cast<unsigned int>(pixels[3][2]) << ','
++                             << static_cast<unsigned int>(pixels[3][3]) << " | "
++                             << static_cast<unsigned int>(pixels[4][0]) << ','
++                             << static_cast<unsigned int>(pixels[4][1]) << ','
++                             << static_cast<unsigned int>(pixels[4][2]) << ','
++                             << static_cast<unsigned int>(pixels[4][3]);
++            ++nextSample;
++        }
++    }
++
+     PingPongCanvas::PingPongCanvas(
+         Shader::ShaderManager& shaderManager, const std::shared_ptr<LuminanceCalculator>& luminanceCalculator)
+         : mFallbackStateSet(new osg::StateSet)
+@@ -108,6 +158,7 @@ namespace MWRender
+             resolveViewport->apply(state);
+ 
+             drawGeometry(renderInfo);
++            logBoundedSceneReadback(state);
+             state.popStateSet();
+ 
+             if (Stereo::getMultiview())
+diff --git a/components/shader/shadermanager.cpp b/components/shader/shadermanager.cpp
+index b02120709..a3d3cf99a 100644
+--- a/components/shader/shadermanager.cpp
++++ b/components/shader/shadermanager.cpp
+@@ -599,6 +599,27 @@ namespace Shader
+             addLinkedShaders(vertexShader, program);
+             addLinkedShaders(fragmentShader, program);
+ 
++            static unsigned int wo23ProgramCount = 0;
++            const std::string& fragmentName = fragmentShader->getName();
++            if (wo23ProgramCount < 8
++                && (fragmentName.find("objects.frag") != std::string::npos
++                    || fragmentName.find("fullscreen_tri.frag") != std::string::npos))
++            {
++                std::stringstream attachments;
++                for (unsigned int i = 0; i < program->getNumShaders(); ++i)
++                {
++                    const osg::Shader* attached = program->getShader(i);
++                    if (i != 0)
++                        attachments << " | ";
++                    attachments << (attached ? attached->getName() : "<null>") << " type="
++                                << (attached ? static_cast<int>(attached->getType()) : -1) << " hasMain="
++                                << (attached && attached->getShaderSource().find("void main") != std::string::npos);
++                }
++                Log(Debug::Info) << "WO23 fragment program " << wo23ProgramCount << " entry=" << fragmentName
++                                 << " attachments=" << attachments.str();
++                ++wo23ProgramCount;
++            }
++
+             found = mPrograms.insert(std::make_pair(std::make_pair(vertexShader, fragmentShader), program)).first;
+         }
+         return found->second;
