@@ -1,0 +1,245 @@
+diff --git a/include/gl4esinit.h b/include/gl4esinit.h
+index 79cbb34..130712a 100644
+--- a/include/gl4esinit.h
++++ b/include/gl4esinit.h
+@@ -18,12 +18,18 @@ extern "C" {
+ void set_getprocaddress(void *(APIENTRY_GL4ES *new_proc_address)(const char *));
+ // reguired with NOEGL
+ void set_getmainfbsize(void (APIENTRY_GL4ES *new_getMainFBSize)(int* width, int* height));
++// Map desktop logical framebuffer/renderbuffer zero to an externally-owned native drawable.
++// This is required by context owners such as SDL/UIKit where the presentable targets are non-zero.
++void set_defaultframebuffer(unsigned int framebuffer, unsigned int renderbuffer);
+ // do this before any GL calls if init constructors are disabled.
+ void initialize_gl4es(void);
+ // do this to uninitialize GL4ES if init constructors are disabled.
+ void close_gl4es(void);
+ // wrapped GetProcAddress
+ void* APIENTRY_GL4ES gl4es_GetProcAddress(const char *name);
++// Flush GL4ES state before and restore it after a swap owned by an external context manager.
++void gl4es_pre_swap(void);
++void gl4es_post_swap(void);
+ 
+ #ifdef __cplusplus
+ }
+diff --git a/src/gl/state.h b/src/gl/state.h
+index 2defbff..a21b333 100644
+--- a/src/gl/state.h
++++ b/src/gl/state.h
+@@ -305,6 +305,9 @@ typedef struct {
+     khash_t(renderbufferlist_t) *renderbufferlist;
+     glrenderbuffer_t *default_rb;
+     glrenderbuffer_t *current_rb;
++
++    GLuint default_fbo; // Externally-owned native drawable FBO for logical framebuffer 0
++    GLuint default_rbo; // Externally-owned native drawable RBO for logical renderbuffer 0
+     
+     GLuint mainfbo_fbo; // The MainFBO
+     GLuint mainfbo_tex; // Texture Attachment
+diff --git a/src/gl/framebuffers.h b/src/gl/framebuffers.h
+index a917658..071e5e0 100644
+--- a/src/gl/framebuffers.h
++++ b/src/gl/framebuffers.h
+@@ -41,6 +41,9 @@ void APIENTRY_GL4ES gl4es_glClearNamedFramebufferfi(GLuint framebuffer, GLenum b
+ 
+ void APIENTRY_GL4ES gl4es_glColorMaskIndexed(GLuint framebuffer, GLboolean red, GLboolean green, GLboolean blue, GLboolean alpha);
+ 
++void gl4es_setDefaultFramebuffer(GLuint framebuffer, GLuint renderbuffer);
++void gl4es_bindDefaultRenderbuffer(void);
++
+ // In case of LIBGL_FB=2, let's create an FBO for everything, that is then blitted just before the SwapBuffer
+ void createMainFBO(int width, int height);
+ void blitMainFBO(int x, int y, int width, int height);
+diff --git a/src/gl/framebuffers.c b/src/gl/framebuffers.c
+index b585f3b..a0eb95a 100644
+--- a/src/gl/framebuffers.c
++++ b/src/gl/framebuffers.c
+@@ -46,6 +46,29 @@ glframebuffer_t* get_framebuffer(GLenum target) {
+     return NULL;
+ }
+ 
++static GLuint defaultFramebuffer(void) {
++    return glstate->fbo.mainfbo_fbo ? glstate->fbo.mainfbo_fbo : glstate->fbo.default_fbo;
++}
++
++void gl4es_setDefaultFramebuffer(GLuint framebuffer, GLuint renderbuffer) {
++    glstate->fbo.default_fbo = framebuffer;
++    glstate->fbo.default_rbo = renderbuffer;
++
++    LOAD_GLES2_OR_OES(glBindFramebuffer);
++    LOAD_GLES2_OR_OES(glBindRenderbuffer);
++    if (glstate->fbo.current_fb && glstate->fbo.current_fb->id == 0 && gles_glBindFramebuffer)
++        gles_glBindFramebuffer(GL_FRAMEBUFFER, defaultFramebuffer());
++    if (glstate->fbo.current_rb == glstate->fbo.default_rb && gles_glBindRenderbuffer)
++        gles_glBindRenderbuffer(GL_RENDERBUFFER, glstate->fbo.default_rbo);
++}
++
++void gl4es_bindDefaultRenderbuffer(void) {
++    LOAD_GLES2_OR_OES(glBindRenderbuffer);
++    if (gles_glBindRenderbuffer)
++        gles_glBindRenderbuffer(GL_RENDERBUFFER, glstate->fbo.default_rbo);
++    glstate->fbo.current_rb = glstate->fbo.default_rb;
++}
++
+ 
+ void readfboBegin() {
+ 	if (glstate->fbo.fbo_read == glstate->fbo.fbo_draw)
+@@ -55,8 +78,8 @@ void readfboBegin() {
+         return;
+     glstate->fbo.current_fb = glstate->fbo.fbo_read;
+ 	GLuint fbo = glstate->fbo.fbo_read->id;
+-	if (!fbo)
+-		fbo = glstate->fbo.mainfbo_fbo;
++    if (!fbo)
++        fbo = defaultFramebuffer();
+     LOAD_GLES2_OR_OES(glBindFramebuffer);
+ 	gles_glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+ }
+@@ -69,8 +92,8 @@ void readfboEnd() {
+         return;
+     glstate->fbo.current_fb = glstate->fbo.fbo_draw;
+ 	GLuint fbo = glstate->fbo.fbo_draw->id;
+-	if (!fbo)
+-		fbo = glstate->fbo.mainfbo_fbo;
++    if (!fbo)
++        fbo = defaultFramebuffer();
+     LOAD_GLES2_OR_OES(glBindFramebuffer);
+ 	gles_glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+ }
+@@ -254,7 +277,7 @@ void APIENTRY_GL4ES gl4es_glBindFramebuffer(GLenum target, GLuint framebuffer) {
+     }
+ 
+     if(framebuffer==0)
+-        framebuffer = glstate->fbo.mainfbo_fbo;
++        framebuffer = defaultFramebuffer();
+ 
+     glstate->fbo.current_fb = fb;
+         
+@@ -271,12 +294,12 @@ GLenum ReadDraw_Push(GLenum target) {
+     LOAD_GLES2_OR_OES(glBindFramebuffer);
+     if(target==GL_DRAW_FRAMEBUFFER) {
+         if(glstate->fbo.current_fb!=glstate->fbo.fbo_draw)
+-            gles_glBindFramebuffer(GL_FRAMEBUFFER, (glstate->fbo.fbo_draw->id)?glstate->fbo.fbo_draw->id:glstate->fbo.mainfbo_fbo);
++            gles_glBindFramebuffer(GL_FRAMEBUFFER, (glstate->fbo.fbo_draw->id)?glstate->fbo.fbo_draw->id:defaultFramebuffer());
+         return GL_FRAMEBUFFER;
+     }
+     if(target==GL_READ_FRAMEBUFFER) {
+         if(glstate->fbo.current_fb!=glstate->fbo.fbo_read)
+-            gles_glBindFramebuffer(GL_FRAMEBUFFER, (glstate->fbo.fbo_read->id)?glstate->fbo.fbo_read->id:glstate->fbo.mainfbo_fbo);
++            gles_glBindFramebuffer(GL_FRAMEBUFFER, (glstate->fbo.fbo_read->id)?glstate->fbo.fbo_read->id:defaultFramebuffer());
+         return GL_FRAMEBUFFER;
+     }
+     return target;
+@@ -286,10 +309,10 @@ void ReadDraw_Pop(GLenum target) {
+         return;
+     LOAD_GLES2_OR_OES(glBindFramebuffer);
+     if(target==GL_DRAW_FRAMEBUFFER && glstate->fbo.current_fb!=glstate->fbo.fbo_draw) {
+-        gles_glBindFramebuffer(GL_FRAMEBUFFER, (glstate->fbo.current_fb->id)?glstate->fbo.current_fb->id:glstate->fbo.mainfbo_fbo);
++        gles_glBindFramebuffer(GL_FRAMEBUFFER, (glstate->fbo.current_fb->id)?glstate->fbo.current_fb->id:defaultFramebuffer());
+     }
+     if(target==GL_READ_FRAMEBUFFER && glstate->fbo.current_fb!=glstate->fbo.fbo_read) {
+-        gles_glBindFramebuffer(GL_FRAMEBUFFER, (glstate->fbo.current_fb->id)?glstate->fbo.current_fb->id:glstate->fbo.mainfbo_fbo);
++        gles_glBindFramebuffer(GL_FRAMEBUFFER, (glstate->fbo.current_fb->id)?glstate->fbo.current_fb->id:defaultFramebuffer());
+     }
+ }
+ 
+@@ -1063,19 +1086,19 @@ void APIENTRY_GL4ES gl4es_glBindRenderbuffer(GLenum target, GLuint renderbuffer)
+     LOAD_GLES2_OR_OES(glBindRenderbuffer);
+     
+     GLuint current = glstate->fbo.current_rb->renderbuffer;
+-    if(current==renderbuffer) {
++    if(current==renderbuffer && renderbuffer!=0) {
+         noerrorShim();
+         return;
+     }
+      glrenderbuffer_t * rend = find_renderbuffer(renderbuffer);
+-    if(!rend || !rend->renderbuffer) {
++    if(!rend || (!rend->renderbuffer && renderbuffer!=0)) {
+         errorShim(GL_INVALID_OPERATION);
+         return;
+     }
+     glstate->fbo.current_rb = rend;
+     
+     errorGL();
+-    gles_glBindRenderbuffer(target, renderbuffer);
++    gles_glBindRenderbuffer(target, renderbuffer ? renderbuffer : glstate->fbo.default_rbo);
+ }
+ 
+ GLboolean APIENTRY_GL4ES gl4es_glIsRenderbuffer(GLuint renderbuffer) {
+@@ -1352,7 +1375,7 @@ void unbindMainFBO() {
+     if (!glstate->fbo.mainfbo_fbo)
+         return;
+     if (glstate->fbo.current_fb->id==0) {
+-        gles_glBindFramebuffer(GL_FRAMEBUFFER, 0);
++        gles_glBindFramebuffer(GL_FRAMEBUFFER, glstate->fbo.default_fbo);
+     }
+ }
+ 
+@@ -1501,12 +1524,12 @@ void APIENTRY_GL4ES gl4es_glBlitFramebuffer(GLint srcX0, GLint srcY0, GLint srcX
+ }
+ 
+ GLuint gl4es_getCurrentFBO() {
+-  return (glstate->fbo.current_fb->id)?glstate->fbo.current_fb->id:glstate->fbo.mainfbo_fbo;
++  return (glstate->fbo.current_fb->id)?glstate->fbo.current_fb->id:defaultFramebuffer();
+ }
+ 
+ void gl4es_setCurrentFBO() {
+   LOAD_GLES2_OR_OES(glBindFramebuffer);
+-  gles_glBindFramebuffer(GL_FRAMEBUFFER, (glstate->fbo.current_fb->id)?glstate->fbo.current_fb->id:glstate->fbo.mainfbo_fbo);
++  gles_glBindFramebuffer(GL_FRAMEBUFFER, (glstate->fbo.current_fb->id)?glstate->fbo.current_fb->id:defaultFramebuffer());
+ }
+ 
+ // DrawBuffers functions are faked unless GL_EXT_draw_buffers is supported
+@@ -1726,7 +1749,7 @@ void gl4es_saveCurrentFBO()
+     // this, in fact, bind FBO to 0 if it wasn't
+     GLuint framebuffer = (glstate->fbo.current_fb)?glstate->fbo.current_fb->id:0;
+     if(framebuffer==0)
+-        framebuffer = glstate->fbo.mainfbo_fbo;
++        framebuffer = defaultFramebuffer();
+     if(framebuffer) {
+         LOAD_GLES2_OR_OES(glBindFramebuffer);
+         if(hardext.vendor&VEND_ARM)
+@@ -1740,7 +1763,7 @@ void gl4es_restoreCurrentFBO()
+     // Bind back current FBO if it wasn't 0
+     GLuint framebuffer = (glstate->fbo.current_fb)?glstate->fbo.current_fb->id:0;
+     if(framebuffer==0)
+-        framebuffer = glstate->fbo.mainfbo_fbo;
++        framebuffer = defaultFramebuffer();
+     if(framebuffer) {
+         LOAD_GLES2_OR_OES(glBindFramebuffer);
+         gles_glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
+diff --git a/src/gl/init.c b/src/gl/init.c
+index 47ad047..3aa598e 100644
+--- a/src/gl/init.c
++++ b/src/gl/init.c
+@@ -15,6 +15,7 @@
+ #include "loader.h"
+ #include "logs.h"
+ #include "fpe_cache.h"
++#include "framebuffers.h"
+ #include "init.h"
+ #include "envvars.h"
+ #if defined(__EMSCRIPTEN__) || defined(__APPLE__)
+@@ -64,6 +65,11 @@ void set_getmainfbsize(void (APIENTRY_GL4ES  *new_getMainFBSize)(int* w, int* h)
+     gl4es_getMainFBSize = (void*)new_getMainFBSize;
+ }
+ 
++EXPORT
++void set_defaultframebuffer(unsigned int framebuffer, unsigned int renderbuffer) {
++    gl4es_setDefaultFramebuffer(framebuffer, renderbuffer);
++}
++
+ EXPORT
+ void set_getprocaddress(void *(APIENTRY_GL4ES  *new_proc_address)(const char *)) {
+     gles_getProcAddress = new_proc_address;
+diff --git a/src/gl/gl4es.c b/src/gl/gl4es.c
+index 674eaa5..95d8604 100644
+--- a/src/gl/gl4es.c
++++ b/src/gl/gl4es.c
+@@ -1225,6 +1225,7 @@ NonAliasExportDecl(void,gl4es_pre_swap,())
+         blitMainFBO(0, 0, 0, 0);
+         // blit the main_fbo before swap
+     }
++    gl4es_bindDefaultRenderbuffer();
+ }
+ 
+ void show_fps() {
