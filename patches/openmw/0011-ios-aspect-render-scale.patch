@@ -1,0 +1,153 @@
+diff --git a/apps/openmw/engine.cpp b/apps/openmw/engine.cpp
+index 93e4a63..520de78 100644
+--- a/apps/openmw/engine.cpp
++++ b/apps/openmw/engine.cpp
+@@ -6,6 +6,7 @@
+ 
+ #include <cerrno>
+ #include <chrono>
++#include <cstdio>
+ #include <future>
+ #include <system_error>
+ 
+@@ -1084,6 +1085,13 @@ void OMW::Engine::go()
+     MWWorld::DateTimeManager& timeManager = *mWorld->getTimeManager();
+     Misc::FrameRateLimiter frameRateLimiter = Misc::makeFrameRateLimiter(mEnvironment.getFrameRateLimit());
+     const std::chrono::steady_clock::duration maxSimulationInterval(std::chrono::milliseconds(200));
++#ifdef OPENMW_IOS
++    constexpr unsigned iosPerformanceWindowFrames = 300;
++    constexpr unsigned iosPerformanceWindowLimit = 4;
++    unsigned iosPerformanceFrames = 0;
++    unsigned iosPerformanceWindows = 0;
++    auto iosPerformanceWindowStart = std::chrono::steady_clock::now();
++#endif
+     while (!mViewer->done() && !mStateManager->hasQuitRequest())
+     {
+         const double dt = std::chrono::duration_cast<std::chrono::duration<double>>(
+@@ -1107,6 +1115,29 @@ void OMW::Engine::go()
+             openmw_ios_log("first_frame", "first complete engine frame");
+             loggedFirstFrame = true;
+         }
++        if (mStateManager->getState() == MWState::StateManager::State_Running
++            && iosPerformanceWindows < iosPerformanceWindowLimit)
++        {
++            if (iosPerformanceFrames == 0)
++                iosPerformanceWindowStart = std::chrono::steady_clock::now();
++            ++iosPerformanceFrames;
++            if (iosPerformanceFrames == iosPerformanceWindowFrames)
++            {
++                const double elapsedSeconds = std::chrono::duration_cast<std::chrono::duration<double>>(
++                                                  std::chrono::steady_clock::now() - iosPerformanceWindowStart)
++                                                  .count();
++                const double averageFps = iosPerformanceWindowFrames / elapsedSeconds;
++                const double averageFrameMs = elapsedSeconds * 1000.0 / iosPerformanceWindowFrames;
++                char detail[192];
++                std::snprintf(detail, sizeof(detail),
++                    "window=%u;frames=%u;elapsed_seconds=%.3f;average_fps=%.2f;average_frame_ms=%.3f",
++                    iosPerformanceWindows + 1, iosPerformanceWindowFrames, elapsedSeconds, averageFps,
++                    averageFrameMs);
++                openmw_ios_log("performance_window", detail);
++                iosPerformanceFrames = 0;
++                ++iosPerformanceWindows;
++            }
++        }
+ #endif
+         timeManager.updateIsPaused();
+         if (!timeManager.isPaused())
+diff --git a/apps/openmw/mwrender/postprocessor.cpp b/apps/openmw/mwrender/postprocessor.cpp
+index 1787163..87118a4 100644
+--- a/apps/openmw/mwrender/postprocessor.cpp
++++ b/apps/openmw/mwrender/postprocessor.cpp
+@@ -3,8 +3,15 @@
+ #include <SDL_opengl_glext.h>
+ #include <algorithm>
+ #include <chrono>
++#include <cmath>
++#include <cstdlib>
++#include <string>
+ #include <thread>
+ 
++#ifdef OPENMW_IOS
++#include <ios/openmw_ios_logging.h>
++#endif
++
+ #include <osg/Texture1D>
+ #include <osg/Texture2D>
+ #include <osg/Texture2DArray>
+@@ -41,6 +48,33 @@
+ 
+ namespace
+ {
++#ifdef OPENMW_IOS
++    float iosRenderScale()
++    {
++        static const float scale = [] {
++            const char* value = std::getenv("OPENMW_IOS_RENDER_SCALE");
++            if (!value)
++                return 1.f;
++
++            char* end = nullptr;
++            const float parsed = std::strtof(value, &end);
++            if (end == value || *end != '\0' || !std::isfinite(parsed))
++                return 1.f;
++            return std::clamp(parsed, 0.25f, 1.f);
++        }();
++        return scale;
++    }
++
++    int scaledRenderDimension(int outputDimension)
++    {
++        if (iosRenderScale() >= 1.f)
++            return outputDimension;
++
++        const int rounded = std::max(2, static_cast<int>(std::lround(outputDimension * iosRenderScale())));
++        return rounded + (rounded % 2);
++    }
++#endif
++
+     struct ResizedCallback : osg::GraphicsContext::ResizedCallback
+     {
+         ResizedCallback(MWRender::PostProcessor* postProcessor)
+@@ -231,7 +265,18 @@ namespace MWRender
+     void PostProcessor::resize()
+     {
+         mHUDCamera->resize(mWidth, mHeight);
+-        mViewer->getCamera()->resize(mWidth, mHeight);
++        mViewer->getCamera()->resize(renderWidth(), renderHeight());
++#ifdef OPENMW_IOS
++        static bool loggedRenderScale = false;
++        if (!loggedRenderScale)
++        {
++            const std::string dimensions = "output=" + std::to_string(mWidth) + "x" + std::to_string(mHeight)
++                + ";internal=" + std::to_string(renderWidth()) + "x" + std::to_string(renderHeight())
++                + ";scale=" + std::to_string(iosRenderScale());
++            openmw_ios_log("render_scale_contract", dimensions.c_str());
++            loggedRenderScale = true;
++        }
++#endif
+         if (Stereo::getStereo())
+             Stereo::Manager::instance().screenResolutionChanged();
+ 
+@@ -863,14 +908,22 @@ namespace MWRender
+     {
+         if (Stereo::getStereo())
+             return Stereo::Manager::instance().eyeResolution().x();
++#ifdef OPENMW_IOS
++        return scaledRenderDimension(mWidth);
++#else
+         return mWidth;
++#endif
+     }
+ 
+     int PostProcessor::renderHeight() const
+     {
+         if (Stereo::getStereo())
+             return Stereo::Manager::instance().eyeResolution().y();
++#ifdef OPENMW_IOS
++        return scaledRenderDimension(mHeight);
++#else
+         return mHeight;
++#endif
+     }
+ 
+     void PostProcessor::triggerShaderReload()

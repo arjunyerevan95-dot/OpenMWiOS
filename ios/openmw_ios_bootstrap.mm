@@ -6,6 +6,7 @@
 
 #include <SDL.h>
 
+#include <cmath>
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
@@ -14,6 +15,9 @@
 
 namespace
 {
+    constexpr float DefaultRenderScale = 1.0f;
+    constexpr float MinimumRenderScale = 0.25f;
+
     std::vector<std::string> sArguments;
     std::vector<char*> sArgumentPointers;
 
@@ -44,6 +48,20 @@ namespace
             stream << "fallback-archive=Bloodmoon.bsa\n";
             stream << "content=Bloodmoon.esm\n";
         }
+    }
+
+    float readRenderScale(const std::filesystem::path& root)
+    {
+        const std::filesystem::path config = root / "ios-render-scale.txt";
+        std::ifstream stream(config);
+        float scale = DefaultRenderScale;
+        if (!(stream >> scale) || !std::isfinite(scale))
+            return DefaultRenderScale;
+        if (scale < MinimumRenderScale)
+            return MinimumRenderScale;
+        if (scale > DefaultRenderScale)
+            return DefaultRenderScale;
+        return scale;
     }
 }
 
@@ -77,6 +95,11 @@ extern "C" void openmw_ios_prepare_environment(void)
         setenv("LIBGL_ES", "2", 1);
         setenv("LIBGL_GL", "21", 1);
         setenv("OPENMW_GLES_VERSION", "2", 1);
+        const float renderScale = readRenderScale(root);
+        const std::string renderScaleValue = std::to_string(renderScale);
+        setenv("OPENMW_IOS_RENDER_SCALE", renderScaleValue.c_str(), 1);
+        openmw_ios_log("render_scale_config",
+            ("path=" + (root / "ios-render-scale.txt").string() + ";scale=" + renderScaleValue).c_str());
         openmw_ios_log("requested_gl_profile", "OpenGL ES 2.0 through GL4ES");
 
         SDL_SetHint(SDL_HINT_ORIENTATIONS, "LandscapeLeft LandscapeRight");
