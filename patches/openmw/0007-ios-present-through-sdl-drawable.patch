@@ -1,0 +1,127 @@
+diff --git a/components/sdlutil/gl4esinit.h b/components/sdlutil/gl4esinit.h
+index 8916d50..ba2ed5f 100644
+--- a/components/sdlutil/gl4esinit.h
++++ b/components/sdlutil/gl4esinit.h
+@@ -8,6 +8,10 @@
+ //
+ // GL4ES can then query the context for features and extensions.
+ extern "C" void openmw_gl4es_init(SDL_Window* window);
++#ifdef OPENMW_IOS
++extern "C" void openmw_gl4es_pre_swap();
++extern "C" void openmw_gl4es_post_swap();
++#endif
+ 
+ #endif // OPENMW_GL4ES_MANUAL_INIT
+ #endif // OPENMW_COMPONENTS_SDLUTIL_GL4ESINIT_H
+diff --git a/components/sdlutil/gl4esinit.cpp b/components/sdlutil/gl4esinit.cpp
+index 7ea13dc..1aa6409 100644
+--- a/components/sdlutil/gl4esinit.cpp
++++ b/components/sdlutil/gl4esinit.cpp
+@@ -20,6 +20,36 @@ extern "C"
+ 
+     static SDL_Window* gWindow;
+ 
++#ifdef OPENMW_IOS
++    using NativeGetIntegerv = void (*)(unsigned int, int*);
++    using NativeCheckFramebufferStatus = unsigned int (*)(unsigned int);
++
++    static NativeGetIntegerv gNativeGetIntegerv;
++    static NativeCheckFramebufferStatus gNativeCheckFramebufferStatus;
++    static unsigned int gDefaultFramebuffer;
++    static unsigned int gDefaultRenderbuffer;
++
++    std::string openmw_gl4es_NativeTargetState()
++    {
++        int framebuffer = 0;
++        int renderbuffer = 0;
++        int viewport[4] = { 0, 0, 0, 0 };
++        if (gNativeGetIntegerv)
++        {
++            gNativeGetIntegerv(GL_FRAMEBUFFER_BINDING, &framebuffer);
++            gNativeGetIntegerv(GL_RENDERBUFFER_BINDING, &renderbuffer);
++            gNativeGetIntegerv(GL_VIEWPORT, viewport);
++        }
++        const unsigned int status
++            = gNativeCheckFramebufferStatus ? gNativeCheckFramebufferStatus(GL_FRAMEBUFFER) : 0;
++        return "nativeFbo=" + std::to_string(framebuffer) + ";nativeRbo=" + std::to_string(renderbuffer)
++            + ";defaultFbo=" + std::to_string(gDefaultFramebuffer) + ";defaultRbo="
++            + std::to_string(gDefaultRenderbuffer) + ";viewport=" + std::to_string(viewport[0]) + ","
++            + std::to_string(viewport[1]) + "," + std::to_string(viewport[2]) + ","
++            + std::to_string(viewport[3]) + ";status=" + std::to_string(status);
++    }
++#endif
++
+     void openmw_gl4es_GetMainFBSize(int* width, int* height)
+     {
+         SDL_GL_GetDrawableSize(gWindow, width, height);
+@@ -44,9 +74,26 @@ extern "C"
+         gWindow = window;
+         set_getprocaddress(SDL_GL_GetProcAddress);
+         set_getmainfbsize(openmw_gl4es_GetMainFBSize);
++#ifdef OPENMW_IOS
++        gNativeGetIntegerv = reinterpret_cast<NativeGetIntegerv>(SDL_GL_GetProcAddress("glGetIntegerv"));
++        gNativeCheckFramebufferStatus = reinterpret_cast<NativeCheckFramebufferStatus>(
++            SDL_GL_GetProcAddress("glCheckFramebufferStatus"));
++        int framebuffer = 0;
++        int renderbuffer = 0;
++        if (gNativeGetIntegerv)
++        {
++            gNativeGetIntegerv(GL_FRAMEBUFFER_BINDING, &framebuffer);
++            gNativeGetIntegerv(GL_RENDERBUFFER_BINDING, &renderbuffer);
++        }
++        gDefaultFramebuffer = static_cast<unsigned int>(framebuffer);
++        gDefaultRenderbuffer = static_cast<unsigned int>(renderbuffer);
++#endif
+         initialize_gl4es();
+ #ifdef OPENMW_IOS
++        set_defaultframebuffer(gDefaultFramebuffer, gDefaultRenderbuffer);
+         openmw_ios_log("gl4es_initialization", "GL4ES initialized with SDL context ownership");
++        const std::string targets = openmw_gl4es_NativeTargetState();
++        openmw_ios_log("gl4es_default_drawable_targets", targets.c_str());
+ #endif
+ 
+         // merge glBegin/glEnd in beams and console
+@@ -55,6 +102,25 @@ extern "C"
+         glHint(GL_AVOID16BITS_HINT_GL4ES, 1);
+     }
+ 
++#ifdef OPENMW_IOS
++    void openmw_gl4es_pre_swap()
++    {
++        gl4es_pre_swap();
++        static unsigned int swaps = 0;
++        if (swaps < 3 || swaps == 120 || swaps == 600)
++        {
++            const std::string state = "swap=" + std::to_string(swaps) + ";" + openmw_gl4es_NativeTargetState();
++            openmw_ios_log("gl4es_pre_swap_targets", state.c_str());
++        }
++        ++swaps;
++    }
++
++    void openmw_gl4es_post_swap()
++    {
++        gl4es_post_swap();
++    }
++#endif
++
+ } // extern "C"
+ 
+ #endif // OPENMW_GL4ES_MANUAL_INIT
+diff --git a/components/sdlutil/sdlgraphicswindow.cpp b/components/sdlutil/sdlgraphicswindow.cpp
+index 2ffd136..efb15ee 100644
+--- a/components/sdlutil/sdlgraphicswindow.cpp
++++ b/components/sdlutil/sdlgraphicswindow.cpp
+@@ -319,7 +319,13 @@ namespace SDLUtil
+         }
+ #endif
+ 
++#if defined(OPENMW_GL4ES_MANUAL_INIT) && defined(OPENMW_IOS)
++        openmw_gl4es_pre_swap();
++#endif
+         SDL_GL_SwapWindow(mWindow);
++#if defined(OPENMW_GL4ES_MANUAL_INIT) && defined(OPENMW_IOS)
++        openmw_gl4es_post_swap();
++#endif
+     }
+ 
+     void GraphicsWindowSDL2::setSyncToVBlank(bool on)
