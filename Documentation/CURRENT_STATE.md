@@ -1,11 +1,13 @@
 # OpenMWiOS — Current State
 
 - Project: OpenMWiOS
-- Active branch: `codex/wo27-runtime-data-path`
+- Active branch: `codex/wo28-android-touch-fidelity`
 - Current engineering baseline commit: `6db1c2af5066f810df97c5af39bdbf2a48fb86b5`
+- Control-plane baseline commit: `50a84c34fc213c20e8653e565b90b94da636013c`
+- Active work order: [WO-028](../WorkOrders/WO-028.md)
 - Last completed work order: [WO-027](../WorkOrders/WO-027.md)
-- Already-issued next engineering work order: none
-- Engineering execution status: **frozen for control-plane migration and orchestrator review**
+- Current objective: Android touch UI/action fidelity
+- Engineering execution status: **ACTIVE under WO-028**
 - Last updated: 2026-08-21
 
 ## Qualified state
@@ -38,7 +40,7 @@ See [WO27 evidence](../Evidence/WO-027/manifest.md) for the candidate, CI, test,
 
 ## Current blockers and unresolved boundary
 
-Primary blocker: Android control-layout and action fidelity. Movement and look work, but the iOS overlay/action bridge is incomplete; Inventory is a demonstrated example.
+Primary blocker and active objective: Android control-layout and action fidelity. Movement and look work, but the iOS overlay/action bridge is incomplete; Inventory is a demonstrated example.
 
 Current unresolved renderer boundary exposed by exterior traversal:
 
@@ -56,14 +58,10 @@ The permanent default-data-path correction is completed in WO27. The stable logi
 
 The accepted physical test did **not** record the post-install container UUID because the diagnostic transport was unavailable. Therefore it establishes automatic discovery without manual UUID input, but does not independently prove that SideStore changed the UUID in that exact install.
 
-## Migration consistency note
-
-The control-plane migration order described WO26 as the last completed work order and the permanent data-path correction as the frozen next task. Stronger direct evidence disagrees: Git commit `6db1c2a`, Fast run `32480504839`, the completed local WO27 handoff, the device observation, and the read-only Google ledger all show WO27 completed. This repository-backed state therefore records WO27 as completed. No WO28 has been formally issued or invented.
-
-The tracked repository ledger at `docs/ios-port-ledger.md` was locally modified and lagged the completed WO27 evidence at migration time. It was preserved untouched.
-
 ## Latest important evidence
 
+- [Active WO28](../WorkOrders/WO-028.md)
+- [WO28 evidence manifest](../Evidence/WO-028/manifest.md)
 - [Canonical WO26 state](../WorkOrders/WO-026.md)
 - [Canonical WO27 state](../WorkOrders/WO-027.md)
 - [WO27 evidence manifest](../Evidence/WO-027/manifest.md)
@@ -75,9 +73,9 @@ The tracked repository ledger at `docs/ios-port-ledger.md` was locally modified 
 ## Future orchestrator/worker recovery
 
 1. Read `Documentation/CURRENT_STATE.md`.
-2. Read the canonical current `WorkOrders/WO-027.md` and its stated successor status.
+2. Read the canonical active `WorkOrders/WO-028.md`, then its completed baseline `WorkOrders/WO-027.md` only as referenced.
 3. Read only the `Decisions/` and `Evidence/` records referenced by that work order.
 4. Inspect current Git state and active/recent CI before changing anything.
 5. Use the Google Docs ledger only when deeper historical context is required.
 
-Do not resume engineering until the control-plane migration passes orchestrator review and a new engineering work order is formally issued or an existing one is explicitly resumed.
+Engineering changes are authorized only within the scope and stop conditions of `WorkOrders/WO-028.md`.
