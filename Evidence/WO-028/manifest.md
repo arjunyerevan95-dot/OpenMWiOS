@@ -1,7 +1,7 @@
 # WO-028 Evidence Manifest
 
 - Work order: [WO-028 — Android Touch UI / Action Fidelity](../../WorkOrders/WO-028.md)
-- Status: ACTIVE
+- Status: SUPERSEDED — execution result rejected; evidence accepted
 - Engineering baseline: `6db1c2af5066f810df97c5af39bdbf2a48fb86b5`
 - Control-plane baseline: `50a84c34fc213c20e8653e565b90b94da636013c`
 - Active branch: `codex/wo28-android-touch-fidelity`
@@ -80,21 +80,27 @@
 - Exact failure: `openmw_ios_touch_controls.mm:161:66: error: reference to 'wait' is ambiguous`; the embedded Android wait-icon identifier collided with the system/POSIX `wait` declaration.
 - The failed amended attempt restored source downloads, vcpkg binaries, GL4ES/OSG-qualified incremental state, and build state. Reported cache source: `ef3983ccaef8b76b65384adf22e90c34de2fd4bcac37a40240c79059e485119f`; build-state key suffix: `848f5b103cf0731ca40f21afcbb53420a90ac009afc14d249e519c5a835ddd4e`.
 - Compile-only disambiguation commit: `bc0aafd991989cbc44e185cc8aaaf1af8389992c`; it renames the four archived icon variables to explicit `*Icon` identifiers and does not alter action dispatch, layout, touch ownership, renderer code, or the WO27 path behavior.
-- Replacement amended Fast run: PENDING.
+- Replacement amended Fast run: `32511443555`, successful at candidate source `1dc819cea447f8ac40c878e1a6d7f4d478e94063`.
+- Replacement artifact: `OpenMW-iOS-fast-30`, GitHub artifact ID `9457442141`.
+- Replacement executable SHA-256: `2D87E61D8F6F372EBC90F4B0A1E747D3E9721EA0A9A1B87C629810BB06686B39`.
+- Replacement IPA SHA-256: `0E4169BFF35D0D2D37FFD7730A6FD6AF0A97ABDFAF4643DCBD4C3DDF63B082D0`.
 
 ## Device evidence
 
 - Logging/preflight: NOT YET RECORDED
 - On 2026-08-22 the user stated that further device validation and deep logging were no longer needed because OpenMW opens regardless of the current container. This confirms that a repeated WO27 container-path preflight is not needed for this candidate, but it does not provide the WO28 touch-layout/action results required by the canonical work order.
-- Device-validation disposition: user requested waiver before the amended candidate's touch controls were exercised. Because execution authority does not permit changing WO28 acceptance criteria, the amended candidate remains production-built but device-unqualified pending orchestrator review.
+- Device-validation disposition: user requested waiver before the amended candidate's touch controls were exercised. Later crash observations failed the canonical acceptance criteria; orchestrator review rejected the implementation and accepted the evidence.
 - Subsequent device observation on 2026-08-22: the user reported that tapping any visible touch-overlay button causes an immediate hard crash. Tapping the main-menu `New Game` entry also causes a hard crash. No crash report or symbolicated stack was supplied with the observation.
+- Launch-time observation on 2026-08-22: tapping the app icon sometimes causes an immediate hard crash. This may repeat for several consecutive attempts before a later launch reaches the main menu.
+- Crash-path classification: launch-time, `New Game`, and overlay-action crashes are distinct observed paths. They remain separate hypotheses until crash/termination evidence establishes convergence.
+- Installation/signing context: before sideloading this WO28 IPA, SideStore reported that its own certificate was no longer valid. The user re-signed SideStore and then sideloaded OpenMW. The relationship is unknown and no current evidence implicates signing, entitlements, dyld, provisioning, or installation state.
 - Candidate attribution: the observation followed distribution of amended Fast candidate `1dc819cea447f8ac40c878e1a6d7f4d478e94063` / run `32511443555`; the installed binary identity was not independently read back from the device.
 - Visual result: the main menu renders, but the Android-derived white overlay icons are visually dominant. The user requested approximately 80% transparency (about 20% opacity) rather than bright opaque white. This is UX evidence only and does not amend WO28 scope.
 - Screenshot: user attachment `5F84DEBA-7DFD-4A2E-9FAA-FFDD3CA54BD7/1-Photo-1.jpg`, `1280x589`, SHA-256 `A1173517C96EF3BB73BEC6DE1DC010A1EEF6F26D6C50AB16764DE9C036A08C19`.
 - Stop boundary: WO28 Stop Condition G (new native crash) is met by user observation. Root cause is NOT RECORDED; crash symbolication is NOT RECORDED.
 - Installation: first WO28 IPA installed successfully through the established route.
 - User launch: completed; exact timestamp NOT RECORDED.
-- Main-menu touch: NOT YET RECORDED
+- Main-menu touch: menu rendering was reached on a successful launch; selecting `New Game` immediately hard-crashed.
 - Movement/look/multitouch: movement and look were sufficient to reach and traverse Seyda Neen. The visible fixed right-look stick was a user-reported regression; visual/layout fidelity failed.
 - Activate/Attack/Jump: NOT YET RECORDED
 - Inventory open/use/close: NOT YET RECORDED
@@ -102,13 +108,14 @@
 - Dialogue and scene transition: NOT YET RECORDED
 - Renderer regression: no low-level/fullscreen regression. Water visibly improved after the user enabled water shader effects; this is a settings observation, not a WO28 code correction.
 - WO27 data-path regression: none observed; the game loaded without a UUID/manual-path intervention.
-- Crash/jetsam: no user-observed crash or jetsam.
+- Crash/jetsam: hard crashes were user-observed at intermittent launch time, from `New Game`, and from every tested overlay button. No crash report, termination report, jetsam report, or symbolicated stack was supplied.
 - Incidental performance: exterior traversal remained operational; not qualified.
 - Exterior graphics defects: deferred. Nine screenshots show foliage alpha/cutout sheets and missing distance fog/white or empty regions beyond the selected draw distance. Water is no longer classified as a renderer defect because enabling its shader effects materially corrected its appearance. No WO28 graphics correction is authorized.
 - First-pass screenshot evidence (user attachment directory `1CB41284-C970-4FD6-A145-D5E98D3616DE`): `1-Photo-1.jpg` SHA-256 `783290B6B501631B41FB083DEF8E6949AD1A10082BC21428A3958C2085C59EE7` is the Android acceptance reference; iOS screenshots 2â€“9 have SHA-256 values `553F04BF581F2FED1486556FDA6600D9DC9833E1E9E2BFE685C3365E7D0B9667`, `C3D279F75A29960C21B9F205A425D2ADCA21CD182E5426292442F0E47F3D7481`, `CECCCFBA175FA522492E8F3E2E051E461B3A88005B09FB8377331535009143BA`, `35C4C00DD1BCD6DB99932084501220A7D5A2BD4EB442450CBA0F93D68765B0F5`, `2598A60E98DD0226032D0F6A32004C7189919EB9294B51C335B10240F2CFB5F9`, `B18578B3BD2EEEFE09F6963942BB403C7CD22026FBC9B8895F1A279CF145AA64`, `2589040A6857A4B2B89053E011B50897FCB7D4E33F4699D4E5C35365DE8B508F`, and `C42C87637D0A4975F589BC62D3AB69F6E7FE96894F98749276DFFB41C3DF11FC`.
 
 ## Outcome
 
-- Stop condition: **G — new native crash**, based on the user-observed immediate crash on overlay-button input and `New Game` input.
+- Stop condition: **G — new native crash**, based on user-observed intermittent launch-time crashes and immediate crashes after overlay-button or `New Game` input.
 - Strongest execution conclusion: the amended production candidate renders the main menu and revised Android artwork, but it is not qualifiable because input reliably triggers a hard crash. The supplied evidence does not establish the crash mechanism.
 - Recommended review boundary: orchestrator review of the rejected candidate and authorization, if desired, for a narrowly scoped crash-capture/root-cause work order. The opacity request is recorded but must not be mixed into crash diagnosis without authorization.
+- Orchestrator disposition: **REJECT** the implementation result and accept the evidence. WO28 is **SUPERSEDED** by [DEC-004](../../Decisions/DEC-004.md); WO27 remains the highest accepted runtime baseline. No successor work order was issued or started.
