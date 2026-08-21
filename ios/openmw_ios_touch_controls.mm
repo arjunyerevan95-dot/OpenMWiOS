@@ -19,7 +19,6 @@ namespace
     using OpenMWIOS::Touch::Action;
     using OpenMWIOS::Touch::Binding;
     using OpenMWIOS::Touch::Layout;
-    using OpenMWIOS::Touch::Point;
     using OpenMWIOS::Touch::Role;
 
     constexpr CGFloat TouchOverlayTag = 0x4f4d5754; // OMWT
@@ -305,7 +304,7 @@ namespace
     pushKey(scancode, pressed);
 }
 
-- (void)updateMovement:(Point)point
+- (void)updateMovement:(OpenMWIOS::Touch::Point)point
 {
     const auto vector = OpenMWIOS::Touch::movementVector(_layout, point, MovementDeadZone);
     if ([self ensureVirtualController])
@@ -373,7 +372,7 @@ namespace
     for (UITouch* touch in touches)
     {
         const CGPoint location = [touch locationInView:self];
-        const Point point{ static_cast<float>(location.x), static_cast<float>(location.y) };
+        const OpenMWIOS::Touch::Point point{ static_cast<float>(location.x), static_cast<float>(location.y) };
         const auto binding = _ownership.begin(touchId(touch), point, _layout);
         if (!binding)
             continue;
@@ -407,7 +406,7 @@ namespace
     for (UITouch* touch in touches)
     {
         const CGPoint location = [touch locationInView:self];
-        const Point point{ static_cast<float>(location.x), static_cast<float>(location.y) };
+        const OpenMWIOS::Touch::Point point{ static_cast<float>(location.x), static_cast<float>(location.y) };
         const auto previous = _ownership.move(touchId(touch), point);
         if (!previous)
             continue;
@@ -482,7 +481,7 @@ namespace
     };
 
     drawCircle(_layout.movement, true);
-    Point knob = _layout.movement.center;
+    OpenMWIOS::Touch::Point knob = _layout.movement.center;
     for (const auto& [identifier, binding] : _ownership.bindings())
     {
         (void)identifier;
@@ -496,7 +495,7 @@ namespace
     }
     drawCircle({ knob, _layout.movement.radius * 0.38f }, true);
 
-    const NSDictionary* attributes = @{
+    NSDictionary<NSAttributedStringKey, id>* attributes = @{
         NSFontAttributeName : [UIFont boldSystemFontOfSize:12.f],
         NSForegroundColorAttributeName : UIColor.whiteColor,
     };
