@@ -22,17 +22,31 @@ def clamp(value: float, minimum: float, maximum: float) -> float:
 def make_layout(width: float, height: float, safe=(0.0, 0.0, 0.0, 0.0)):
     top, left, bottom, right_inset = safe
     short_side = min(width, height)
-    edge = clamp(short_side * 0.035, 12.0, 28.0)
     stick_radius = clamp(short_side * 0.17, 54.0, 96.0)
     button_radius = clamp(short_side * 0.075, 24.0, 42.0)
-    step = button_radius * 2.0 + clamp(short_side * 0.025, 8.0, 18.0)
-    movement = (left + edge + stick_radius, height - bottom - edge - stick_radius, stick_radius)
-    right = width - right_inset - edge - button_radius
-    lower = height - bottom - edge - button_radius
-    offsets = ((0, 0), (-step, 0), (0, -step), (-step, -step), (-2 * step, -step),
-               (0, -2 * step), (-step, -2 * step), (-2 * step, -2 * step))
-    buttons = tuple((right + dx, lower + dy, button_radius) for dx, dy in offsets)
-    return {"movement": movement, "buttons": buttons, "look_boundary": width * 0.38,
+    content_width = max(width - left - right_inset, 1.0)
+    content_height = max(height - top - bottom, 1.0)
+
+    def android_center(x, y, radius):
+        return (clamp(left + x * content_width + radius, left + radius, width - right_inset - radius),
+                clamp(top + y * content_height + radius, top + radius, height - bottom - radius), radius)
+
+    movement = android_center(0.048932366, 0.5294487, stick_radius)
+    look = android_center(0.71470284, 0.5663806, stick_radius)
+    definitions = (
+        ("Activate", 0.24287565, 0.7986111, 1.0),
+        ("Attack", 0.8257772, 0.41666666, 1.2),
+        ("Jump", 0.6476684, 0.7986111, 1.0),
+        ("ReadyWeapon", 0.92292744, 0.6944444, 1.0),
+        ("ReadyMagic", 0.92292744, 0.5208333, 1.0),
+        ("Inventory", 0.92292744, 0.20833333, 1.0),
+        ("Pause", 0.92292744, 0.034722224, 1.0),
+        ("Sneak", 0.8419689, 0.034722224, 1.0),
+        ("Journal", 0.8419689, 0.20833333, 1.0),
+    )
+    buttons = tuple((name, *android_center(x, y, button_radius * radius_scale))
+                    for name, x, y, radius_scale in definitions)
+    return {"movement": movement, "look": look, "buttons": buttons,
             "safe": (top, left, bottom, right_inset)}
 
 
@@ -49,7 +63,8 @@ class IosTouchControlTests(unittest.TestCase):
     def assert_layout_inside_safe_area(self, width, height, safe):
         layout = make_layout(width, height, safe)
         top, left, bottom, right = safe
-        for x, y, radius in (layout["movement"], *layout["buttons"]):
+        circles = (layout["movement"], layout["look"], *(button[1:] for button in layout["buttons"]))
+        for x, y, radius in circles:
             self.assertGreaterEqual(x - radius, left - 0.01)
             self.assertLessEqual(x + radius, width - right + 0.01)
             self.assertGreaterEqual(y - radius, top - 0.01)
@@ -61,6 +76,7 @@ class IosTouchControlTests(unittest.TestCase):
         self.assertEqual(reference["commit"], "5b02e847dc646c9f10cd66001e4d65c5274dde49")
         self.assertEqual(reference["native_bridge_path"], "patches/openmw/androidmain.cpp")
         self.assertEqual(reference["default_android_keycodes"]["inventory"], 30)
+        self.assertEqual(reference["ui_config_path"], "payload/app/ui/UI.cfg")
 
     def test_iphone_landscape_layout_respects_safe_area(self):
         self.assert_layout_inside_safe_area(956, 440, (0, 62, 21, 62))
@@ -75,6 +91,7 @@ class IosTouchControlTests(unittest.TestCase):
         landscape = make_layout(1180, 820, (13, 37, 29, 11))
         alternate = make_layout(820, 1180, (37, 13, 11, 29))
         self.assertNotEqual(landscape["movement"], alternate["movement"])
+        self.assertNotEqual(landscape["look"], alternate["look"])
         self.assertNotEqual(landscape["buttons"], alternate["buttons"])
 
     def test_dead_zone_analog_magnitude_and_clamp(self):
@@ -95,35 +112,59 @@ class IosTouchControlTests(unittest.TestCase):
         self.assertIn("found->second.lastPoint = point", model)
         self.assertNotIn("mBindings.clear();\n            return add", model)
 
-    def test_gui_mode_is_true_passthrough_and_cleanup_is_explicit(self):
+    def test_gui_mode_keeps_semantic_menu_buttons_and_other_touches_passthrough(self):
         adapter = ADAPTER.read_text(encoding="utf-8")
-        self.assertIn("return _gameplayMode;", adapter)
+        model = MODEL.read_text(encoding="utf-8")
+        self.assertIn("visibleInMode", model)
+        self.assertIn("Action::Inventory || action == Action::Pause || action == Action::Journal", model)
+        self.assertIn("button.bounds.contains(touchPoint, 1.15f)", adapter)
+        self.assertIn("return NO;", adapter)
         self.assertIn("SDL_ShowCursor(SDL_QUERY) == SDL_DISABLE", adapter)
         self.assertIn("[self releaseAllInputs]", adapter)
-        self.assertIn('mode=gui;controls=passthrough', adapter)
+        self.assertIn('mode=gui;controls=inv,journal,menu;other_touches=passthrough', adapter)
 
     def test_public_sdl_paths_preserve_external_input_architecture(self):
         adapter = ADAPTER.read_text(encoding="utf-8")
         self.assertIn("SDL_JoystickAttachVirtualEx", adapter)
         self.assertIn("SDL_JoystickSetVirtualAxis", adapter)
+        self.assertIn("SDL_JoystickSetVirtualButton", adapter)
         self.assertIn("SDL_PushEvent", adapter)
         self.assertNotIn("SDL_SendMouseMotion", adapter)
         self.assertNotIn("SDL_SendKeyboardKey", adapter)
 
-    def test_android_action_semantics_are_preserved(self):
+    def test_android_actions_use_openmw_semantic_controller_bindings(self):
         adapter = ADAPTER.read_text(encoding="utf-8")
         mappings = {
-            "Activate": "SDL_SCANCODE_SPACE",
-            "Attack": "SDL_SCANCODE_Z",
-            "Jump": "SDL_SCANCODE_E",
-            "ReadyWeapon": "SDL_SCANCODE_F",
-            "ReadyMagic": "SDL_SCANCODE_R",
-            "Inventory": "SDL_SCANCODE_B",
-            "Pause": "SDL_SCANCODE_ESCAPE",
-            "Sneak": "SDL_SCANCODE_LCTRL",
+            "Activate": "SDL_CONTROLLER_BUTTON_A",
+            "ReadyWeapon": "SDL_CONTROLLER_BUTTON_X",
+            "ReadyMagic": "SDL_CONTROLLER_BUTTON_Y",
+            "Inventory": "SDL_CONTROLLER_BUTTON_B",
+            "Pause": "SDL_CONTROLLER_BUTTON_START",
+            "Sneak": "SDL_CONTROLLER_BUTTON_LEFTSTICK",
+            "Journal": "SDL_CONTROLLER_BUTTON_LEFTSHOULDER",
         }
-        for action, scancode in mappings.items():
-            self.assertRegex(adapter, rf"case Action::{action}:\s+return {scancode};")
+        for action, binding in mappings.items():
+            self.assertRegex(adapter, rf"case Action::{action}:\s+return {binding};")
+        self.assertRegex(adapter, r"case Action::Attack:\s+return SDL_CONTROLLER_AXIS_TRIGGERRIGHT;")
+        self.assertRegex(adapter, r"case Action::Jump:\s+return SDL_CONTROLLER_AXIS_TRIGGERLEFT;")
+        self.assertNotRegex(adapter, r"case Action::Inventory:\s+return SDL_SCANCODE_B;")
+        self.assertIn("pushMouseButton(SDL_BUTTON_RIGHT, pressed)", adapter)
+
+    def test_android_normalized_control_grouping_and_journal_are_present(self):
+        model = MODEL.read_text(encoding="utf-8")
+        layout = make_layout(956, 440, (0, 62, 21, 62))
+        actions = {button[0] for button in layout["buttons"]}
+        self.assertEqual(actions, {"Activate", "Attack", "Jump", "ReadyWeapon", "ReadyMagic",
+                                   "Inventory", "Pause", "Sneak", "Journal"})
+        self.assertIn("0.048932366f", model)
+        self.assertIn("0.71470284f", model)
+        self.assertIn("Android 2.7.4 stores these as normalized top-left offsets", model)
+
+    def test_inventory_press_and_release_are_not_keyboard_b(self):
+        adapter = ADAPTER.read_text(encoding="utf-8")
+        self.assertIn("SDL_JoystickSetVirtualButton", adapter)
+        self.assertIn("pressed ? SDL_PRESSED : SDL_RELEASED", adapter)
+        self.assertNotIn("These preserve the current Android 2.7.4 UI.cfg semantics", adapter)
 
     def test_layout_and_adapter_have_no_current_device_dimensions(self):
         source = MODEL.read_text(encoding="utf-8") + ADAPTER.read_text(encoding="utf-8")
@@ -157,12 +198,17 @@ int main() {
     auto layout = makeLayout(956.f, 440.f, {0.f, 62.f, 21.f, 62.f});
     Ownership ownership;
     auto movement = ownership.begin(1, layout.movement.center, layout);
-    auto look = ownership.begin(2, {layout.lookBoundaryX + 10.f, 50.f}, layout);
+    auto look = ownership.begin(2, layout.look.center, layout);
     auto button = ownership.begin(3, layout.buttons[0].bounds.center, layout);
     assert(movement && movement->role == Role::Movement);
     assert(look && look->role == Role::Look);
     assert(button && button->role == Role::Button);
     assert(ownership.bindings().size() == 3);
+    Ownership guiOwnership;
+    auto guiInventory = guiOwnership.begin(4, layout.buttons[5].bounds.center, layout, false);
+    auto guiMovement = guiOwnership.begin(5, layout.movement.center, layout, false);
+    assert(guiInventory && guiInventory->role == Role::Button);
+    assert(!guiMovement);
     ownership.end(2);
     assert(ownership.bindings().size() == 2);
     return 0;

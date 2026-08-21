@@ -31,27 +31,65 @@ namespace
         return reinterpret_cast<std::uintptr_t>((__bridge void*)touch);
     }
 
-    SDL_Scancode scancodeForAction(Action action)
+    int controllerButtonForAction(Action action)
     {
-        // These preserve the current Android 2.7.4 UI.cfg semantics.
+        switch (action)
+        {
+            case Action::Activate:
+                return SDL_CONTROLLER_BUTTON_A;
+            case Action::ReadyWeapon:
+                return SDL_CONTROLLER_BUTTON_X;
+            case Action::ReadyMagic:
+                return SDL_CONTROLLER_BUTTON_Y;
+            case Action::Inventory:
+                return SDL_CONTROLLER_BUTTON_B;
+            case Action::Pause:
+                return SDL_CONTROLLER_BUTTON_START;
+            case Action::Sneak:
+                return SDL_CONTROLLER_BUTTON_LEFTSTICK;
+            case Action::Journal:
+                return SDL_CONTROLLER_BUTTON_LEFTSHOULDER;
+            case Action::Attack:
+            case Action::Jump:
+                return -1;
+        }
+        return -1;
+    }
+
+    int controllerAxisForAction(Action action)
+    {
+        switch (action)
+        {
+            case Action::Attack:
+                return SDL_CONTROLLER_AXIS_TRIGGERRIGHT;
+            case Action::Jump:
+                return SDL_CONTROLLER_AXIS_TRIGGERLEFT;
+            default:
+                return -1;
+        }
+    }
+
+    SDL_Scancode fallbackScancodeForAction(Action action)
+    {
         switch (action)
         {
             case Action::Activate:
                 return SDL_SCANCODE_SPACE;
-            case Action::Attack:
-                return SDL_SCANCODE_Z;
             case Action::Jump:
                 return SDL_SCANCODE_E;
             case Action::ReadyWeapon:
                 return SDL_SCANCODE_F;
             case Action::ReadyMagic:
                 return SDL_SCANCODE_R;
-            case Action::Inventory:
-                return SDL_SCANCODE_B;
             case Action::Pause:
                 return SDL_SCANCODE_ESCAPE;
             case Action::Sneak:
                 return SDL_SCANCODE_LCTRL;
+            case Action::Journal:
+                return SDL_SCANCODE_J;
+            case Action::Attack:
+            case Action::Inventory:
+                return SDL_SCANCODE_UNKNOWN;
         }
         return SDL_SCANCODE_UNKNOWN;
     }
@@ -76,6 +114,8 @@ namespace
                 return @"MENU";
             case Action::Sneak:
                 return @"SNK";
+            case Action::Journal:
+                return @"JRN";
         }
         return @"?";
     }
@@ -133,6 +173,24 @@ namespace
         SDL_PushEvent(&event);
     }
 
+    void pushMouseButton(Uint8 button, bool down)
+    {
+        int x = 0;
+        int y = 0;
+        SDL_GetMouseState(&x, &y);
+        SDL_Event event{};
+        event.type = down ? SDL_MOUSEBUTTONDOWN : SDL_MOUSEBUTTONUP;
+        event.button.timestamp = SDL_GetTicks();
+        event.button.windowID = currentSDLWindowId();
+        event.button.which = 0;
+        event.button.button = button;
+        event.button.state = down ? SDL_PRESSED : SDL_RELEASED;
+        event.button.clicks = down ? 1 : 0;
+        event.button.x = x;
+        event.button.y = y;
+        SDL_PushEvent(&event);
+    }
+
     UIWindow* gameplayWindow()
     {
         UIWindow* candidate = UIApplication.sharedApplication.keyWindow;
@@ -167,10 +225,11 @@ namespace
     SDL_GameController* _virtualController;
     SDL_Joystick* _virtualJoystick;
     int _virtualDeviceIndex;
-    std::array<bool, 8> _pressedActions;
+    std::array<bool, OpenMWIOS::Touch::ActionCount> _pressedActions;
     std::array<bool, 4> _fallbackDirections;
     CADisplayLink* _displayLink;
     BOOL _gameplayMode;
+    BOOL _inputReady;
     int _diagnosticBudget;
 }
 
@@ -190,6 +249,7 @@ namespace
         _pressedActions.fill(false);
         _fallbackDirections.fill(false);
         _gameplayMode = NO;
+        _inputReady = NO;
         _diagnosticBudget = DiagnosticBudget;
         [self rebuildLayout];
 
@@ -222,9 +282,19 @@ namespace
 
 - (BOOL)pointInside:(CGPoint)point withEvent:(UIEvent*)event
 {
-    (void)point;
     (void)event;
-    return _gameplayMode;
+    if (!_inputReady)
+        return NO;
+    if (_gameplayMode)
+        return YES;
+
+    const OpenMWIOS::Touch::Point touchPoint{ static_cast<float>(point.x), static_cast<float>(point.y) };
+    for (const auto& button : _layout.buttons)
+    {
+        if (OpenMWIOS::Touch::visibleInMode(button.action, false) && button.bounds.contains(touchPoint, 1.15f))
+            return YES;
+    }
+    return NO;
 }
 
 - (void)rebuildLayout
@@ -247,16 +317,21 @@ namespace
 - (void)updateInputMode:(CADisplayLink*)displayLink
 {
     (void)displayLink;
-    const BOOL gameplayMode = SDL_WasInit(SDL_INIT_VIDEO) != 0 && SDL_ShowCursor(SDL_QUERY) == SDL_DISABLE;
-    if (gameplayMode == _gameplayMode)
+    const BOOL inputReady = SDL_WasInit(SDL_INIT_VIDEO) != 0;
+    const BOOL gameplayMode = inputReady && SDL_ShowCursor(SDL_QUERY) == SDL_DISABLE;
+    if (inputReady == _inputReady && gameplayMode == _gameplayMode)
         return;
 
+    const BOOL modeChanged = gameplayMode != _gameplayMode;
+    _inputReady = inputReady;
     _gameplayMode = gameplayMode;
-    if (!_gameplayMode)
+    if (modeChanged)
         [self releaseAllInputs];
-    self.hidden = !_gameplayMode;
-    [self diagnose:"touch_mode_transition" detail:_gameplayMode ? @"mode=gameplay;controls=visible"
-                                                              : @"mode=gui;controls=passthrough"];
+    self.hidden = !_inputReady;
+    [self setNeedsDisplay];
+    [self diagnose:"touch_mode_transition"
+             detail:_gameplayMode ? @"mode=gameplay;controls=android-set"
+                                  : @"mode=gui;controls=inv,journal,menu;other_touches=passthrough"];
 }
 
 - (BOOL)ensureVirtualController
@@ -269,10 +344,11 @@ namespace
     SDL_VirtualJoystickDesc descriptor{};
     descriptor.version = SDL_VIRTUAL_JOYSTICK_DESC_VERSION;
     descriptor.type = SDL_JOYSTICK_TYPE_GAMECONTROLLER;
-    descriptor.naxes = 2;
-    descriptor.nbuttons = 0;
+    descriptor.naxes = SDL_CONTROLLER_AXIS_MAX;
+    descriptor.nbuttons = SDL_CONTROLLER_BUTTON_MAX;
     descriptor.nhats = 0;
-    descriptor.axis_mask = (1u << SDL_CONTROLLER_AXIS_LEFTX) | (1u << SDL_CONTROLLER_AXIS_LEFTY);
+    descriptor.axis_mask = (Uint32{ 1 } << SDL_CONTROLLER_AXIS_MAX) - 1u;
+    descriptor.button_mask = (Uint32{ 1 } << SDL_CONTROLLER_BUTTON_MAX) - 1u;
     descriptor.name = "OpenMW iOS Touch Controller";
 
     _virtualDeviceIndex = SDL_JoystickAttachVirtualEx(&descriptor);
@@ -292,7 +368,8 @@ namespace
     }
     _virtualJoystick = SDL_GameControllerGetJoystick(_virtualController);
 
-    [self diagnose:"touch_virtual_controller" detail:@"attached=yes;axes=leftx,lefty;analog=yes"];
+    [self diagnose:"touch_virtual_controller"
+             detail:@"attached=yes;axes=leftx,lefty,triggers;buttons=a,b,x,y,start,leftstick,leftshoulder"];
     return YES;
 }
 
@@ -309,9 +386,9 @@ namespace
     const auto vector = OpenMWIOS::Touch::movementVector(_layout, point, MovementDeadZone);
     if ([self ensureVirtualController])
     {
-        SDL_JoystickSetVirtualAxis(_virtualJoystick, 0,
+        SDL_JoystickSetVirtualAxis(_virtualJoystick, SDL_CONTROLLER_AXIS_LEFTX,
             static_cast<Sint16>(std::lround(vector.x * static_cast<float>(SDL_JOYSTICK_AXIS_MAX))));
-        SDL_JoystickSetVirtualAxis(_virtualJoystick, 1,
+        SDL_JoystickSetVirtualAxis(_virtualJoystick, SDL_CONTROLLER_AXIS_LEFTY,
             static_cast<Sint16>(std::lround(vector.y * static_cast<float>(SDL_JOYSTICK_AXIS_MAX))));
     }
     else
@@ -329,8 +406,8 @@ namespace
 {
     if (_virtualJoystick)
     {
-        SDL_JoystickSetVirtualAxis(_virtualJoystick, 0, 0);
-        SDL_JoystickSetVirtualAxis(_virtualJoystick, 1, 0);
+        SDL_JoystickSetVirtualAxis(_virtualJoystick, SDL_CONTROLLER_AXIS_LEFTX, 0);
+        SDL_JoystickSetVirtualAxis(_virtualJoystick, SDL_CONTROLLER_AXIS_LEFTY, 0);
     }
     [self setFallbackDirection:0 scancode:SDL_SCANCODE_W pressed:false];
     [self setFallbackDirection:1 scancode:SDL_SCANCODE_S pressed:false];
@@ -345,7 +422,26 @@ namespace
     if (_pressedActions[index] == pressed)
         return;
     _pressedActions[index] = pressed;
-    pushKey(scancodeForAction(action), pressed);
+
+    if ([self ensureVirtualController])
+    {
+        const int button = controllerButtonForAction(action);
+        const int axis = controllerAxisForAction(action);
+        if (button >= 0)
+            SDL_JoystickSetVirtualButton(_virtualJoystick, button, pressed ? SDL_PRESSED : SDL_RELEASED);
+        else if (axis >= 0)
+            SDL_JoystickSetVirtualAxis(_virtualJoystick, axis, pressed ? SDL_JOYSTICK_AXIS_MAX : 0);
+    }
+    else if (action == Action::Attack)
+        pushMouseButton(SDL_BUTTON_LEFT, pressed);
+    else if (action == Action::Inventory)
+        pushMouseButton(SDL_BUTTON_RIGHT, pressed);
+    else
+        pushKey(fallbackScancodeForAction(action), pressed);
+
+    [self diagnose:"touch_action_dispatch"
+             detail:[NSString stringWithFormat:@"action=%@;pressed=%@;path=%@", labelForAction(action),
+                         pressed ? @"yes" : @"no", _virtualJoystick ? @"virtual-controller" : @"fallback"]];
     [self setNeedsDisplay];
 }
 
@@ -373,7 +469,7 @@ namespace
     {
         const CGPoint location = [touch locationInView:self];
         const OpenMWIOS::Touch::Point point{ static_cast<float>(location.x), static_cast<float>(location.y) };
-        const auto binding = _ownership.begin(touchId(touch), point, _layout);
+        const auto binding = _ownership.begin(touchId(touch), point, _layout, _gameplayMode);
         if (!binding)
             continue;
 
@@ -480,20 +576,26 @@ namespace
         CGContextStrokeEllipseInRect(context, circleRect);
     };
 
-    drawCircle(_layout.movement, true);
-    OpenMWIOS::Touch::Point knob = _layout.movement.center;
-    for (const auto& [identifier, binding] : _ownership.bindings())
+    if (_gameplayMode)
     {
-        (void)identifier;
-        if (binding.role == Role::Movement)
+        drawCircle(_layout.movement, true);
+        OpenMWIOS::Touch::Point knob = _layout.movement.center;
+        for (const auto& [identifier, binding] : _ownership.bindings())
         {
-            const auto vector = OpenMWIOS::Touch::movementVector(_layout, binding.lastPoint, 0.f);
-            knob.x += vector.x * _layout.movement.radius * 0.58f;
-            knob.y += vector.y * _layout.movement.radius * 0.58f;
-            break;
+            (void)identifier;
+            if (binding.role == Role::Movement)
+            {
+                const auto vector = OpenMWIOS::Touch::movementVector(_layout, binding.lastPoint, 0.f);
+                knob.x += vector.x * _layout.movement.radius * 0.58f;
+                knob.y += vector.y * _layout.movement.radius * 0.58f;
+                break;
+            }
         }
+        drawCircle({ knob, _layout.movement.radius * 0.38f }, true);
+
+        drawCircle(_layout.look, true);
+        drawCircle({ _layout.look.center, _layout.look.radius * 0.26f }, true);
     }
-    drawCircle({ knob, _layout.movement.radius * 0.38f }, true);
 
     NSDictionary<NSAttributedStringKey, id>* attributes = @{
         NSFontAttributeName : [UIFont boldSystemFontOfSize:12.f],
@@ -501,6 +603,8 @@ namespace
     };
     for (const auto& button : _layout.buttons)
     {
+        if (!OpenMWIOS::Touch::visibleInMode(button.action, _gameplayMode))
+            continue;
         const bool pressed = _pressedActions[static_cast<std::size_t>(button.action)];
         CGContextSetFillColorWithColor(context,
             [UIColor colorWithRed:0.08f green:0.08f blue:0.08f alpha:pressed ? 0.65f : 0.32f].CGColor);

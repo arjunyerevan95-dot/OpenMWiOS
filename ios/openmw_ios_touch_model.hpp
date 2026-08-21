@@ -47,7 +47,10 @@ namespace OpenMWIOS::Touch
         Inventory,
         Pause,
         Sneak,
+        Journal,
     };
+
+    constexpr std::size_t ActionCount = 9;
 
     struct Button
     {
@@ -62,8 +65,9 @@ namespace OpenMWIOS::Touch
         Insets safeArea;
         Circle movement;
         float movementCaptureRadius = 0.f;
-        float lookBoundaryX = 0.f;
-        std::array<Button, 8> buttons;
+        Circle look;
+        float lookCaptureRadius = 0.f;
+        std::array<Button, ActionCount> buttons;
     };
 
     inline float clamp(float value, float minimum, float maximum)
@@ -79,50 +83,69 @@ namespace OpenMWIOS::Touch
         layout.safeArea = safeArea;
 
         const float shortSide = std::min(layout.width, layout.height);
-        const float edge = clamp(shortSide * 0.035f, 12.f, 28.f);
         const float stickRadius = clamp(shortSide * 0.17f, 54.f, 96.f);
         const float buttonRadius = clamp(shortSide * 0.075f, 24.f, 42.f);
-        const float buttonStep = buttonRadius * 2.f + clamp(shortSide * 0.025f, 8.f, 18.f);
+        const float contentWidth = std::max(layout.width - safeArea.left - safeArea.right, 1.f);
+        const float contentHeight = std::max(layout.height - safeArea.top - safeArea.bottom, 1.f);
 
-        layout.movement.center = {
-            safeArea.left + edge + stickRadius,
-            layout.height - safeArea.bottom - edge - stickRadius,
+        const auto centerFromAndroidTopLeft = [&](float normalizedX, float normalizedY, float radius) {
+            return Point{
+                clamp(safeArea.left + normalizedX * contentWidth + radius, safeArea.left + radius,
+                    layout.width - safeArea.right - radius),
+                clamp(safeArea.top + normalizedY * contentHeight + radius, safeArea.top + radius,
+                    layout.height - safeArea.bottom - radius),
+            };
         };
+
+        // Android 2.7.4 stores these as normalized top-left offsets in UI.cfg.
+        // Preserve the grouping while deriving all physical positions from the
+        // current safe-area geometry.
+        layout.movement.center = centerFromAndroidTopLeft(0.048932366f, 0.5294487f, stickRadius);
         layout.movement.radius = stickRadius;
         layout.movementCaptureRadius = stickRadius * 1.4f;
-        layout.lookBoundaryX = layout.width * 0.38f;
+        layout.look.center = centerFromAndroidTopLeft(0.71470284f, 0.5663806f, stickRadius);
+        layout.look.radius = stickRadius;
+        layout.lookCaptureRadius = stickRadius * 1.15f;
 
-        const float right = layout.width - safeArea.right - edge - buttonRadius;
-        const float bottom = layout.height - safeArea.bottom - edge - buttonRadius;
-        const std::array<Action, 8> actions = {
-            Action::Activate,
-            Action::Attack,
-            Action::Jump,
-            Action::ReadyWeapon,
-            Action::ReadyMagic,
-            Action::Inventory,
-            Action::Pause,
-            Action::Sneak,
+        struct AndroidButton
+        {
+            Action action;
+            float normalizedX;
+            float normalizedY;
+            float radiusScale;
         };
-        const std::array<Point, 8> offsets = {
-            Point{ 0.f, 0.f },
-            Point{ -buttonStep, 0.f },
-            Point{ 0.f, -buttonStep },
-            Point{ -buttonStep, -buttonStep },
-            Point{ -2.f * buttonStep, -buttonStep },
-            Point{ 0.f, -2.f * buttonStep },
-            Point{ -buttonStep, -2.f * buttonStep },
-            Point{ -2.f * buttonStep, -2.f * buttonStep },
+        const std::array<AndroidButton, ActionCount> androidButtons = {
+            AndroidButton{ Action::Activate, 0.24287565f, 0.7986111f, 1.f },
+            AndroidButton{ Action::Attack, 0.8257772f, 0.41666666f, 1.2f },
+            AndroidButton{ Action::Jump, 0.6476684f, 0.7986111f, 1.f },
+            AndroidButton{ Action::ReadyWeapon, 0.92292744f, 0.6944444f, 1.f },
+            AndroidButton{ Action::ReadyMagic, 0.92292744f, 0.5208333f, 1.f },
+            AndroidButton{ Action::Inventory, 0.92292744f, 0.20833333f, 1.f },
+            AndroidButton{ Action::Pause, 0.92292744f, 0.034722224f, 1.f },
+            AndroidButton{ Action::Sneak, 0.8419689f, 0.034722224f, 1.f },
+            // Recent Android exposes journal through its menu/utility layer.
+            // iOS gives that semantic action a direct companion target.
+            AndroidButton{ Action::Journal, 0.8419689f, 0.20833333f, 1.f },
         };
 
         for (std::size_t index = 0; index < layout.buttons.size(); ++index)
         {
+            const float radius = buttonRadius * androidButtons[index].radiusScale;
             layout.buttons[index] = {
-                actions[index],
-                Circle{ Point{ right + offsets[index].x, bottom + offsets[index].y }, buttonRadius },
+                androidButtons[index].action,
+                Circle{ centerFromAndroidTopLeft(androidButtons[index].normalizedX,
+                            androidButtons[index].normalizedY, radius),
+                    radius },
             };
         }
         return layout;
+    }
+
+    inline bool visibleInMode(Action action, bool gameplayMode)
+    {
+        if (gameplayMode)
+            return true;
+        return action == Action::Inventory || action == Action::Pause || action == Action::Journal;
     }
 
     struct StickVector
@@ -166,24 +189,28 @@ namespace OpenMWIOS::Touch
     class Ownership
     {
     public:
-        std::optional<Binding> begin(std::uintptr_t touchId, Point point, const Layout& layout)
+        std::optional<Binding> begin(std::uintptr_t touchId, Point point, const Layout& layout,
+            bool gameplayMode = true)
         {
             if (mBindings.find(touchId) != mBindings.end())
                 return std::nullopt;
 
             for (const Button& button : layout.buttons)
             {
-                if (button.bounds.contains(point, 1.15f) && !actionOwned(button.action))
+                if (visibleInMode(button.action, gameplayMode) && button.bounds.contains(point, 1.15f)
+                    && !actionOwned(button.action))
                     return add(touchId, { Role::Button, button.action, point });
             }
 
-            if (layout.movement.contains(point, layout.movementCaptureRadius / layout.movement.radius)
+            if (gameplayMode
+                && layout.movement.contains(point, layout.movementCaptureRadius / layout.movement.radius)
                 && !roleOwned(Role::Movement))
             {
                 return add(touchId, { Role::Movement, std::nullopt, point });
             }
 
-            if (point.x >= layout.lookBoundaryX && !roleOwned(Role::Look))
+            if (gameplayMode && layout.look.contains(point, layout.lookCaptureRadius / layout.look.radius)
+                && !roleOwned(Role::Look))
                 return add(touchId, { Role::Look, std::nullopt, point });
 
             return std::nullopt;

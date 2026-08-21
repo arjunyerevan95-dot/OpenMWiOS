@@ -4,12 +4,14 @@
   "commit": "5b02e847dc646c9f10cd66001e4d65c5274dde49",
   "ui_config_path": "payload/app/ui/UI.cfg",
   "ui_implementation_paths": [
+    "payload/app/src/main/java/org/openmw/EngineActivity.kt",
     "payload/app/src/main/java/org/openmw/ui/controls/DynamicLeftThumbstick.kt",
     "payload/app/src/main/java/org/openmw/ui/controls/DynamicRightThumbstick.kt",
     "payload/app/src/main/java/org/openmw/ui/controls/DynamicButtons.kt",
     "payload/app/src/main/java/org/openmw/ui/controls/StateManager.kt"
   ],
   "native_bridge_path": "patches/openmw/androidmain.cpp",
+  "openmw_binding_source": "apps/openmw/mwinput/bindingsmanager.cpp",
   "default_android_keycodes": {
     "pause": 111,
     "attack": 54,
@@ -19,6 +21,29 @@
     "ready_weapon": 34,
     "ready_magic": 46,
     "sneak": 113
+  },
+  "default_ui_layout": {
+    "pause": [0.92292744, 0.034722224],
+    "attack": [0.8257772, 0.41666666],
+    "inventory": [0.92292744, 0.20833333],
+    "jump": [0.6476684, 0.7986111],
+    "activate": [0.24287565, 0.7986111],
+    "ready_weapon": [0.92292744, 0.6944444],
+    "ready_magic": [0.92292744, 0.5208333],
+    "sneak": [0.8419689, 0.034722224],
+    "left_stick": [0.048932366, 0.5294487],
+    "right_stick": [0.71470284, 0.5663806]
+  },
+  "ios_semantic_controller_bindings": {
+    "activate": "SDL_CONTROLLER_BUTTON_A",
+    "attack": "SDL_CONTROLLER_AXIS_TRIGGERRIGHT",
+    "jump": "SDL_CONTROLLER_AXIS_TRIGGERLEFT",
+    "ready_weapon": "SDL_CONTROLLER_BUTTON_X",
+    "ready_magic": "SDL_CONTROLLER_BUTTON_Y",
+    "inventory": "SDL_CONTROLLER_BUTTON_B",
+    "pause": "SDL_CONTROLLER_BUTTON_START",
+    "sneak": "SDL_CONTROLLER_BUTTON_LEFTSTICK",
+    "journal": "SDL_CONTROLLER_BUTTON_LEFTSHOULDER"
   },
   "notes": "Minimal provenance fixture for the iOS adaptation. It intentionally does not vendor the Android source tree or artwork."
 }
