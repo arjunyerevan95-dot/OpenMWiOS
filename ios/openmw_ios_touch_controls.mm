@@ -1,6 +1,7 @@
 #import "openmw_ios_touch_controls.h"
 
 #import "openmw_ios_logging.h"
+#import "openmw_ios_touch_icons.hpp"
 #import "openmw_ios_touch_model.hpp"
 
 #import <Foundation/Foundation.h>
@@ -49,6 +50,9 @@ namespace
                 return SDL_CONTROLLER_BUTTON_LEFTSTICK;
             case Action::Journal:
                 return SDL_CONTROLLER_BUTTON_LEFTSHOULDER;
+            case Action::TogglePOV:
+            case Action::QuickSave:
+            case Action::Wait:
             case Action::Attack:
             case Action::Jump:
                 return -1;
@@ -87,6 +91,12 @@ namespace
                 return SDL_SCANCODE_LCTRL;
             case Action::Journal:
                 return SDL_SCANCODE_J;
+            case Action::TogglePOV:
+                return SDL_SCANCODE_TAB;
+            case Action::QuickSave:
+                return SDL_SCANCODE_F5;
+            case Action::Wait:
+                return SDL_SCANCODE_T;
             case Action::Attack:
             case Action::Inventory:
                 return SDL_SCANCODE_UNKNOWN;
@@ -116,8 +126,41 @@ namespace
                 return @"SNK";
             case Action::Journal:
                 return @"JRN";
+            case Action::TogglePOV:
+                return @"POV";
+            case Action::QuickSave:
+                return @"SAVE";
+            case Action::Wait:
+                return @"WAIT";
         }
         return @"?";
+    }
+
+    UIImage* imageForAction(Action action)
+    {
+        static std::array<UIImage*, OpenMWIOS::Touch::ActionCount> images;
+        static dispatch_once_t once;
+        dispatch_once(&once, ^{
+            using namespace OpenMWIOS::Touch::Icons;
+            const auto png = [](const char* encoded) {
+                NSString* string = [NSString stringWithUTF8String:encoded];
+                NSData* data = [[NSData alloc] initWithBase64EncodedString:string options:0];
+                return [UIImage imageWithData:data];
+            };
+            images[static_cast<std::size_t>(Action::Pause)] = png(icon1);
+            images[static_cast<std::size_t>(Action::Attack)] = png(icon2);
+            images[static_cast<std::size_t>(Action::Inventory)] = png(icon3);
+            images[static_cast<std::size_t>(Action::Jump)] = png(icon4);
+            images[static_cast<std::size_t>(Action::Activate)] = png(icon6);
+            images[static_cast<std::size_t>(Action::ReadyWeapon)] = png(icon7);
+            images[static_cast<std::size_t>(Action::ReadyMagic)] = png(icon8);
+            images[static_cast<std::size_t>(Action::Sneak)] = png(icon9);
+            images[static_cast<std::size_t>(Action::Journal)] = png(journal);
+            images[static_cast<std::size_t>(Action::TogglePOV)] = png(third_person);
+            images[static_cast<std::size_t>(Action::QuickSave)] = png(save);
+            images[static_cast<std::size_t>(Action::Wait)] = png(wait);
+        });
+        return images[static_cast<std::size_t>(action)];
     }
 
     SDL_Window* currentSDLWindow()
@@ -381,9 +424,9 @@ namespace
     pushKey(scancode, pressed);
 }
 
-- (void)updateMovement:(OpenMWIOS::Touch::Point)point
+- (void)updateMovementFrom:(OpenMWIOS::Touch::Point)origin to:(OpenMWIOS::Touch::Point)point
 {
-    const auto vector = OpenMWIOS::Touch::movementVector(_layout, point, MovementDeadZone);
+    const auto vector = OpenMWIOS::Touch::movementVector(origin, _layout.movementRadius, point, MovementDeadZone);
     if ([self ensureVirtualController])
     {
         SDL_JoystickSetVirtualAxis(_virtualJoystick, SDL_CONTROLLER_AXIS_LEFTX,
@@ -423,21 +466,31 @@ namespace
         return;
     _pressedActions[index] = pressed;
 
+    BOOL dispatched = NO;
     if ([self ensureVirtualController])
     {
         const int button = controllerButtonForAction(action);
         const int axis = controllerAxisForAction(action);
         if (button >= 0)
+        {
             SDL_JoystickSetVirtualButton(_virtualJoystick, button, pressed ? SDL_PRESSED : SDL_RELEASED);
+            dispatched = YES;
+        }
         else if (axis >= 0)
+        {
             SDL_JoystickSetVirtualAxis(_virtualJoystick, axis, pressed ? SDL_JOYSTICK_AXIS_MAX : 0);
+            dispatched = YES;
+        }
     }
-    else if (action == Action::Attack)
-        pushMouseButton(SDL_BUTTON_LEFT, pressed);
-    else if (action == Action::Inventory)
-        pushMouseButton(SDL_BUTTON_RIGHT, pressed);
-    else
-        pushKey(fallbackScancodeForAction(action), pressed);
+    if (!dispatched)
+    {
+        if (action == Action::Attack)
+            pushMouseButton(SDL_BUTTON_LEFT, pressed);
+        else if (action == Action::Inventory)
+            pushMouseButton(SDL_BUTTON_RIGHT, pressed);
+        else
+            pushKey(fallbackScancodeForAction(action), pressed);
+    }
 
     [self diagnose:"touch_action_dispatch"
              detail:[NSString stringWithFormat:@"action=%@;pressed=%@;path=%@", labelForAction(action),
@@ -475,8 +528,9 @@ namespace
 
         if (binding->role == Role::Movement)
         {
-            [self updateMovement:point];
-            const auto vector = OpenMWIOS::Touch::movementVector(_layout, point, MovementDeadZone);
+            [self updateMovementFrom:binding->startPoint to:point];
+            const auto vector = OpenMWIOS::Touch::movementVector(
+                binding->startPoint, _layout.movementRadius, point, MovementDeadZone);
             [self diagnose:"touch_movement_acquired"
                      detail:[NSString stringWithFormat:@"id=%llu;vector=%.3f,%.3f;magnitude=%.3f",
                                  static_cast<unsigned long long>(touchId(touch)), vector.x, vector.y, vector.magnitude]];
@@ -507,7 +561,7 @@ namespace
         if (!previous)
             continue;
         if (previous->role == Role::Movement)
-            [self updateMovement:point];
+            [self updateMovementFrom:previous->startPoint to:point];
         else if (previous->role == Role::Look)
         {
             const float dx = point.x - previous->lastPoint.x;
@@ -578,23 +632,22 @@ namespace
 
     if (_gameplayMode)
     {
-        drawCircle(_layout.movement, true);
-        OpenMWIOS::Touch::Point knob = _layout.movement.center;
         for (const auto& [identifier, binding] : _ownership.bindings())
         {
             (void)identifier;
             if (binding.role == Role::Movement)
             {
-                const auto vector = OpenMWIOS::Touch::movementVector(_layout, binding.lastPoint, 0.f);
-                knob.x += vector.x * _layout.movement.radius * 0.58f;
-                knob.y += vector.y * _layout.movement.radius * 0.58f;
+                const OpenMWIOS::Touch::Circle dynamicBase{ binding.startPoint, _layout.movementRadius };
+                drawCircle(dynamicBase, false);
+                const auto vector = OpenMWIOS::Touch::movementVector(
+                    binding.startPoint, _layout.movementRadius, binding.lastPoint, 0.f);
+                OpenMWIOS::Touch::Point knob = binding.startPoint;
+                knob.x += vector.x * _layout.movementRadius * 0.58f;
+                knob.y += vector.y * _layout.movementRadius * 0.58f;
+                drawCircle({ knob, _layout.movementRadius * 0.28f }, true);
                 break;
             }
         }
-        drawCircle({ knob, _layout.movement.radius * 0.38f }, true);
-
-        drawCircle(_layout.look, true);
-        drawCircle({ _layout.look.center, _layout.look.radius * 0.26f }, true);
     }
 
     NSDictionary<NSAttributedStringKey, id>* attributes = @{
@@ -606,14 +659,25 @@ namespace
         if (!OpenMWIOS::Touch::visibleInMode(button.action, _gameplayMode))
             continue;
         const bool pressed = _pressedActions[static_cast<std::size_t>(button.action)];
-        CGContextSetFillColorWithColor(context,
-            [UIColor colorWithRed:0.08f green:0.08f blue:0.08f alpha:pressed ? 0.65f : 0.32f].CGColor);
-        drawCircle(button.bounds, true);
-        NSString* label = labelForAction(button.action);
-        const CGSize size = [label sizeWithAttributes:attributes];
-        const CGPoint origin = CGPointMake(button.bounds.center.x - size.width * 0.5f,
-            button.bounds.center.y - size.height * 0.5f);
-        [label drawAtPoint:origin withAttributes:attributes];
+        UIImage* icon = imageForAction(button.action);
+        const CGRect iconRect = CGRectMake(button.bounds.center.x - button.bounds.radius,
+            button.bounds.center.y - button.bounds.radius, button.bounds.radius * 2.f, button.bounds.radius * 2.f);
+        if (icon)
+        {
+            CGContextSaveGState(context);
+            CGContextSetAlpha(context, pressed ? 0.95f : 0.64f);
+            UIImage* tinted = [icon imageWithTintColor:UIColor.whiteColor renderingMode:UIImageRenderingModeAlwaysOriginal];
+            [tinted drawInRect:iconRect blendMode:kCGBlendModeNormal alpha:1.f];
+            CGContextRestoreGState(context);
+        }
+        else
+        {
+            NSString* label = labelForAction(button.action);
+            const CGSize size = [label sizeWithAttributes:attributes];
+            const CGPoint origin = CGPointMake(button.bounds.center.x - size.width * 0.5f,
+                button.bounds.center.y - size.height * 0.5f);
+            [label drawAtPoint:origin withAttributes:attributes];
+        }
     }
     CGContextRestoreGState(context);
 }

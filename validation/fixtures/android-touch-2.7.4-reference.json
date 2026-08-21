@@ -45,5 +45,50 @@
     "sneak": "SDL_CONTROLLER_BUTTON_LEFTSTICK",
     "journal": "SDL_CONTROLLER_BUTTON_LEFTSHOULDER"
   },
-  "notes": "Minimal provenance fixture for the iOS adaptation. It intentionally does not vendor the Android source tree or artwork."
+  "archived_osc_layout_reference": {
+    "repository": "https://github.com/xyzz/openmw-android",
+    "commit": "bfd613230ebe57170cbe4966aa8938d54afa6efa",
+    "source_path": "app/src/main/java/ui/controls/Osc.kt",
+    "virtual_size": [1024, 768],
+    "buttons": {
+      "toggle_pov": [90, 0, 70],
+      "quick_save": [180, 0, 70],
+      "journal": [270, 0, 70],
+      "wait": [360, 0, 70],
+      "sneak": [850, 0, 70],
+      "pause": [940, 0, 70],
+      "inventory": [940, 95, 70],
+      "attack": [800, 315, 120],
+      "ready_magic": [940, 450, 70],
+      "ready_weapon": [940, 560, 70],
+      "activate": [330, 630, 70],
+      "jump": [624, 630, 70]
+    }
+  },
+  "embedded_icon_provenance": {
+    "repository": "https://gitlab.com/modding-openmw/openmw-android-docker",
+    "tag": "2.7.4",
+    "commit": "5b02e847dc646c9f10cd66001e4d65c5274dde49",
+    "paths": [
+      "payload/app/ui/1.png",
+      "payload/app/ui/2.png",
+      "payload/app/ui/3.png",
+      "payload/app/ui/4.png",
+      "payload/app/ui/6.png",
+      "payload/app/ui/7.png",
+      "payload/app/ui/8.png",
+      "payload/app/ui/9.png"
+    ]
+  },
+  "archived_utility_icon_provenance": {
+    "repository": "https://github.com/xyzz/openmw-android",
+    "commit": "bfd613230ebe57170cbe4966aa8938d54afa6efa",
+    "paths": [
+      "app/src/main/res/drawable/third_person.png",
+      "app/src/main/res/drawable/save.png",
+      "app/src/main/res/drawable/journal.png",
+      "app/src/main/res/drawable/wait.png"
+    ]
+  },
+  "notes": "Pinned behavioral lineage plus the archived OSC layout and exact GPL-3.0 gameplay/utility artwork visible in the user-provided Android reference."
 }
