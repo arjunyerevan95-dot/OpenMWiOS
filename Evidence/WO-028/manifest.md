@@ -85,6 +85,8 @@
 ## Device evidence
 
 - Logging/preflight: NOT YET RECORDED
+- On 2026-08-22 the user stated that further device validation and deep logging were no longer needed because OpenMW opens regardless of the current container. This confirms that a repeated WO27 container-path preflight is not needed for this candidate, but it does not provide the WO28 touch-layout/action results required by the canonical work order.
+- Device-validation disposition: user requested waiver before the amended candidate's touch controls were exercised. Because execution authority does not permit changing WO28 acceptance criteria, the amended candidate remains production-built but device-unqualified pending orchestrator review.
 - Installation: first WO28 IPA installed successfully through the established route.
 - User launch: completed; exact timestamp NOT RECORDED.
 - Main-menu touch: NOT YET RECORDED
