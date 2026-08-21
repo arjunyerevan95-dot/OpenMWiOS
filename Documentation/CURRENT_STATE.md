@@ -1,15 +1,15 @@
 # OpenMWiOS — Current State
 
 - Project: OpenMWiOS
-- Active branch: `codex/wo28-android-touch-fidelity`
+- Active branch: `codex/wo29-ios-crash-isolation`
 - Current engineering baseline commit: `6db1c2af5066f810df97c5af39bdbf2a48fb86b5`
-- Control-plane baseline commit: `88bce1f0bdf709661d2c45644b6eef26c021c87b`
-- Active work order: none
-- Ready work order: [WO-029](../WorkOrders/WO-029.md)
+- Control-plane baseline commit: `a585fea4f17b7de15718a263c0b833e4c3262391`
+- Active work order: [WO-029](../WorkOrders/WO-029.md)
+- Ready work order: none
 - Last completed work order: [WO-027](../WorkOrders/WO-027.md)
 - Last reviewed work order: [WO-028](../WorkOrders/WO-028.md) — execution **REJECTED**, status **SUPERSEDED**
 - Current objective: capture, classify, and symbolicate the rejected WO28 candidate's launch-time, `New Game`, and overlay-action crash paths; apply only a proven bounded correction
-- Engineering execution status: **WO-029 READY; execution has not started**
+- Engineering execution status: **ACTIVE under WO-029**
 - Current unqualified WO28 implementation: candidate `1dc819cea447f8ac40c878e1a6d7f4d478e94063` built and packaged successfully, but failed device acceptance after user-observed launch-time, `New Game`, and overlay-action hard crashes
 - Last updated: 2026-08-22
 
@@ -66,7 +66,7 @@ The accepted physical test did **not** record the post-install container UUID be
 
 ## Latest important evidence
 
-- [Ready WO29](../WorkOrders/WO-029.md)
+- [Active WO29](../WorkOrders/WO-029.md)
 - [Reviewed WO28](../WorkOrders/WO-028.md)
 - [WO28 evidence manifest](../Evidence/WO-028/manifest.md)
 - [WO28 execution completion record](../Evidence/WO-028/completion.md)
@@ -82,9 +82,9 @@ The accepted physical test did **not** record the post-install container UUID be
 ## Future orchestrator/worker recovery
 
 1. Read `Documentation/CURRENT_STATE.md`.
-2. Read the canonical READY `WorkOrders/WO-029.md`, then its referenced WO28/WO27 records only as needed.
+2. Read the canonical ACTIVE `WorkOrders/WO-029.md`, then its referenced WO28/WO27 records only as needed.
 3. Read only the `Decisions/` and `Evidence/` records referenced by that work order.
 4. Inspect current Git state and active/recent CI before changing anything.
 5. Use the Google Docs ledger only when deeper historical context is required.
 
-WO29 is canonically READY but has not started. Engineering execution requires a separate explicit orchestrator start directive; merely reading the work order does not make it ACTIVE.
+WO29 is canonically ACTIVE. Do not issue, start, or execute another work order while its worker run is in progress.
