@@ -1,8 +1,10 @@
+import base64
 import json
 import math
 import pathlib
 import re
 import shutil
+import struct
 import subprocess
 import tempfile
 import unittest
@@ -11,6 +13,7 @@ import unittest
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 MODEL = ROOT / "ios" / "openmw_ios_touch_model.hpp"
 ADAPTER = ROOT / "ios" / "openmw_ios_touch_controls.mm"
+ICONS = ROOT / "ios" / "openmw_ios_touch_icons.hpp"
 PATCH = ROOT / "patches" / "openmw" / "0012-ios-android-derived-touch-controls.patch"
 REFERENCE = ROOT / "validation" / "fixtures" / "android-touch-2.7.4-reference.json"
 
@@ -22,17 +25,36 @@ def clamp(value: float, minimum: float, maximum: float) -> float:
 def make_layout(width: float, height: float, safe=(0.0, 0.0, 0.0, 0.0)):
     top, left, bottom, right_inset = safe
     short_side = min(width, height)
-    edge = clamp(short_side * 0.035, 12.0, 28.0)
-    stick_radius = clamp(short_side * 0.17, 54.0, 96.0)
-    button_radius = clamp(short_side * 0.075, 24.0, 42.0)
-    step = button_radius * 2.0 + clamp(short_side * 0.025, 8.0, 18.0)
-    movement = (left + edge + stick_radius, height - bottom - edge - stick_radius, stick_radius)
-    right = width - right_inset - edge - button_radius
-    lower = height - bottom - edge - button_radius
-    offsets = ((0, 0), (-step, 0), (0, -step), (-step, -step), (-2 * step, -step),
-               (0, -2 * step), (-step, -2 * step), (-2 * step, -2 * step))
-    buttons = tuple((right + dx, lower + dy, button_radius) for dx, dy in offsets)
-    return {"movement": movement, "buttons": buttons, "look_boundary": width * 0.38,
+    stick_radius = clamp(short_side * 0.15, 48.0, 92.0)
+    content_width = max(width - left - right_inset, 1.0)
+    content_height = max(height - top - bottom, 1.0)
+
+    def android_center(x, y, size):
+        radius = clamp(size * content_width / 2048.0, 22.0, 72.0)
+        return (clamp(left + x * content_width / 1024.0 + radius,
+                      left + radius, width - right_inset - radius),
+                clamp(top + y * content_height / 768.0 + radius,
+                      top + radius, height - bottom - radius), radius)
+
+    definitions = (
+        ("Activate", 330.0, 630.0, 70.0),
+        ("Attack", 800.0, 315.0, 120.0),
+        ("Jump", 624.0, 630.0, 70.0),
+        ("ReadyWeapon", 940.0, 560.0, 70.0),
+        ("ReadyMagic", 940.0, 450.0, 70.0),
+        ("Inventory", 940.0, 95.0, 70.0),
+        ("Pause", 940.0, 0.0, 70.0),
+        ("Sneak", 850.0, 0.0, 70.0),
+        ("Journal", 270.0, 0.0, 70.0),
+        ("TogglePOV", 90.0, 0.0, 70.0),
+        ("QuickSave", 180.0, 0.0, 70.0),
+        ("Wait", 360.0, 0.0, 70.0),
+    )
+    buttons = tuple((name, *android_center(x, y, size)) for name, x, y, size in definitions)
+    return {"movement_radius": stick_radius,
+            "movement_boundary": left + content_width * 0.36,
+            "look_boundary": left + content_width * 0.36,
+            "buttons": buttons,
             "safe": (top, left, bottom, right_inset)}
 
 
@@ -49,7 +71,8 @@ class IosTouchControlTests(unittest.TestCase):
     def assert_layout_inside_safe_area(self, width, height, safe):
         layout = make_layout(width, height, safe)
         top, left, bottom, right = safe
-        for x, y, radius in (layout["movement"], *layout["buttons"]):
+        circles = tuple(button[1:] for button in layout["buttons"])
+        for x, y, radius in circles:
             self.assertGreaterEqual(x - radius, left - 0.01)
             self.assertLessEqual(x + radius, width - right + 0.01)
             self.assertGreaterEqual(y - radius, top - 0.01)
@@ -61,6 +84,12 @@ class IosTouchControlTests(unittest.TestCase):
         self.assertEqual(reference["commit"], "5b02e847dc646c9f10cd66001e4d65c5274dde49")
         self.assertEqual(reference["native_bridge_path"], "patches/openmw/androidmain.cpp")
         self.assertEqual(reference["default_android_keycodes"]["inventory"], 30)
+        self.assertEqual(reference["ui_config_path"], "payload/app/ui/UI.cfg")
+        self.assertEqual(reference["archived_osc_layout_reference"]["commit"],
+                         "bfd613230ebe57170cbe4966aa8938d54afa6efa")
+        self.assertEqual(reference["archived_osc_layout_reference"]["virtual_size"], [1024, 768])
+        self.assertEqual(reference["archived_utility_icon_provenance"]["commit"],
+                         "bfd613230ebe57170cbe4966aa8938d54afa6efa")
 
     def test_iphone_landscape_layout_respects_safe_area(self):
         self.assert_layout_inside_safe_area(956, 440, (0, 62, 21, 62))
@@ -74,7 +103,8 @@ class IosTouchControlTests(unittest.TestCase):
     def test_layout_recomputes_for_orientation_and_size(self):
         landscape = make_layout(1180, 820, (13, 37, 29, 11))
         alternate = make_layout(820, 1180, (37, 13, 11, 29))
-        self.assertNotEqual(landscape["movement"], alternate["movement"])
+        self.assertEqual(landscape["movement_radius"], alternate["movement_radius"])
+        self.assertNotEqual(landscape["look_boundary"], alternate["look_boundary"])
         self.assertNotEqual(landscape["buttons"], alternate["buttons"])
 
     def test_dead_zone_analog_magnitude_and_clamp(self):
@@ -95,35 +125,103 @@ class IosTouchControlTests(unittest.TestCase):
         self.assertIn("found->second.lastPoint = point", model)
         self.assertNotIn("mBindings.clear();\n            return add", model)
 
-    def test_gui_mode_is_true_passthrough_and_cleanup_is_explicit(self):
+    def test_gui_mode_keeps_semantic_menu_buttons_and_other_touches_passthrough(self):
         adapter = ADAPTER.read_text(encoding="utf-8")
-        self.assertIn("return _gameplayMode;", adapter)
+        model = MODEL.read_text(encoding="utf-8")
+        self.assertIn("visibleInMode", model)
+        self.assertIn("Action::Inventory || action == Action::Pause || action == Action::Journal", model)
+        self.assertIn("button.bounds.contains(touchPoint, 1.15f)", adapter)
+        self.assertIn("return NO;", adapter)
         self.assertIn("SDL_ShowCursor(SDL_QUERY) == SDL_DISABLE", adapter)
         self.assertIn("[self releaseAllInputs]", adapter)
-        self.assertIn('mode=gui;controls=passthrough', adapter)
+        self.assertIn('mode=gui;controls=inv,journal,menu;other_touches=passthrough', adapter)
 
     def test_public_sdl_paths_preserve_external_input_architecture(self):
         adapter = ADAPTER.read_text(encoding="utf-8")
         self.assertIn("SDL_JoystickAttachVirtualEx", adapter)
         self.assertIn("SDL_JoystickSetVirtualAxis", adapter)
+        self.assertIn("SDL_JoystickSetVirtualButton", adapter)
         self.assertIn("SDL_PushEvent", adapter)
         self.assertNotIn("SDL_SendMouseMotion", adapter)
         self.assertNotIn("SDL_SendKeyboardKey", adapter)
 
-    def test_android_action_semantics_are_preserved(self):
+    def test_android_actions_use_openmw_semantic_controller_bindings(self):
         adapter = ADAPTER.read_text(encoding="utf-8")
         mappings = {
-            "Activate": "SDL_SCANCODE_SPACE",
-            "Attack": "SDL_SCANCODE_Z",
-            "Jump": "SDL_SCANCODE_E",
-            "ReadyWeapon": "SDL_SCANCODE_F",
-            "ReadyMagic": "SDL_SCANCODE_R",
-            "Inventory": "SDL_SCANCODE_B",
-            "Pause": "SDL_SCANCODE_ESCAPE",
-            "Sneak": "SDL_SCANCODE_LCTRL",
+            "Activate": "SDL_CONTROLLER_BUTTON_A",
+            "ReadyWeapon": "SDL_CONTROLLER_BUTTON_X",
+            "ReadyMagic": "SDL_CONTROLLER_BUTTON_Y",
+            "Inventory": "SDL_CONTROLLER_BUTTON_B",
+            "Pause": "SDL_CONTROLLER_BUTTON_START",
+            "Sneak": "SDL_CONTROLLER_BUTTON_LEFTSTICK",
+            "Journal": "SDL_CONTROLLER_BUTTON_LEFTSHOULDER",
         }
-        for action, scancode in mappings.items():
+        for action, binding in mappings.items():
+            self.assertRegex(adapter, rf"case Action::{action}:\s+return {binding};")
+        self.assertRegex(adapter, r"case Action::Attack:\s+return SDL_CONTROLLER_AXIS_TRIGGERRIGHT;")
+        self.assertRegex(adapter, r"case Action::Jump:\s+return SDL_CONTROLLER_AXIS_TRIGGERLEFT;")
+        self.assertNotRegex(adapter, r"case Action::Inventory:\s+return SDL_SCANCODE_B;")
+        self.assertIn("pushMouseButton(SDL_BUTTON_RIGHT, pressed)", adapter)
+
+    def test_android_osc_control_grouping_and_utility_actions_are_present(self):
+        model = MODEL.read_text(encoding="utf-8")
+        adapter = ADAPTER.read_text(encoding="utf-8")
+        layout = make_layout(956, 440, (0, 62, 21, 62))
+        actions = {button[0] for button in layout["buttons"]}
+        self.assertEqual(actions, {"Activate", "Attack", "Jump", "ReadyWeapon", "ReadyMagic",
+                                   "Inventory", "Pause", "Sneak", "Journal", "TogglePOV",
+                                   "QuickSave", "Wait"})
+        self.assertIn("1024x768 virtual coordinate system", model)
+        self.assertIn("Action::Activate, 330.f, 630.f, 70.f", model)
+        self.assertIn("Action::Attack, 800.f, 315.f, 120.f", model)
+        self.assertIn("Action::Pause, 940.f, 0.f, 70.f", model)
+        utility_scancodes = {
+            "TogglePOV": "SDL_SCANCODE_TAB",
+            "QuickSave": "SDL_SCANCODE_F5",
+            "Wait": "SDL_SCANCODE_T",
+        }
+        for action, scancode in utility_scancodes.items():
             self.assertRegex(adapter, rf"case Action::{action}:\s+return {scancode};")
+        self.assertIn("BOOL dispatched = NO", adapter)
+        self.assertIn("if (!dispatched)", adapter)
+
+    def test_movement_is_floating_and_look_is_an_invisible_free_drag_region(self):
+        model = MODEL.read_text(encoding="utf-8")
+        adapter = ADAPTER.read_text(encoding="utf-8")
+        self.assertIn("Point startPoint", model)
+        self.assertIn("point.x <= layout.movementBoundaryX", model)
+        self.assertIn("point.x >= layout.lookBoundaryX", model)
+        self.assertIn("binding.startPoint, _layout.movementRadius", adapter)
+        self.assertNotIn("drawCircle(_layout.look", adapter)
+        self.assertNotIn("layout.look.contains", model)
+
+    def test_android_icons_are_embedded_with_pinned_provenance(self):
+        icons = ICONS.read_text(encoding="utf-8")
+        adapter = ADAPTER.read_text(encoding="utf-8")
+        self.assertIn("5b02e847dc646c9f10cd66001e4d65c5274dde49", icons)
+        for number in (1, 2, 3, 4, 6, 7, 8, 9):
+            self.assertIn(f"icon{number}[]", icons)
+        for name in ("thirdPersonIcon", "saveIcon", "journalIcon", "waitIcon"):
+            self.assertIn(f"{name}[]", icons)
+        self.assertIn("imageForAction", adapter)
+        self.assertIn("imageWithTintColor:UIColor.whiteColor", adapter)
+
+    def test_all_embedded_android_icons_are_valid_128px_pngs(self):
+        icons = ICONS.read_text(encoding="utf-8")
+        names = ("icon1", "icon2", "icon3", "icon4", "icon6", "icon7", "icon8", "icon9",
+                 "thirdPersonIcon", "saveIcon", "journalIcon", "waitIcon")
+        for name in names:
+            match = re.search(rf"{name}\[\]\s*=\s*R\"OMWICON\((.*?)\)OMWICON\";", icons, re.S)
+            self.assertIsNotNone(match, name)
+            data = base64.b64decode(re.sub(r"\s+", "", match.group(1)), validate=True)
+            self.assertEqual(data[:8], b"\x89PNG\r\n\x1a\n", name)
+            self.assertEqual(struct.unpack(">II", data[16:24]), (128, 128), name)
+
+    def test_inventory_press_and_release_are_not_keyboard_b(self):
+        adapter = ADAPTER.read_text(encoding="utf-8")
+        self.assertIn("SDL_JoystickSetVirtualButton", adapter)
+        self.assertIn("pressed ? SDL_PRESSED : SDL_RELEASED", adapter)
+        self.assertNotIn("These preserve the current Android 2.7.4 UI.cfg semantics", adapter)
 
     def test_layout_and_adapter_have_no_current_device_dimensions(self):
         source = MODEL.read_text(encoding="utf-8") + ADAPTER.read_text(encoding="utf-8")
@@ -156,13 +254,20 @@ int main() {
     using namespace OpenMWIOS::Touch;
     auto layout = makeLayout(956.f, 440.f, {0.f, 62.f, 21.f, 62.f});
     Ownership ownership;
-    auto movement = ownership.begin(1, layout.movement.center, layout);
-    auto look = ownership.begin(2, {layout.lookBoundaryX + 10.f, 50.f}, layout);
+    Point movementPoint{layout.safeArea.left + 20.f, 220.f};
+    Point lookPoint{layout.width * 0.55f, 220.f};
+    auto movement = ownership.begin(1, movementPoint, layout);
+    auto look = ownership.begin(2, lookPoint, layout);
     auto button = ownership.begin(3, layout.buttons[0].bounds.center, layout);
     assert(movement && movement->role == Role::Movement);
     assert(look && look->role == Role::Look);
     assert(button && button->role == Role::Button);
     assert(ownership.bindings().size() == 3);
+    Ownership guiOwnership;
+    auto guiInventory = guiOwnership.begin(4, layout.buttons[5].bounds.center, layout, false);
+    auto guiMovement = guiOwnership.begin(5, movementPoint, layout, false);
+    assert(guiInventory && guiInventory->role == Role::Button);
+    assert(!guiMovement);
     ownership.end(2);
     assert(ownership.bindings().size() == 2);
     return 0;
