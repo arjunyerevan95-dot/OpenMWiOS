@@ -87,6 +87,11 @@
 - Logging/preflight: NOT YET RECORDED
 - On 2026-08-22 the user stated that further device validation and deep logging were no longer needed because OpenMW opens regardless of the current container. This confirms that a repeated WO27 container-path preflight is not needed for this candidate, but it does not provide the WO28 touch-layout/action results required by the canonical work order.
 - Device-validation disposition: user requested waiver before the amended candidate's touch controls were exercised. Because execution authority does not permit changing WO28 acceptance criteria, the amended candidate remains production-built but device-unqualified pending orchestrator review.
+- Subsequent device observation on 2026-08-22: the user reported that tapping any visible touch-overlay button causes an immediate hard crash. Tapping the main-menu `New Game` entry also causes a hard crash. No crash report or symbolicated stack was supplied with the observation.
+- Candidate attribution: the observation followed distribution of amended Fast candidate `1dc819cea447f8ac40c878e1a6d7f4d478e94063` / run `32511443555`; the installed binary identity was not independently read back from the device.
+- Visual result: the main menu renders, but the Android-derived white overlay icons are visually dominant. The user requested approximately 80% transparency (about 20% opacity) rather than bright opaque white. This is UX evidence only and does not amend WO28 scope.
+- Screenshot: user attachment `5F84DEBA-7DFD-4A2E-9FAA-FFDD3CA54BD7/1-Photo-1.jpg`, `1280x589`, SHA-256 `A1173517C96EF3BB73BEC6DE1DC010A1EEF6F26D6C50AB16764DE9C036A08C19`.
+- Stop boundary: WO28 Stop Condition G (new native crash) is met by user observation. Root cause is NOT RECORDED; crash symbolication is NOT RECORDED.
 - Installation: first WO28 IPA installed successfully through the established route.
 - User launch: completed; exact timestamp NOT RECORDED.
 - Main-menu touch: NOT YET RECORDED
@@ -104,6 +109,6 @@
 
 ## Outcome
 
-- Stop condition: NOT YET RECORDED
-- Strongest conclusion: NOT YET RECORDED
-- Recommended next boundary: NOT YET RECORDED
+- Stop condition: **G — new native crash**, based on the user-observed immediate crash on overlay-button input and `New Game` input.
+- Strongest execution conclusion: the amended production candidate renders the main menu and revised Android artwork, but it is not qualifiable because input reliably triggers a hard crash. The supplied evidence does not establish the crash mechanism.
+- Recommended review boundary: orchestrator review of the rejected candidate and authorization, if desired, for a narrowly scoped crash-capture/root-cause work order. The opacity request is recorded but must not be mixed into crash diagnosis without authorization.
