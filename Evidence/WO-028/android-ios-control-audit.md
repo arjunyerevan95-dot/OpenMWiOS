@@ -63,3 +63,33 @@ WO28 uses the normalized Android 2.7.4 positions as safe-area-relative anchors. 
 - Android artwork and the Nexus icon pack are not ported; functional circles/labels remain.
 - Android launcher customization and per-user control editing are intentionally unported.
 - The left stick remains fixed for the Android-fidelity qualification. Floating-stick behavior remains the first recommended UX refinement after qualification.
+
+## Device-test amendment: first WO28 interpretation falsified
+
+The first WO28 IPA from Fast run `32494194803` reached Seyda Neen with the renderer, water-shader option, WO27 data discovery, movement, and free gameplay progression intact. It did **not** qualify Android UI fidelity. The user's direct comparison against the Android interface established:
+
+- the fixed visible right stick was a regression; the previously qualified broad, invisible relative-look region was the correct iOS behavior;
+- the fixed visible movement stick was not the requested iOS UX; movement must acquire a floating origin from the first touch in the left movement region and need not remain visible while idle;
+- text labels in circular placeholders did not reproduce Android iconography;
+- projecting only the newer editable `UI.cfg` subset did not reproduce the complete Android OSC grouping visible in the user's reference.
+
+The exact screenshot layout was then traced to the archived Android OSC lineage rather than guessed from pixels:
+
+- Repository: `https://github.com/xyzz/openmw-android`
+- Commit: `bfd613230ebe57170cbe4966aa8938d54afa6efa`
+- Source: `app/src/main/java/ui/controls/Osc.kt`
+- Virtual layout: `1024x768`
+- Core default positions: `pause=(940,0)`, `inventory=(940,95)`, `sneak=(850,0)`, `magic=(940,450)`, `weapon=(940,560)`, `attack=(800,315,size=120)`, `use=(330,630)`, and `jump=(624,630)`.
+- Top utility actions used by the corrected iOS baseline: third-person `(90,0)`, quick save `(180,0)`, journal `(270,0)`, and wait `(360,0)`.
+
+The amended iOS design retains the already-proven semantic virtual-controller dispatch, but supersedes the first-pass presentation/ownership model:
+
+| Area | First WO28 IPA | Amended WO28 correction |
+|---|---|---|
+| Movement | Fixed visible circle | Floating touch origin anywhere in the left movement region; indicator appears only while owned |
+| Look | Fixed visible circle | Invisible broad right-side free-drag region; relative mouse deltas preserved |
+| Core and top-row actions | Text circles | Pinned GPL-3.0 Android gameplay and utility icons |
+| Placement | Newer `UI.cfg` subset | Archived OSC `1024x768` virtual coordinates projected through current safe area |
+| Utilities | Journal only | Third-person, quick save, journal, and wait at OSC top-row positions |
+
+This addendum supersedes only the earlier layout/look/artwork conclusions. The controller-level semantic action findings, especially Inventory controller `B`, remain supported and unchanged.

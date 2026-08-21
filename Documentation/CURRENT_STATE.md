@@ -8,7 +8,7 @@
 - Last completed work order: [WO-027](../WorkOrders/WO-027.md)
 - Current objective: Android touch UI/action fidelity
 - Engineering execution status: **ACTIVE under WO-028**
-- Current unqualified WO28 implementation: `96d753f` — awaiting Fast Development and device validation
+- Current unqualified WO28 implementation: first device pass `96d753f` was rejected for visual/layout fidelity; amended correction `111da2ba97ca0078e7f96f7d8966191a9d8db101` is awaiting Fast Development and device validation
 - Last updated: 2026-08-21
 
 ## Qualified state
@@ -23,7 +23,7 @@ The highest qualified runtime gate combines the completed WO26 and WO27 results:
 - WO27 resolves the default base-game path from the current iOS Documents directory at runtime. The accepted device launch required no manual `openmw.cfg` edit and no externally supplied container UUID/path.
 - No native crash or jetsam was observed in the accepted WO27 device run.
 
-This is a partial touch qualification, not a complete mobile-control qualification. The control overlay is not yet faithful to the recent Android layout/action behavior, and at least the Inventory action is nonfunctional through the current keyboard-style injection path.
+This is a partial touch qualification, not a complete mobile-control qualification. WO28's first production/device pass preserved movement, look, exterior traversal, rendering, and WO27 data discovery, but it was rejected because it used placeholder circles, a fixed movement stick, and a fixed right look stick rather than the actual Android-derived interface. The amended correction restores invisible free-drag look, makes the movement origin floating, and adopts the pinned Android icon/layout evidence; it is not qualified until the next production/device pass.
 
 ## Versions and accepted candidate
 
@@ -47,7 +47,8 @@ Current unresolved renderer boundary exposed by exterior traversal:
 
 - foliage alpha/transparency is incorrect, producing opaque leaf cards;
 - distant scenery contains missing/white regions and a horizontal band;
-- water appearance is not classified because the active OpenMW water settings may be low;
+- water appearance improved after the user enabled OpenMW water shader effects, so the prior water concern is currently configuration-dependent rather than a proven renderer defect;
+- distance fog appears absent at the configured draw boundary, leaving white/empty regions beyond rendered geometry; its relationship to the foliage-alpha defect is unknown;
 - reduced render scale 0.58 still has menu corruption and is not qualified;
 - `ColorMaski` warning activity remains noisy but was not proven to block rendering.
 
