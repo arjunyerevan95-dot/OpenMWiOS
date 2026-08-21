@@ -8,6 +8,7 @@
 - Last completed work order: [WO-027](../WorkOrders/WO-027.md)
 - Current objective: Android touch UI/action fidelity
 - Engineering execution status: **ACTIVE under WO-028**
+- Current unqualified WO28 implementation: `96d753f` — awaiting Fast Development and device validation
 - Last updated: 2026-08-21
 
 ## Qualified state

@@ -24,37 +24,43 @@
 
 ## Android reference
 
-- Repository: NOT YET RECORDED
-- Tag/line: NOT YET RECORDED
-- Commit: NOT YET RECORDED
-- Touch UI paths: NOT YET RECORDED
-- Native bridge paths: NOT YET RECORDED
-- OpenMW input patches: NOT YET RECORDED
+- Repository: `https://gitlab.com/modding-openmw/openmw-android-docker.git`
+- Tag/line: `2.7.4`
+- Commit: `5b02e847dc646c9f10cd66001e4d65c5274dde49`
+- Touch UI paths: `EngineActivity.kt`, `DynamicButtons.kt`, `DynamicLeftThumbstick.kt`, `DynamicRightThumbstick.kt`, `StateManager.kt`, and `payload/app/ui/UI.cfg` as pinned in `validation/fixtures/android-touch-2.7.4-reference.json`.
+- Native bridge: `patches/openmw/androidmain.cpp`; Android forwards relative mouse/button events through SDL internals and provides a virtual-stick bridge.
+- OpenMW input authority: pinned `apps/openmw/mwinput/bindingsmanager.cpp` controller defaults and Android `payload/app/ui/input_v3.xml`.
 
 ## Android control inventory
 
-NOT YET RECORDED. The completed inventory must include control ID, visible function, gameplay purpose, emitted event, bridge call, consumed OpenMW action/input, press/release/hold/repeat behavior, mode visibility, contextual state, and analog/digital classification.
+[Android/iOS touch-control audit](android-ios-control-audit.md) records every default Android control, ID, source event, bridge/semantic path, mode/hold behavior, normalized location, and WO26/WO28 disposition.
 
 ## iOS before/after inventory
 
-NOT YET RECORDED. Each Android control must be classified as `MATCHES`, `MISSING`, `WRONG ACTION`, `WRONG EVENT TYPE`, `WRONG VISIBILITY`, `WRONG LAYOUT`, `PARTIAL`, or `NOT APPLICABLE`, with final disposition.
+[Android/iOS touch-control audit](android-ios-control-audit.md) is the compact before/after inventory. The decisive WO26 gaps were:
+
+- `WRONG ACTION`: Inventory injected keyboard `B`, which is not OpenMW's default Inventory binding.
+- `WRONG EVENT TYPE`: action icons generally guessed keyboard events instead of using OpenMW semantic controller bindings.
+- `WRONG LAYOUT`: arbitrary right-side 3x3 grid rather than Android `UI.cfg` grouping.
+- `PARTIAL`: look worked through an invisible broad region but did not reproduce the Android right-stick target.
+- `MISSING`: direct Journal affordance and GUI-mode semantic controls.
 
 ## Known starting defect
 
 - Before Inventory dispatch: touch `INV` → keyboard `B` injection → inventory does not open.
-- Required after dispatch: NOT YET RECORDED.
+- Implemented after dispatch: touch `INV` → virtual-controller `SDL_CONTROLLER_BUTTON_B` press/release → OpenMW `A_Inventory`; if virtual attachment is unavailable, use OpenMW's default right-mouse Inventory path rather than keyboard `B`.
 
 ## Implementation and regression evidence
 
-- Action-dispatch architecture: NOT YET RECORDED
-- Files changed: NOT YET RECORDED
+- Action-dispatch architecture: touch-ID-owned control → SDL virtual game controller → pinned OpenMW semantic controller binding. Relative mouse look remains the Android-equivalent public SDL event path. Keyboard/mouse defaults are fallback-only.
+- Files changed: `ios/openmw_ios_touch_model.hpp`, `ios/openmw_ios_touch_controls.mm`, `validation/test_ios_touch_controls.py`, `validation/fixtures/android-touch-2.7.4-reference.json`, and WO28 evidence/control-plane records.
 - Correction commits: NOT YET RECORDED
-- Regression tests: NOT YET RECORDED
-- Synthetic wide-iPhone result: NOT YET RECORDED
-- Synthetic smaller-iPhone result: NOT YET RECORDED
-- Synthetic landscape-iPad result: NOT YET RECORDED
-- Arbitrary-aspect result: NOT YET RECORDED
-- Floating-stick status: NOT YET RECORDED
+- Regression tests: 16 local tests run, 15 passed and one host C++ compile fixture skipped because no local `clang++`/`g++` is installed. CI AppleClang remains the production compilation gate.
+- Synthetic wide-iPhone result: passed `956x440`, safe area `0,62,21,62`.
+- Synthetic smaller-iPhone result: layout recomputation test passed using a distinct orientation/aspect input.
+- Synthetic landscape-iPad result: passed `1366x1024`, safe area `24,0,20,0`.
+- Arbitrary-aspect result: passed `1180x820`, safe area `13,37,29,11`.
+- Floating-stick status: deferred; fixed Android-derived stick retained for fidelity qualification.
 
 ## Build evidence
 
