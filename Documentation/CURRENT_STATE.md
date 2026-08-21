@@ -8,7 +8,7 @@
 - Last completed work order: [WO-027](../WorkOrders/WO-027.md)
 - Current objective: Android touch UI/action fidelity
 - Engineering execution status: **ACTIVE under WO-028**
-- Current unqualified WO28 implementation: first device pass `96d753f` was rejected for visual/layout fidelity; amended correction `111da2ba97ca0078e7f96f7d8966191a9d8db101` is awaiting Fast Development and device validation
+- Current unqualified WO28 implementation: first device pass `96d753f` was rejected for visual/layout fidelity; amended correction `111da2ba97ca0078e7f96f7d8966191a9d8db101` plus compile-only icon disambiguation `bc0aafd991989cbc44e185cc8aaaf1af8389992c` await replacement Fast Development and device validation
 - Last updated: 2026-08-21
 
 ## Qualified state

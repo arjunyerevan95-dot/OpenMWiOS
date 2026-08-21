@@ -76,7 +76,11 @@
 - Build duration: approximately `1h09m47s` (`2026-08-21T14:49:11Z` to `15:58:58Z`).
 - First executable SHA-256: `E6BB8BEA0D9E3A4E5275E9919AD49716F28C4BB42277E623B2A5BF1316EF4D97`.
 - First IPA SHA-256: `8184D02236A95CB399F80E176343DD540ECA686F108F14F3601F60335D8ACD06`; artifact `OpenMW-iOS-fast-28`, artifact ID `9453201466`.
-- Amended corrective Fast run: NOT YET RECORDED.
+- First amended Fast attempt: `32508649782`, failed before artifact production during AppleClang compilation.
+- Exact failure: `openmw_ios_touch_controls.mm:161:66: error: reference to 'wait' is ambiguous`; the embedded Android wait-icon identifier collided with the system/POSIX `wait` declaration.
+- The failed amended attempt restored source downloads, vcpkg binaries, GL4ES/OSG-qualified incremental state, and build state. Reported cache source: `ef3983ccaef8b76b65384adf22e90c34de2fd4bcac37a40240c79059e485119f`; build-state key suffix: `848f5b103cf0731ca40f21afcbb53420a90ac009afc14d249e519c5a835ddd4e`.
+- Compile-only disambiguation commit: `bc0aafd991989cbc44e185cc8aaaf1af8389992c`; it renames the four archived icon variables to explicit `*Icon` identifiers and does not alter action dispatch, layout, touch ownership, renderer code, or the WO27 path behavior.
+- Replacement amended Fast run: PENDING.
 
 ## Device evidence
 
