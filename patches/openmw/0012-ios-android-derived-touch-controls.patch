@@ -1,0 +1,26 @@
+diff --git a/apps/openmw/CMakeLists.txt b/apps/openmw/CMakeLists.txt
+--- a/apps/openmw/CMakeLists.txt
++++ b/apps/openmw/CMakeLists.txt
+@@ -149,6 +149,7 @@ if(BUILD_OPENMW)
+         openmw_add_executable(openmw MACOSX_BUNDLE
+             main.cpp
+             ${CMAKE_SOURCE_DIR}/ios/openmw_ios_bootstrap.mm
++            ${CMAKE_SOURCE_DIR}/ios/openmw_ios_touch_controls.mm
+             ${CMAKE_SOURCE_DIR}/ios/openmw_ios_logging.mm
+             ${CMAKE_SOURCE_DIR}/ios/openmw_ios_paths.mm
+         )
+diff --git a/apps/openmw/engine.cpp b/apps/openmw/engine.cpp
+--- a/apps/openmw/engine.cpp
++++ b/apps/openmw/engine.cpp
+@@ -3,3 +3,4 @@
+ #ifdef OPENMW_IOS
+ #include <ios/openmw_ios_logging.h>
++#include <ios/openmw_ios_touch_controls.h>
+ #endif
+@@ -569,5 +570,6 @@ void OMW::Engine::createWindow()
+             }
+ #ifdef OPENMW_IOS
+             openmw_ios_log("window_creation", "SDL window created");
++            openmw_ios_install_touch_controls();
+ #endif
+         }
