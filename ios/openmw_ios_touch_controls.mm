@@ -155,10 +155,10 @@ namespace
             images[static_cast<std::size_t>(Action::ReadyWeapon)] = png(icon7);
             images[static_cast<std::size_t>(Action::ReadyMagic)] = png(icon8);
             images[static_cast<std::size_t>(Action::Sneak)] = png(icon9);
-            images[static_cast<std::size_t>(Action::Journal)] = png(journal);
-            images[static_cast<std::size_t>(Action::TogglePOV)] = png(third_person);
-            images[static_cast<std::size_t>(Action::QuickSave)] = png(save);
-            images[static_cast<std::size_t>(Action::Wait)] = png(wait);
+            images[static_cast<std::size_t>(Action::Journal)] = png(journalIcon);
+            images[static_cast<std::size_t>(Action::TogglePOV)] = png(thirdPersonIcon);
+            images[static_cast<std::size_t>(Action::QuickSave)] = png(saveIcon);
+            images[static_cast<std::size_t>(Action::Wait)] = png(waitIcon);
         });
         return images[static_cast<std::size_t>(action)];
     }

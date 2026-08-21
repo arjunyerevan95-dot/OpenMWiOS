@@ -201,7 +201,7 @@ class IosTouchControlTests(unittest.TestCase):
         self.assertIn("5b02e847dc646c9f10cd66001e4d65c5274dde49", icons)
         for number in (1, 2, 3, 4, 6, 7, 8, 9):
             self.assertIn(f"icon{number}[]", icons)
-        for name in ("third_person", "save", "journal", "wait"):
+        for name in ("thirdPersonIcon", "saveIcon", "journalIcon", "waitIcon"):
             self.assertIn(f"{name}[]", icons)
         self.assertIn("imageForAction", adapter)
         self.assertIn("imageWithTintColor:UIColor.whiteColor", adapter)
@@ -209,7 +209,7 @@ class IosTouchControlTests(unittest.TestCase):
     def test_all_embedded_android_icons_are_valid_128px_pngs(self):
         icons = ICONS.read_text(encoding="utf-8")
         names = ("icon1", "icon2", "icon3", "icon4", "icon6", "icon7", "icon8", "icon9",
-                 "third_person", "save", "journal", "wait")
+                 "thirdPersonIcon", "saveIcon", "journalIcon", "waitIcon")
         for name in names:
             match = re.search(rf"{name}\[\]\s*=\s*R\"OMWICON\((.*?)\)OMWICON\";", icons, re.S)
             self.assertIsNotNone(match, name)
