@@ -1,0 +1,24 @@
+{
+  "source_repository": "https://gitlab.com/modding-openmw/openmw-android-docker",
+  "tag": "2.7.4",
+  "commit": "5b02e847dc646c9f10cd66001e4d65c5274dde49",
+  "ui_config_path": "payload/app/ui/UI.cfg",
+  "ui_implementation_paths": [
+    "payload/app/src/main/java/org/openmw/ui/controls/DynamicLeftThumbstick.kt",
+    "payload/app/src/main/java/org/openmw/ui/controls/DynamicRightThumbstick.kt",
+    "payload/app/src/main/java/org/openmw/ui/controls/DynamicButtons.kt",
+    "payload/app/src/main/java/org/openmw/ui/controls/StateManager.kt"
+  ],
+  "native_bridge_path": "patches/openmw/androidmain.cpp",
+  "default_android_keycodes": {
+    "pause": 111,
+    "attack": 54,
+    "inventory": 30,
+    "jump": 33,
+    "activate": 62,
+    "ready_weapon": 34,
+    "ready_magic": 46,
+    "sneak": 113
+  },
+  "notes": "Minimal provenance fixture for the iOS adaptation. It intentionally does not vendor the Android source tree or artwork."
+}
