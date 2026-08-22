@@ -1,0 +1,158 @@
+diff --git a/apps/openmw/CMakeLists.txt b/apps/openmw/CMakeLists.txt
+--- a/apps/openmw/CMakeLists.txt
++++ b/apps/openmw/CMakeLists.txt
+@@ -149,6 +149,7 @@ if(BUILD_OPENMW)
+         openmw_add_executable(openmw MACOSX_BUNDLE
+             main.cpp
+             ${CMAKE_SOURCE_DIR}/ios/openmw_ios_bootstrap.mm
++            ${CMAKE_SOURCE_DIR}/ios/openmw_ios_renderer_diagnostics.mm
+             ${CMAKE_SOURCE_DIR}/ios/openmw_ios_touch_controls.mm
+             ${CMAKE_SOURCE_DIR}/ios/openmw_ios_logging.mm
+             ${CMAKE_SOURCE_DIR}/ios/openmw_ios_paths.mm
+diff --git a/apps/openmw/mwrender/renderingmanager.cpp b/apps/openmw/mwrender/renderingmanager.cpp
+--- a/apps/openmw/mwrender/renderingmanager.cpp
++++ b/apps/openmw/mwrender/renderingmanager.cpp
+@@ -1,5 +1,6 @@
+ #include "renderingmanager.hpp"
+ 
++#include <cstdio>
+ #include <cstdlib>
+ #include <limits>
+ 
+@@ -78,4 +79,8 @@
+ #include "vismask.hpp"
+ #include "water.hpp"
+ 
++#ifdef OPENMW_IOS
++#include <ios/openmw_ios_renderer_diagnostics.h>
++#endif
++
+ namespace MWRender
+@@ -685,5 +690,16 @@ namespace MWRender
+         float fogStart = mFog->getFogStart(isUnderwater);
+         float fogEnd = mFog->getFogEnd(isUnderwater);
+         osg::Vec4f fogColor = mFog->getFogColor(isUnderwater);
++#ifdef OPENMW_IOS
++        if (openmw_ios_renderer_diag_enabled())
++        {
++            char detail[320];
++            std::snprintf(detail, sizeof(detail),
++                "start=%.6g;end=%.6g;far=%.6g;color=%.6g,%.6g,%.6g,%.6g;underwater=%d",
++                fogStart, fogEnd, mViewDistance, fogColor.r(), fogColor.g(), fogColor.b(), fogColor.a(),
++                isUnderwater ? 1 : 0);
++            openmw_ios_renderer_diag_record("r2.intent", "openmw", "exterior-fog", detail);
++        }
++#endif
+ 
+         mStateUpdater->setFogStart(fogStart);
+diff --git a/components/resource/imagemanager.cpp b/components/resource/imagemanager.cpp
+--- a/components/resource/imagemanager.cpp
++++ b/components/resource/imagemanager.cpp
+@@ -1,5 +1,8 @@
+ #include "imagemanager.hpp"
+ 
+ #include <cassert>
++#include <cstdint>
++#include <cstdio>
++#include <string_view>
+ #include <osgDB/Registry>
+ 
+@@ -10,3 +13,7 @@
+ #include "objectcache.hpp"
+ 
++#ifdef OPENMW_IOS
++#include <ios/openmw_ios_renderer_diagnostics.h>
++#endif
++
+ #ifdef OSG_LIBRARY_STATIC
+@@ -65,4 +72,20 @@ namespace
+         return SceneUtil::getGLExtensions().isTextureCompressionS3TCSupported;
+     }
+ 
++#ifdef OPENMW_IOS
++    int rendererDiagnosticCategory(std::string_view path)
++    {
++        const auto contains = [path](std::string_view token) { return path.find(token) != std::string_view::npos; };
++        if (contains("flora") || contains("tree") || contains("leaf") || contains("moss") || contains("fern")
++            || contains("kelp"))
++            return OPENMW_IOS_RENDERER_TEXTURE_ALPHA_CARD;
++        if (contains("fire") || contains("flame") || contains("smoke") || contains("magic") || contains("vfx")
++            || contains("fx\\"))
++            return OPENMW_IOS_RENDERER_TEXTURE_PARTICLE;
++        if (contains("_land_default") || contains("tx_wood") || contains("tx_stone"))
++            return OPENMW_IOS_RENDERER_TEXTURE_CONTROL;
++        return OPENMW_IOS_RENDERER_TEXTURE_NONE;
++    }
++#endif
++
+ }
+@@ -207,4 +234,19 @@ namespace Resource
+                 image->setOrigin(osg::Image::TOP_LEFT);
+             }
+ 
++#ifdef OPENMW_IOS
++            const int diagnosticCategory = rendererDiagnosticCategory(path.value());
++            if (diagnosticCategory != OPENMW_IOS_RENDERER_TEXTURE_NONE && image->data())
++            {
++                const std::size_t byteCount = image->getImageSizeInBytes();
++                const std::uint64_t hash = openmw_ios_renderer_diag_hash(image->data(), byteCount);
++                char detail[256];
++                std::snprintf(detail, sizeof(detail),
++                    "width=%d;height=%d;bytes=%zu;pixel_format=%u;compressed=%d;translucent=%d",
++                    image->s(), image->t(), byteCount, static_cast<unsigned>(image->getPixelFormat()),
++                    image->isCompressed() ? 1 : 0, image->isImageTranslucent() ? 1 : 0);
++                openmw_ios_renderer_diag_register_texture(
++                    hash, diagnosticCategory, image->getFileName().c_str(), detail);
++            }
++#endif
+             mCache->addEntryToObjectCache(path.value(), image);
+diff --git a/components/shader/shadervisitor.cpp b/components/shader/shadervisitor.cpp
+--- a/components/shader/shadervisitor.cpp
++++ b/components/shader/shadervisitor.cpp
+@@ -1,4 +1,7 @@
+ #include "shadervisitor.hpp"
+ 
++#include <cstdio>
++#include <cstdint>
++
+ #include <set>
+ #include <unordered_map>
+@@ -28,4 +31,8 @@
+ #include "removedalphafunc.hpp"
+ #include "shadermanager.hpp"
+ 
++#ifdef OPENMW_IOS
++#include <ios/openmw_ios_renderer_diagnostics.h>
++#endif
++
+ namespace Shader
+@@ -634,3 +641,29 @@ namespace Shader
+         defineMap["alphaToCoverage"] = "0";
+         defineMap["adjustCoverage"] = "0";
++#ifdef OPENMW_IOS
++        if (openmw_ios_renderer_diag_enabled()
++            && (reqs.mAlphaFunc != osg::AlphaFunc::ALWAYS || reqs.mAlphaBlend))
++        {
++            const osg::StateAttribute* textureAttribute
++                = writableStateSet->getTextureAttribute(0, osg::StateAttribute::TEXTURE);
++            const osg::Texture* texture = textureAttribute ? textureAttribute->asTexture() : nullptr;
++            const osg::Image* image = texture ? texture->getImage(0) : nullptr;
++            char correlation[32] = "unbound";
++            if (image && image->data())
++            {
++                const std::uint64_t hash
++                    = openmw_ios_renderer_diag_hash(image->data(), image->getImageSizeInBytes());
++                std::snprintf(correlation, sizeof(correlation), "%016llx", (unsigned long long)hash);
++            }
++            char detail[512];
++            std::snprintf(detail, sizeof(detail),
++                "identity=%s;node=%s;alpha_func=%d;alpha_ref=%.6g;alpha_blend=%d;additive=%d;"
++                "soft_particles=%d;textures=%zu;render_bin=%d;render_hint=%d",
++                image ? image->getFileName().c_str() : "", node.getName().c_str(),
++                static_cast<int>(reqs.mAlphaFunc), reqs.mAlphaRef, reqs.mAlphaBlend ? 1 : 0,
++                reqs.mAdditiveBlending ? 1 : 0, reqs.mSoftParticles ? 1 : 0, reqs.mTextures.size(),
++                writableStateSet->getBinNumber(), static_cast<int>(writableStateSet->getRenderingHint()));
++            openmw_ios_renderer_diag_record("r1.state", "openmw", correlation, detail);
++        }
++#endif
+         if (reqs.mAlphaFunc != osg::AlphaFunc::ALWAYS)
