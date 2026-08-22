@@ -151,7 +151,9 @@ Cache fingerprint/source:
 - Source digest: `3174ada24c81a0899132dafc3b5ab15feffb00a1a65c0a09aed30df230cc044a`
 - Scope: `refs/pull/16/merge`, base `codex/wo28-android-touch-fidelity`
 - Source-download, vcpkg, and qualified build-state caches: miss
-- Cache architecture was not changed and no second build was launched.
+- Cache architecture was not changed.
+
+An evidence-only completion push unexpectedly triggered pull-request run `32563091883` because the PR's cumulative diff still contains runtime files even though the new commit changed only Markdown. The worker cancelled it immediately. It ran for 34 seconds, stopped during qualified build-state cache restore, and skipped configure, compile, link, package, and artifact upload. It is not a second production build.
 
 ## Corrected device observation
 

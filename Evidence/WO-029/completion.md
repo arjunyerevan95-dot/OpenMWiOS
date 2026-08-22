@@ -11,6 +11,7 @@
 - Executable SHA-256: `6FF52E861FF44D4C4449E1A82481EE7F52B515932A56279EB5C057F9E740F0C2`
 - Mach-O UUID: `52739477-31F4-3693-9D6F-30366E3D640D`
 - Full Qualification: not run
+- Documentation-only run `32563091883`: unexpectedly triggered, cancelled after 34 seconds during cache restore; no configure, compile, link, package, or artifact step ran
 
 ## Proven result
 

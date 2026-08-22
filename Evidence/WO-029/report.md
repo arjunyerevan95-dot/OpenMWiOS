@@ -34,7 +34,8 @@ No touch behavior, mappings, layout, opacity, renderer, data path, dependency, c
 - IPA SHA-256: `E295561EE9BF1F52A7337C6AACFE7777F530E9E394462F3C143DEB98E14BDD63`
 - Corrected Mach-O UUID: `52739477-31F4-3693-9D6F-30366E3D640D`
 - Corrected artifact dSYM/link map: absent
-- All three qualified caches missed; cache architecture was unchanged and no duplicate build ran
+- All three qualified caches missed; cache architecture was unchanged
+- Evidence-only run `32563091883` was unexpectedly triggered and cancelled after 34 seconds during cache restore; configure/compile/link/package were skipped
 - Full Qualification: not run
 - Cache architecture: unchanged
 
