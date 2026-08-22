@@ -19,6 +19,17 @@ def added_lines(patch: str) -> str:
     )
 
 
+def persistent_foundation_globals_are_copied(source: str) -> bool:
+    return (
+        'sPath = [[directory stringByAppendingPathComponent:@"renderer-diagnostic.jsonl"] copy];'
+        in source
+        and "sSession = [NSUUID.UUID.UUIDString copy];" in source
+        and 'sPath = [directory stringByAppendingPathComponent:@"renderer-diagnostic.jsonl"];'
+        not in source
+        and "sSession = NSUUID.UUID.UUIDString;" not in source
+    )
+
+
 class WorkOrder31RendererDiagnosticChannelTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
@@ -46,6 +57,18 @@ class WorkOrder31RendererDiagnosticChannelTests(unittest.TestCase):
             self.assertIn(f'@"{field}"', self.bridge)
         self.assertIn("openmw-ios-renderer-diagnostic-v1", self.bridge)
         self.assertIn("NSUUID.UUID.UUIDString", self.bridge)
+
+    def test_persistent_foundation_objects_have_explicit_mrc_ownership(self) -> None:
+        self.assertTrue(persistent_foundation_globals_are_copied(self.bridge))
+
+        rejected_source = self.bridge.replace(
+            'sPath = [[directory stringByAppendingPathComponent:@"renderer-diagnostic.jsonl"] copy];',
+            'sPath = [directory stringByAppendingPathComponent:@"renderer-diagnostic.jsonl"];',
+        ).replace(
+            "sSession = [NSUUID.UUID.UUIDString copy];",
+            "sSession = NSUUID.UUID.UUIDString;",
+        )
+        self.assertFalse(persistent_foundation_globals_are_copied(rejected_source))
 
     def test_probe_families_and_total_output_are_hard_bounded(self) -> None:
         self.assertIn("MaxFileBytes = 256 * 1024", self.bridge)

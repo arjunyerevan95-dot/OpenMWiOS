@@ -100,9 +100,9 @@ namespace
                                   withIntermediateDirectories:YES
                                                    attributes:nil
                                                         error:nil];
-        sPath = [directory stringByAppendingPathComponent:@"renderer-diagnostic.jsonl"];
+        sPath = [[directory stringByAppendingPathComponent:@"renderer-diagnostic.jsonl"] copy];
         [[NSFileManager defaultManager] createFileAtPath:sPath contents:[NSData data] attributes:nil];
-        sSession = NSUUID.UUID.UUIDString;
+        sSession = [NSUUID.UUID.UUIDString copy];
         appendRecord(@{
             @"schema" : @"openmw-ios-renderer-diagnostic-v1",
             @"session" : sSession,
