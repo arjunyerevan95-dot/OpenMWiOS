@@ -3,13 +3,13 @@
 - Project: OpenMWiOS
 - Active branch: `codex/wo29-ios-crash-isolation`
 - Current engineering baseline commit: `45c1d8c696fb328d977893b79efc78689a3f4d08`
-- Control-plane baseline commit: `13175cd376e78f623103c9c070996009ede1c74d`
+- Control-plane baseline commit: `765deec93d0b7e4ff0ccebd24483f704ee925c0a`
 - Active work order: none
-- Ready work order: none
+- Ready work order: [WO-030](../WorkOrders/WO-030.md)
 - Last completed work order: [WO-029](../WorkOrders/WO-029.md)
 - Last reviewed work order: [WO-029](../WorkOrders/WO-029.md) — **ACCEPTED with explicit validation limits**
-- Current objective: preserve the accepted crash correction and design the next evidence-driven renderer investigation
-- Engineering execution status: **STOPPED; no work order is READY or ACTIVE**
+- Current objective: correct the exterior renderer defects and deliver persistent, user-customizable, substantially less opaque iOS touch controls under WO30
+- Engineering execution status: **STOPPED; WO-030 is READY and awaits a separate explicit orchestrator start directive**
 - Current accepted correction: `45c1d8c696fb328d977893b79efc78689a3f4d08` owns the process-lifetime touch icon cache under non-ARC and removes the proven WO28 launch/`New Game`/overlay crash mechanism
 - Last updated: 2026-08-22
 
@@ -63,7 +63,9 @@ Current unresolved renderer boundary exposed by exterior traversal:
 - `ColorMaski` warning activity remains noisy but was not proven to block rendering.
 - a transient blocky red combat effect was captured once and absent in the next screenshot; it remains unclassified.
 
-Secondary/deferred UX boundaries: overlay icons remain too visually dominant, and future resize/reposition/customization was requested. These were not part of WO29 and are not authorized work.
+WO30 is the canonical READY order for the renderer boundary. It preserves foliage alpha/cutout and distance/fog/culling/paging/clipping as separate causal paths unless evidence establishes convergence.
+
+WO30 also authorizes the requested touch UX work as an independently reviewable track: persistent on-device repositioning/resizing, movement-radius and opacity adjustment, reset behavior, and a nominal 20% default idle opacity. It does not authorize action remapping or replacement of the qualified touch foundation.
 
 These are observations or unresolved hypotheses, not established root causes. They must not be folded into the completed data-path correction.
 
@@ -75,6 +77,7 @@ The accepted physical test did **not** record the post-install container UUID be
 
 ## Latest important evidence
 
+- [READY WO30](../WorkOrders/WO-030.md)
 - [Accepted WO29](../WorkOrders/WO-029.md)
 - [WO29 evidence manifest](../Evidence/WO-029/manifest.md)
 - [WO29 execution report](../Evidence/WO-029/report.md)
@@ -101,4 +104,4 @@ The accepted physical test did **not** record the post-install container UUID be
 4. Inspect current Git state and active/recent CI before changing anything.
 5. Use the Google Docs ledger only when deeper historical context is required.
 
-No engineering changes are currently authorized. New execution requires a canonical `READY` work order and a separate explicit orchestrator start directive.
+WO30 engineering changes are not yet authorized to begin. Execution requires the separate explicit orchestrator start directive; at that point WO30 transitions from READY to ACTIVE.
