@@ -10,7 +10,8 @@
 - Canonical activation commit observed on the execution branch: `7377ac81b113546e4d8bcb765680e2a37e90e9ad`
 - Accepted runtime baseline (WO27): `6db1c2af5066f810df97c5af39bdbf2a48fb86b5`
 - Rejected candidate under investigation: `1dc819cea447f8ac40c878e1a6d7f4d478e94063`
-- Evidence snapshot time: `2026-08-22T02:18:19.9860921+05:30`
+- Initial evidence snapshot time: `2026-08-22T02:18:19.9860921+05:30`
+- Completion evidence time: `2026-08-22T14:10:18.7571904+05:30`
 
 The activation commit changed only canonical ControlPlane files. It was present when the worker resumed WO-029; the worker did not author or amend those files.
 
@@ -65,7 +66,7 @@ The unsigned CI identity remains distinct from any SideStore-re-signed installed
 - Mach-O symbol table: present (`292603` symbols; string table size `19777328`)
 - debug-map/stab entries: present, including `N_SO`/`N_OSO`; the executable references CI object files that are not contained in the uploaded artifact
 
-The existing executable may permit function-level symbolication if a matching crash address/UUID is obtained. Exact source-line symbolication may require a matching dSYM or preserved CI object files. A diagnostic-only Fast build remains authorized only if the existing report/executable pair proves insufficient.
+The matching reports and executable symbol table were sufficient to establish the function-level fault and exact Objective-C selector/receiver evidence. A diagnostic-only Fast build was therefore not needed and was not run. Exact source-line dSYM symbolication remains unavailable for both uploaded artifacts.
 
 ## Candidate change inventory
 
@@ -121,6 +122,71 @@ Focused regression:
 
 No runtime mapping, layout, opacity, renderer, WO27 data path, dependency, cache, or workflow behavior changed. No diagnostic-only build was needed because the existing matching reports were already function-symbolicated and contained the exact Objective-C exception selector/receiver evidence.
 
-## Current boundary
+## Corrected candidate CI and artifact
 
-The bounded correction is locally qualified. A single corrected Fast Development build remains to be committed, pushed, monitored, and device-qualified. No WO-029 CI run has begun as of this update.
+- Correction commit: `45c1d8c696fb328d977893b79efc78689a3f4d08`
+- Execution branch: `codex/wo29-ios-crash-isolation`
+- Pull request: `https://github.com/arjunyerevan95-dot/OpenMWiOS/pull/16`
+- Fast Development run: `32548876888`
+- Run URL: `https://github.com/arjunyerevan95-dot/OpenMWiOS/actions/runs/32548876888`
+- Run conclusion: `success`
+- Run start/end: `2026-08-22T03:24:23Z` / `2026-08-22T04:51:56Z`
+- Total run duration: approximately `1h27m33s`
+- CI regression suite: `109` tests completed in a successful validation step
+- Configure/dependency preparation: `2197s`
+- Production compile/link: `2725s`
+- Production compile, link, bundle validation, packaging, and upload: passed
+- Artifact ID/name: `9470501854` / `OpenMW-iOS-fast-31`
+- Artifact wrapper SHA-256: `DB896B05A9D2CAA4CEAF4A99FDD9A72E2997C2E911B64A8603BF69BDD78DC27C`
+- IPA SHA-256: `E295561EE9BF1F52A7337C6AACFE7777F530E9E394462F3C143DEB98E14BDD63`
+- Executable SHA-256: `6FF52E861FF44D4C4449E1A82481EE7F52B515932A56279EB5C057F9E740F0C2`
+- Corrected Mach-O UUID: `52739477-31F4-3693-9D6F-30366E3D640D`
+- Corrected dSYM/link map: not present in the uploaded artifact
+- Temporary delivery URL: `https://tempfile.org/3VaEXqg9i3J/download` (24-hour temporary host)
+- Full Qualification: did not run
+
+Cache fingerprint/source:
+
+- ABI: `ios-fast-v4-xcode16.4-ios16.3-arm64-edd5fbcd7e18a5d33a4de616e039704d860dd513c9140bfb34ccbee5f1003987`
+- Source digest: `3174ada24c81a0899132dafc3b5ab15feffb00a1a65c0a09aed30df230cc044a`
+- Scope: `refs/pull/16/merge`, base `codex/wo28-android-touch-fidelity`
+- Source-download, vcpkg, and qualified build-state caches: miss
+- Cache architecture was not changed and no second build was launched.
+
+## Corrected device observation
+
+The user installed the exact corrected IPA and reported: "That was a pass. It boots up normally and the controls work fine." The session reached both indoor and Seyda Neen exterior gameplay and produced nine screenshots. No native crash, unexplained termination, or jetsam was user-observed. This materially falsifies the rejected candidate's immediate launch/menu/action crash behavior for the observed session.
+
+The formal Phase 5 attempt-count matrix was not recorded:
+
+- consecutive launch count: `NOT RECORDED` (at least one successful launch observed)
+- fresh `New Game` transition count: `NOT RECORDED`
+- per-control enumeration: `NOT RECORDED`; user reported controls generally working
+- movement/look/additional-action enumeration: `NOT RECORDED`; extended indoor/exterior traversal and combat screenshots were supplied
+- post-test crash inventory: unavailable because `pymobiledevice3 usbmux list` returned `[]` after the session
+
+The worker therefore records a strong corrected-device pass but does not self-declare canonical acceptance of the unrecorded numeric quota. Orchestrator review is required.
+
+## Device screenshot evidence
+
+Local attachment directory (external to the repository):
+
+`C:\Users\arjun\.codex\codex-remote-attachments\019ffd24-a544-7153-9790-108f7079471e\BE58A696-FDDD-48EE-A6C9-584584F95F0E`
+
+| Screenshot | SHA-256 | Observation |
+|---|---|---|
+| `1-Photo-1.jpg` | `7487B9B882E225BFE648E81A8B4D5B3F1DE7992C338E1788724BB68463F0CA68` | Seyda Neen exterior; overlay present; foliage/distance defects visible |
+| `2-Photo-2.jpg` | `8CA8BD23BF392F777846FB00171D306E244D1BBD7D93436F337971BE9B812716` | Interior scene renders; overlay present |
+| `3-Photo-3.jpg` | `C1C5475E7EB8D7645EAB7F41611B285DE54FB8F924C0B411FA9FA0A04108A897` | Exterior gameplay/HUD and weapon visible |
+| `4-Photo-4.jpg` | `A4A7765EED72104FEBA7084978A4118A3B2DFD5FE7945D3171323FB8FF667955` | Exterior foliage planes and white distance region visible |
+| `5-Photo-5.jpg` | `EFAB3183908E5F37346090C49F797792869569248A642928BEF50C48DDB8F460` | Exterior traversal; blue horizon band/distance cutoff visible |
+| `6-Photo-6.jpg` | `18B02DD614C44D3BF90CEC40592F7D9B536DFAA436263A17438B8A1416C52A73` | Exterior tree alpha/cutout failure and missing distance presentation visible |
+| `7-Photo-7.jpg` | `C1E85A524E563A014677CBFF75359C5CA0277F0455487EB3BFC02C9710BB9B6B` | Exterior traversal with repeated foliage/distance symptoms |
+| `8-Photo-8.jpg` | `C0E0B07D473B108FBD4A2A02AF43EBDA5AA39F5C5C1F47103F509BAE8A67F79B` | Combat scene with a transient blocky red effect |
+| `9-Photo-9.jpg` | `540A4C777B366D8E49381E699D675DC084F238B270E78C01D506A9C1C6D40E1C` | Same combat area after the red block is absent |
+
+User feedback also requests approximately 80% transparency and future control resizing/repositioning/customization. These are UX observations only and were not implemented or converted into a durable decision. Exterior foliage-alpha/cutout, distance fog/horizon, and the transient blocky combat effect remain unclassified renderer observations outside WO-029.
+
+## Execution boundary
+
+The bounded icon-cache ownership correction is source-proven, locally qualified, production-built, and positively device-observed. The formal numeric launch/transition/control matrix and an independent post-test crash inventory were not recorded. Execution stops at the orchestrator-review gate; no UX or renderer work was begun.
