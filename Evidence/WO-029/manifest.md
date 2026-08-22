@@ -192,3 +192,19 @@ User feedback also requests approximately 80% transparency and future control re
 ## Execution boundary
 
 The bounded icon-cache ownership correction is source-proven, locally qualified, production-built, and positively device-observed. The formal numeric launch/transition/control matrix and an independent post-test crash inventory were not recorded. Execution stops at the orchestrator-review gate; no UX or renderer work was begun.
+
+## Additional maximum-view-distance evidence
+
+During orchestrator review, the user reported setting view distance to maximum and supplied three further exterior screenshots. See [max-view-distance-observations.md](max-view-distance-observations.md) for hashes and conservative classification.
+
+The setting improved distant coverage somewhat but did not resolve opaque foliage cards, white/blank distance regions, disconnected distant silhouettes, or the sharp blue horizon/cutoff band. This evidence makes a low view-distance setting insufficient as a complete explanation, but it does not establish a renderer root cause or prove that foliage and distance defects converge.
+
+## Orchestrator disposition
+
+- Disposition: **ACCEPT**, qualified to the proven crash boundary.
+- Canonical work-order status: **ACCEPTED**.
+- Accepted engineering commit: `45c1d8c696fb328d977893b79efc78689a3f4d08`.
+- Durable crash decision: [DEC-005](../../Decisions/DEC-005.md).
+- Durable maximum-view-distance finding: [DEC-006](../../Decisions/DEC-006.md).
+- Validation limit: formal numeric launch/transition/control counts and an independent post-test crash inventory remain unrecorded.
+- No successor work order was issued or started during acceptance.

@@ -36,3 +36,13 @@ These observations were not fixed, promoted to durable decisions, or used to ame
 ## Control-plane discipline
 
 The worker did not modify `Documentation/CURRENT_STATE.md`, `WorkOrders/`, or `Decisions/`. Execution stops at the orchestrator-review gate. No subsequent engineering work was begun.
+
+## Orchestrator disposition — 2026-08-22
+
+**ACCEPT**, qualified to the proven crash boundary.
+
+The orchestrator accepts the thirteen-report convergence finding, the non-ARC cached-image ownership causal model, correction `45c1d8c696fb328d977893b79efc78689a3f4d08`, successful production run `32548876888`, exact artifact hashes, and the sustained corrected-device pass. WO29 is canonically `ACCEPTED` under [DEC-005](../../Decisions/DEC-005.md).
+
+The unrecorded formal launch/`New Game`/per-control counts and unavailable post-test crash inventory remain explicit validation limits. This acceptance does not claim complete mobile-control qualification.
+
+Three later screenshots taken with view distance set to maximum are preserved separately in [max-view-distance-observations.md](max-view-distance-observations.md). They confirm a deferred renderer boundary and do not amend or broaden WO29.
