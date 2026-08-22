@@ -1,5 +1,10 @@
+import json
+import os
 import pathlib
 import re
+import shutil
+import subprocess
+import tempfile
 import unittest
 
 
@@ -9,6 +14,10 @@ HEADER = ROOT / "ios" / "openmw_ios_renderer_diagnostics.h"
 BOOTSTRAP = ROOT / "ios" / "openmw_ios_bootstrap.mm"
 OPENMW_PATCH = ROOT / "patches" / "openmw" / "0013-ios-file-backed-renderer-diagnostics.patch"
 GL4ES_PATCH = ROOT / "patches" / "gl4es" / "0006-ios-file-backed-renderer-diagnostics.patch"
+GL4ES_OBSERVABILITY_PATCH = ROOT / "patches" / "gl4es" / "0007-ios-renderer-diagnostics-observable-paths.patch"
+OPENMW_RUNTIME_PATCH = ROOT / "patches" / "openmw" / "0014-ios-renderer-diagnostics-runtime-fog-intent.patch"
+OSG_PATCH = ROOT / "ios" / "patches" / "osg-route-gl-entry-points-through-gl4es.patch"
+BRIDGE_FIXTURE = ROOT / "validation" / "fixtures" / "wo31_gl4es_bridge_fixture.c"
 
 
 def added_lines(patch: str) -> str:
@@ -30,6 +39,47 @@ def persistent_foundation_globals_are_copied(source: str) -> bool:
     )
 
 
+def extract_added_file(patch: str, path: str) -> str:
+    marker = f"diff --git a/{path} b/{path}"
+    block = patch.split(marker, 1)[1].split("\ndiff --git ", 1)[0]
+    return "\n".join(
+        line[1:] for line in block.splitlines() if line.startswith("+") and not line.startswith("+++")
+    ) + "\n"
+
+
+def apply_file_patch(source: str, patch: str, path: str) -> str:
+    marker = f"diff --git a/{path} b/{path}"
+    block = patch.split(marker, 1)[1].split("\ndiff --git ", 1)[0]
+    original = source.splitlines()
+    output = []
+    cursor = 0
+    chunks = re.split(r"(?=^@@ )", block, flags=re.MULTILINE)
+    for chunk in chunks:
+        if not chunk.startswith("@@ "):
+            continue
+        lines = chunk.splitlines()
+        match = re.match(r"@@ -(\d+)(?:,\d+)? \+(\d+)(?:,\d+)? @@", lines[0])
+        if not match:
+            raise AssertionError(f"invalid hunk header: {lines[0]}")
+        old_start = int(match.group(1)) - 1
+        output.extend(original[cursor:old_start])
+        cursor = old_start
+        for line in lines[1:]:
+            if line.startswith(" "):
+                assert original[cursor] == line[1:]
+                output.append(original[cursor])
+                cursor += 1
+            elif line.startswith("-"):
+                assert original[cursor] == line[1:]
+                cursor += 1
+            elif line.startswith("+"):
+                output.append(line[1:])
+            elif line == "\\ No newline at end of file":
+                continue
+    output.extend(original[cursor:])
+    return "\n".join(output) + "\n"
+
+
 class WorkOrder31RendererDiagnosticChannelTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
@@ -38,6 +88,9 @@ class WorkOrder31RendererDiagnosticChannelTests(unittest.TestCase):
         cls.bootstrap = BOOTSTRAP.read_text(encoding="utf-8")
         cls.openmw_patch = OPENMW_PATCH.read_text(encoding="utf-8")
         cls.gl4es_patch = GL4ES_PATCH.read_text(encoding="utf-8")
+        cls.gl4es_observability_patch = GL4ES_OBSERVABILITY_PATCH.read_text(encoding="utf-8")
+        cls.openmw_runtime_patch = OPENMW_RUNTIME_PATCH.read_text(encoding="utf-8")
+        cls.osg_patch = OSG_PATCH.read_text(encoding="utf-8")
 
     def test_log_uses_runtime_documents_directory_and_logical_public_path(self) -> None:
         self.assertIn("openmw_ios_documents_path()", self.bridge)
@@ -139,6 +192,57 @@ class WorkOrder31RendererDiagnosticChannelTests(unittest.TestCase):
         self.assertIn("ios_renderer_diag.c", self.gl4es_patch)
         self.assertIn("OPENMW_IOS", self.openmw_patch)
         self.assertIn("defined(__APPLE__)", self.gl4es_patch)
+
+    def test_amendment_two_uses_guaranteed_lookup_draw_and_osg_texture_name_boundaries(self) -> None:
+        self.assertIn('wo31_diag_handshake("gl4es_GetProcAddress")', self.gl4es_observability_patch)
+        self.assertIn("wo31_diag_fog_applied(wo31_program", self.gl4es_observability_patch)
+        self.assertIn("openmw_ios_renderer_diag_texture_category_for_gl_name", self.gl4es_observability_patch)
+        self.assertIn("registerRendererDiagnosticTexture(textureObject, image.get())", self.osg_patch)
+        self.assertIn("openmw_ios_renderer_diag_register_gl_texture", self.osg_patch)
+        self.assertIn('"r2.intent.apply"', self.openmw_runtime_patch)
+
+    def test_gl4es_translation_unit_executes_app_bridge_and_writes_gl4es_r2_records(self) -> None:
+        compiler = os.environ.get("CC") or shutil.which("cc") or shutil.which("clang") or shutil.which("gcc")
+        if not compiler:
+            self.skipTest("C compiler unavailable; set CC after entering the platform build environment")
+
+        source = extract_added_file(self.gl4es_patch, "src/gl/ios_renderer_diag.c")
+        header = extract_added_file(self.gl4es_patch, "src/gl/ios_renderer_diag.h")
+        source = apply_file_patch(
+            source, self.gl4es_observability_patch, "src/gl/ios_renderer_diag.c"
+        )
+        header = apply_file_patch(
+            header, self.gl4es_observability_patch, "src/gl/ios_renderer_diag.h"
+        )
+
+        with tempfile.TemporaryDirectory() as directory:
+            temp = pathlib.Path(directory)
+            (temp / "ios_renderer_diag.c").write_text(source, encoding="utf-8")
+            (temp / "ios_renderer_diag.h").write_text(header, encoding="utf-8")
+            executable = temp / ("wo31-fixture.exe" if os.name == "nt" else "wo31-fixture")
+            compiler_name = pathlib.Path(compiler).name.lower()
+            if compiler_name in {"cl", "cl.exe"}:
+                command = [
+                    compiler, "/nologo", "/TC", "/DWO31_DIAGNOSTIC_TEST_BRIDGE=1",
+                    f"/I{temp}", str(temp / "ios_renderer_diag.c"), str(BRIDGE_FIXTURE),
+                    f"/Fe:{executable}",
+                ]
+            else:
+                command = [
+                    compiler, "-std=c11", "-DWO31_DIAGNOSTIC_TEST_BRIDGE=1", f"-I{temp}",
+                    str(temp / "ios_renderer_diag.c"), str(BRIDGE_FIXTURE), "-o", str(executable),
+                ]
+            subprocess.run(command, check=True, capture_output=True, text=True)
+            result = subprocess.run([str(executable)], check=True, capture_output=True, text=True)
+
+        records = [json.loads(line) for line in result.stdout.splitlines()]
+        self.assertEqual(sum(record["family"] == "handshake" for record in records), 1)
+        self.assertTrue(any(record["source"] == "gl4es" for record in records))
+        self.assertTrue(any(record["family"] == "r1.draw" for record in records))
+        self.assertTrue(any(record["family"] == "r2.received" for record in records))
+        applied = [record for record in records if record["family"] == "r2.applied"]
+        self.assertEqual(len(applied), 1)
+        self.assertIn("received_count=2", applied[0]["detail"])
 
 
 if __name__ == "__main__":

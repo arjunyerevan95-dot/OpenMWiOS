@@ -121,6 +121,8 @@ extern "C" void openmw_ios_prepare_environment(void)
         std::filesystem::create_directories(library / "OpenMW");
         setenv("OPENMW_IOS_RENDERER_DIAGNOSTICS", "1", 1);
         openmw_ios_renderer_diag_begin();
+        openmw_ios_renderer_diag_record(
+            "handshake", "openmw", "bridge-ready", "bootstrap-after-documents-resolution");
         openmw_ios_log("sandbox_paths", ("documents=" + documents.string() + ";library=" + library.string()
             + ";bundle=" + bundle.string()).c_str());
         migrateLegacyGeneratedDataEntry(root / "openmw.cfg");

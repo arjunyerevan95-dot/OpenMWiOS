@@ -23,6 +23,9 @@ uint32_t openmw_ios_renderer_diag_record(const char* family, const char* source,
 void openmw_ios_renderer_diag_register_texture(
     uint64_t hash, int category, const char* identity, const char* detail);
 int openmw_ios_renderer_diag_texture_category(uint64_t hash);
+void openmw_ios_renderer_diag_register_gl_texture(
+    unsigned int texture, uint64_t hash, int category, const char* identity, const char* detail);
+int openmw_ios_renderer_diag_texture_category_for_gl_name(unsigned int texture);
 uint64_t openmw_ios_renderer_diag_hash(const void* data, size_t size);
 
 #ifdef __cplusplus

@@ -31,11 +31,14 @@ namespace
     NSString* sSession = nil;
     std::unordered_map<std::string, FamilyState> sFamilies;
     std::unordered_map<uint64_t, int> sTextureCategories;
+    std::unordered_map<unsigned int, int> sGLTextureCategories;
 
     unsigned int budgetForFamily(const std::string& family)
     {
         if (family == "session")
             return 2;
+        if (family == "handshake")
+            return 4;
         if (family.rfind("r1.asset", 0) == 0)
             return 48;
         if (family.rfind("r1.upload", 0) == 0)
@@ -43,6 +46,8 @@ namespace
         if (family.rfind("r1.draw", 0) == 0)
             return 96;
         if (family.rfind("r1.state", 0) == 0)
+            return 48;
+        if (family.rfind("r1.bound", 0) == 0)
             return 48;
         if (family.rfind("r2.intent", 0) == 0)
             return 16;
@@ -202,6 +207,31 @@ extern "C" int openmw_ios_renderer_diag_texture_category(uint64_t hash)
     beginLocked();
     const auto found = sTextureCategories.find(hash);
     return found == sTextureCategories.end() ? OPENMW_IOS_RENDERER_TEXTURE_NONE : found->second;
+}
+
+extern "C" void openmw_ios_renderer_diag_register_gl_texture(
+    unsigned int texture, uint64_t hash, int category, const char* identity, const char* detail)
+{
+    {
+        std::lock_guard<std::mutex> lock(sMutex);
+        beginLocked();
+        if (!sEnabled || texture == 0 || hash == 0 || category == OPENMW_IOS_RENDERER_TEXTURE_NONE)
+            return;
+        sGLTextureCategories[texture] = category;
+    }
+    char correlation[48];
+    snprintf(correlation, sizeof(correlation), "texture-%u", texture);
+    std::string combined = "hash=" + std::to_string(hash) + ";category=" + std::to_string(category)
+        + ";identity=" + (identity ? identity : "") + ";" + (detail ? detail : "");
+    openmw_ios_renderer_diag_record("r1.bound", "osg", correlation, combined.c_str());
+}
+
+extern "C" int openmw_ios_renderer_diag_texture_category_for_gl_name(unsigned int texture)
+{
+    std::lock_guard<std::mutex> lock(sMutex);
+    beginLocked();
+    const auto found = sGLTextureCategories.find(texture);
+    return found == sGLTextureCategories.end() ? OPENMW_IOS_RENDERER_TEXTURE_NONE : found->second;
 }
 
 extern "C" uint64_t openmw_ios_renderer_diag_hash(const void* data, size_t size)
