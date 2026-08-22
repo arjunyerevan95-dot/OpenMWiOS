@@ -74,3 +74,20 @@ The successful startup record proves path creation, truncation, schema serializa
 `openmw_ios_renderer_diag_begin()` runs inside an explicit autorelease pool. `beginLocked()` assigns autoreleased Foundation objects to the persistent raw globals `sPath` and `sSession`, then the pool drains. The OpenMW target has no repository CMake/Xcode ARC enablement (only the unrelated bundle probe explicitly enables ARC), and the CI compile invocation for `openmw_ios_renderer_diagnostics.mm` contains no explicit ARC option outside its response file. The first later renderer record dereferences those persistent objects through `appendRecord()`.
 
 This source lifecycle error is consistent with all observed evidence: the startup write succeeds while the objects are alive, no second record is committed, and the app crashes as rendering begins. No R1/R2 correction was attempted. WO-031 stopped under Condition F without consuming a second build.
+
+## Amendment 1 ownership repair
+
+ControlPlane commit `3265016fd1d583e98bebf1379eea95853a85674e` authorized one replacement diagnostic build after a narrow repair of the proven MRC lifetime defect. Commit `8140aa4ee2af00e335b9212605524883571e65ed` changes only the two persistent assignments:
+
+- `sPath` is assigned a copied path string;
+- `sSession` is assigned a copied UUID string.
+
+Both objects therefore remain owned after the startup autorelease pool drains. They intentionally live for the process lifetime. The translation unit remains under the existing MRC production semantics; no ARC or build-system change was introduced.
+
+The focused suite now has 11 tests. Its lifetime check accepts the copied assignments and rejects a synthetic source variant containing the original raw autoreleased assignments. The existing path, schema, enablement, record budgets, total file cap, correlation design, OpenMW probes, and GL4ES probes are unchanged.
+
+Replacement Fast run `32588069228` compiled, linked, bundle-validated, packaged, and uploaded the exact repair successfully. The replacement artifact has IPA SHA-256 `498D0285103C0F3664F44F35004FF1ADD8D463A6ACB6F4E5C11C4CE682A6C9CD`, executable SHA-256 `5AA12617933D031E25D06C590BEA15507CC7CA863DB63EEBDC91FDBC994F2D40`, and Mach-O UUID `56699F22-BA7C-3E7D-B5B6-0B9CEBB0AFC8`.
+
+The exact replacement candidate reached exterior runtime without the prior crash, proving the copied ownership survives the startup autorelease-pool boundary. The retrieved file was 7,028 bytes (SHA-256 `5A6113914B4D90EEF274588E8914CA01D37F53BFB4CAB45DAE22F8E8ABD5FAC0`) and contained one startup plus 22 later OpenMW records in session `02306F28-5A6E-45AB-ADAC-414235769F83`.
+
+It contained zero GL4ES records and zero R2 records. The 22 OpenMW records were 21 `r1.state` records and one `r1.asset` record; the asset was the non-translucent control texture `textures/_land_default.dds`, not a correlated defective foliage or particle sample. Therefore the required intended-versus-applied correlation was not established. Amendment 1 stops under Condition B; the final renderer-correction build was not used.
