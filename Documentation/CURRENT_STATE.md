@@ -1,15 +1,15 @@
 # OpenMWiOS — Current State
 
 - Project: OpenMWiOS
-- Active branch: `codex/wo29-ios-crash-isolation`
+- Active branch: `codex/wo30-renderer-touch-customization`
 - Current engineering baseline commit: `45c1d8c696fb328d977893b79efc78689a3f4d08`
-- Control-plane baseline commit: `765deec93d0b7e4ff0ccebd24483f704ee925c0a`
-- Active work order: none
-- Ready work order: [WO-030](../WorkOrders/WO-030.md)
+- Control-plane baseline commit: `2b72ab9`
+- Active work order: [WO-030](../WorkOrders/WO-030.md)
+- Ready work order: none
 - Last completed work order: [WO-029](../WorkOrders/WO-029.md)
 - Last reviewed work order: [WO-029](../WorkOrders/WO-029.md) — **ACCEPTED with explicit validation limits**
 - Current objective: correct the exterior renderer defects and deliver persistent, user-customizable, substantially less opaque iOS touch controls under WO30
-- Engineering execution status: **STOPPED; WO-030 is READY and awaits a separate explicit orchestrator start directive**
+- Engineering execution status: **ACTIVE; explicit WO-030 start directive delivered to the existing OpenMW worker on 2026-08-22**
 - Current accepted correction: `45c1d8c696fb328d977893b79efc78689a3f4d08` owns the process-lifetime touch icon cache under non-ARC and removes the proven WO28 launch/`New Game`/overlay crash mechanism
 - Last updated: 2026-08-22
 
@@ -77,7 +77,7 @@ The accepted physical test did **not** record the post-install container UUID be
 
 ## Latest important evidence
 
-- [READY WO30](../WorkOrders/WO-030.md)
+- [ACTIVE WO30](../WorkOrders/WO-030.md)
 - [Accepted WO29](../WorkOrders/WO-029.md)
 - [WO29 evidence manifest](../Evidence/WO-029/manifest.md)
 - [WO29 execution report](../Evidence/WO-029/report.md)
@@ -104,4 +104,4 @@ The accepted physical test did **not** record the post-install container UUID be
 4. Inspect current Git state and active/recent CI before changing anything.
 5. Use the Google Docs ledger only when deeper historical context is required.
 
-WO30 engineering changes are not yet authorized to begin. Execution requires the separate explicit orchestrator start directive; at that point WO30 transitions from READY to ACTIVE.
+WO30 is ACTIVE under the existing worker. Do not resend its start directive, create a duplicate worker, or issue another work order. Await the required `Evidence/WO-030/report.md` completion/blocker report and orchestrator review.
