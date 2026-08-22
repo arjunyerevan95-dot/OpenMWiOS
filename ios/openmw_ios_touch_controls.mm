@@ -986,11 +986,10 @@ namespace
         if (icon)
         {
             CGContextSaveGState(context);
-            const CGFloat alpha = _editing ? 0.82f : (pressed ? MIN(0.92f, _profile.idleOpacity + 0.42f)
-                                                            : _profile.idleOpacity);
-            CGContextSetAlpha(context, alpha);
+            const CGFloat alpha
+                = pressed ? MIN(0.92f, _profile.idleOpacity + 0.42f) : _profile.idleOpacity;
             UIImage* tinted = [icon imageWithTintColor:UIColor.whiteColor renderingMode:UIImageRenderingModeAlwaysOriginal];
-            [tinted drawInRect:iconRect blendMode:kCGBlendModeNormal alpha:1.f];
+            [tinted drawInRect:iconRect blendMode:kCGBlendModeNormal alpha:alpha];
             CGContextRestoreGState(context);
         }
         else

@@ -273,6 +273,8 @@ class IosTouchControlTests(unittest.TestCase):
         self.assertIn("float idleOpacity = 0.20f", model)
         self.assertIn("action == Action::Pause ? 24.f : 18.f", model)
         self.assertIn("_profile.idleOpacity + 0.42f", adapter)
+        self.assertIn("blendMode:kCGBlendModeNormal alpha:alpha", adapter)
+        self.assertNotIn("_editing ? 0.82f", adapter)
         self.assertIn("clamp(_profile.idleOpacity - 0.05f, 0.05f, 0.85f)", adapter)
         self.assertIn("clamp(_profile.idleOpacity + 0.05f, 0.05f, 0.85f)", adapter)
 
