@@ -1,17 +1,17 @@
 # OpenMWiOS — Current State
 
 - Project: OpenMWiOS
-- Active branch: `codex/wo29-ios-crash-isolation` (canonical ControlPlane); stopped WO31 execution branch: `codex/wo31-exterior-renderer-correction`
+- Active branch: `codex/wo31-exterior-renderer-correction` (worker execution); canonical ControlPlane branch: `codex/wo29-ios-crash-isolation`
 - Current engineering baseline commit: `195f3a4bbcfd17ecd46546f3e28d3ee8558bed27`
 - Control-plane issued baseline commit: `dfe9e1e875c7020658aa59d22121a7cc0061ac69`
-- Active work order: none
-- Ready work order: [WO-031 Amendment 2](../WorkOrders/WO-031.md)
+- Active work order: [WO-031 Amendment 2](../WorkOrders/WO-031.md)
+- Ready work order: none
 - Last completed work order: [WO-030](../WorkOrders/WO-030.md) — **ACCEPTED / PARTIAL ACCEPT**
 - Last reviewed work order: [WO-031 Amendment 1](../WorkOrders/WO-031.md) — **AMENDMENT REQUIRED; lifetime repaired, GL4ES/R2 observability absent**
 - Current objective: make the GL4ES and R2 probe paths demonstrably observable, then resume evidence-led exterior R1/R2 renderer correction without touch implementation work
-- Engineering execution status: **STOPPED / READY; WO-031 Amendment 2 is issued but has no start directive**
+- Engineering execution status: **ACTIVE; explicit WO-031 Amendment 2 start directive delivered through the user on 2026-08-23**
 - Current accepted correction: WO29's non-ARC icon ownership fix plus WO30's practical on-device touch editor and reduced-opacity controls
-- Last updated: 2026-08-22
+- Last updated: 2026-08-23
 
 ## Qualified state
 
@@ -73,7 +73,7 @@ WO31 Amendment 1 repaired the ownership defect and its exact artifact reached Se
 
 The user also observed short-tap Menu failing while long-press editor entry still worked. No touch source changed. This remains an unclassified candidate regression and must be rechecked, but it does not authorize touch work or displace the user's renderer priority.
 
-WO31 Amendment 2 is READY, not ACTIVE. It requires source/linkage proof and an unconditional bounded GL4ES handshake before one additional diagnostic build. That build must capture a representative correlated R1 draw and an R2 OpenMW-intent/GL4ES-received/applied chain. No renderer cause or correction has yet been accepted.
+WO31 Amendment 2 is ACTIVE. Its explicit start directive was delivered through the user to the existing worker on 2026-08-23. It requires source/linkage proof and an unconditional bounded GL4ES handshake before one additional diagnostic build. That build must capture a representative correlated R1 draw and an R2 OpenMW-intent/GL4ES-received/applied chain. No renderer cause or correction has yet been accepted.
 
 Secondary/deferred boundaries: menu/options touch scrolling; WO30 Reset-opacity and all-control-affordance gaps; reduced render scale `0.58`; the transient red effect; and warning-flood cleanup except where narrowly necessary to collect bounded renderer evidence. WO31 prohibits touch-control changes.
 
@@ -87,7 +87,7 @@ The accepted physical test did **not** record the post-install container UUID be
 
 ## Latest important evidence
 
-- [READY WO31 Amendment 2](../WorkOrders/WO-031.md)
+- [ACTIVE WO31 Amendment 2](../WorkOrders/WO-031.md)
 - [WO31 execution report](../Evidence/WO-031/report.md)
 - [WO31 Amendment 1 orchestrator review](../Evidence/WO-031/orchestrator-amendment1-review.md)
 - [WO31 supplied renderer diagnostic](../Evidence/WO-031/device-renderer-diagnostic-amendment1.jsonl)
@@ -118,9 +118,9 @@ The accepted physical test did **not** record the post-install container UUID be
 ## Future orchestrator/worker recovery
 
 1. Read `Documentation/CURRENT_STATE.md`.
-2. Read accepted `WorkOrders/WO-030.md`, READY `WorkOrders/WO-031.md` Amendment 2, DEC-006 through DEC-009, and only their directly referenced evidence.
+2. Read accepted `WorkOrders/WO-030.md`, ACTIVE `WorkOrders/WO-031.md` Amendment 2, DEC-006 through DEC-009, and only their directly referenced evidence.
 3. Read only the `Decisions/` and `Evidence/` records referenced by that work order.
 4. Inspect current Git state and active/recent CI before changing anything.
 5. Use the Google Docs ledger only when deeper historical context is required.
 
-WO31 Amendment 2 is READY and the existing worker is stopped. Do not infer activation from the completed original or Amendment 1 runs. The exact next action is to deliver one explicit Amendment 2 start directive to the existing worker, then transition READY → ACTIVE without creating a duplicate worker or CI run.
+WO31 Amendment 2 is ACTIVE under the existing worker. Do not resend its start directive, create a duplicate worker, or start/duplicate CI. Await the required `Evidence/WO-031/report.md` completion or blocker report and orchestrator review.
