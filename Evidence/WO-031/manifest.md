@@ -4,7 +4,7 @@
 
 - Issued baseline: `dfe9e1e875c7020658aa59d22121a7cc0061ac69`
 - Execution branch: `codex/wo31-exterior-renderer-correction`
-- Diagnostic infrastructure commit: pending
+- Diagnostic infrastructure commit: `50aa047c3010be5380393a81c452bcfae206407d`
 - Renderer correction commit(s): pending evidence; none selected
 - Stop condition: pending
 
@@ -29,12 +29,18 @@ No dependency revision was changed.
 
 ## CI and artifact
 
-- Diagnostic Fast run: pending.
-- Cache state: pending.
-- Artifact ID/digest: pending.
-- Executable SHA-256: pending.
-- IPA SHA-256: pending.
-- Mach-O UUID: pending.
+- Diagnostic Fast run: `32581482760` (`success`, PR 17, head `50aa047c3010be5380393a81c452bcfae206407d`).
+- Run duration: 1h22m20s (2026-08-22T15:22:08Z through 2026-08-22T16:44:28Z).
+- Configure/dependency preparation: 2,208 seconds.
+- Production compile/link: 2,393 seconds.
+- Cache state: cold/miss; source-download, vcpkg, and qualified build-state cache-hit fields were empty. Cache ABI `ios-fast-v4-xcode16.4-ios16.3-arm64-edd5fbcd7e18a5d33a4de616e039704d860dd513c9140bfb34ccbee5f1003987`.
+- Artifact: `OpenMW-iOS-fast-37`, ID `9478916654`, 39,170,007-byte Actions artifact, digest `sha256:6e7e468aca8a2394b86136b1ac3b668d035b719086c5d77f364d156ab17815f0`.
+- IPA: `OpenMW-iOS-unsigned.ipa`, 39,136,868 bytes.
+- Executable SHA-256: `EC6FD36924513DBF3BF3D61307A4442898EE4314B4D004B04FD352B7A24AA33F`.
+- IPA SHA-256: `351F218A48D0054BBEF7C1D7D9C513548E0F0EE93B89BA0C55EA2370D18D66A7`.
+- Mach-O UUID: `98121EA4-1B76-30BC-83E0-14326772000A` (64-bit Mach-O, 41 load commands).
+- Bundle validation: qualified; bundle ID `org.openmw.ios`, executable `openmw`.
+- Temporary diagnostic IPA delivery: `https://tempfile.org/2LM2PxBNN9e/download` (24-hour host).
 - Full Qualification: not run.
 
 ## Device evidence
