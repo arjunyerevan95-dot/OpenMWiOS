@@ -6,7 +6,7 @@
 - Execution branch: `codex/wo31-exterior-renderer-correction`
 - Diagnostic infrastructure commit: `50aa047c3010be5380393a81c452bcfae206407d`
 - Renderer correction commit(s): pending evidence; none selected
-- Stop condition: pending
+- Stop condition: **F — regression/crash**
 
 ## Pinned dependency identity
 
@@ -45,7 +45,15 @@ No dependency revision was changed.
 
 ## Device evidence
 
-- Diagnostic file retrieval: pending.
-- R1 representative samples: pending.
-- R2 two-distance samples: pending.
-- Final correction matrix: pending; no correction has been selected before causal device evidence.
+- Installation: successful; exact diagnostic IPA launched.
+- Launch result: loading screen visible for approximately half a second, followed by a user-observed hard crash.
+- Diagnostic file: 253 bytes, SHA-256 `16F3B558437016BE03447688D3D7B26465FCF9B466C897B5B0D01F951139851A`.
+- Diagnostic session: `C0912F7F-958B-4FC5-BA81-379A75345C7D`.
+- Records: one `session/startup`; zero OpenMW records; zero GL4ES records.
+- Native crash report/symbolication: not available; live device transport was not required or used.
+- R1 representative samples: not reached.
+- R2 two-distance samples: not reached.
+- Renderer correction: none selected or attempted.
+- Build budget: one diagnostic Fast run consumed; no second/final run triggered.
+- Strongest causal conclusion: persistent autoreleased Foundation path/session objects in the non-ARC diagnostics translation unit become invalid after the startup autorelease pool drains; first later record use is the earliest source-backed crash boundary.
+- Existing accepted renderer/touch/data-path baseline was not requalified because the diagnostic candidate crashed before gameplay.

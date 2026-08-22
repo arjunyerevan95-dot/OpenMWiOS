@@ -58,4 +58,19 @@ The bridge defaults disabled unless `OPENMW_IOS_RENDERER_DIAGNOSTICS=1`. The WO-
 - All OpenMW patches through `0013` apply in order to pinned OpenMW `f4bec41444214a7903bebd178389ca22ca13f646`.
 - All GL4ES patches through `0006` apply in order to pinned GL4ES `c9895df34cd466c23bc60c2bd3db3d87e98fcbe7`.
 
-Runtime retrieval proof remains pending the single authorized diagnostic Fast build and user reproduction.
+## Physical-device result
+
+The diagnostic IPA installed and launched, displayed the loading screen for approximately half a second, and then hard-crashed. The retrieved file was only 253 bytes and contained exactly one valid `session/startup` record:
+
+- Session: `C0912F7F-958B-4FC5-BA81-379A75345C7D`
+- File SHA-256: `16F3B558437016BE03447688D3D7B26465FCF9B466C897B5B0D01F951139851A`
+- OpenMW records: 0
+- GL4ES records: 0
+
+The successful startup record proves path creation, truncation, schema serialization, and the initial write. It does not prove later record append or representative renderer correlation.
+
+## Earliest evidenced diagnostic regression
+
+`openmw_ios_renderer_diag_begin()` runs inside an explicit autorelease pool. `beginLocked()` assigns autoreleased Foundation objects to the persistent raw globals `sPath` and `sSession`, then the pool drains. The OpenMW target has no repository CMake/Xcode ARC enablement (only the unrelated bundle probe explicitly enables ARC), and the CI compile invocation for `openmw_ios_renderer_diagnostics.mm` contains no explicit ARC option outside its response file. The first later renderer record dereferences those persistent objects through `appendRecord()`.
+
+This source lifecycle error is consistent with all observed evidence: the startup write succeeds while the objects are alive, no second record is committed, and the app crashes as rendering begins. No R1/R2 correction was attempted. WO-031 stopped under Condition F without consuming a second build.
