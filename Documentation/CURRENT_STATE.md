@@ -65,7 +65,7 @@ Current unresolved renderer boundary exposed by exterior traversal:
 
 WO30 is the canonical READY order for the renderer boundary. It preserves foliage alpha/cutout and distance/fog/culling/paging/clipping as separate causal paths unless evidence establishes convergence.
 
-WO30 also authorizes the requested touch UX work as an independently reviewable track: persistent on-device repositioning/resizing, movement-radius and opacity adjustment, reset behavior, and a nominal 20% default idle opacity. It does not authorize action remapping or replacement of the qualified touch foundation.
+WO30 also authorizes the requested touch UX work as an independently reviewable track: a Serious Sam-style editor entered by long-pressing the existing Menu button, persistent on-device repositioning/resizing, movement-radius and opacity adjustment, reset/cancel behavior, and a nominal 20% default idle opacity. A short Menu tap must retain normal Pause behavior, while a recognized long-press must not leak a Pause action. It does not authorize action remapping or replacement of the qualified touch foundation.
 
 These are observations or unresolved hypotheses, not established root causes. They must not be folded into the completed data-path correction.
 
