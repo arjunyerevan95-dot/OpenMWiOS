@@ -5,11 +5,11 @@
 - Current engineering baseline commit: `195f3a4bbcfd17ecd46546f3e28d3ee8558bed27`
 - Control-plane issued baseline commit: `dfe9e1e875c7020658aa59d22121a7cc0061ac69`
 - Active work order: none
-- Ready work order: [WO-031 Amendment 1](../WorkOrders/WO-031.md)
+- Ready work order: [WO-031 Amendment 2](../WorkOrders/WO-031.md)
 - Last completed work order: [WO-030](../WorkOrders/WO-030.md) — **ACCEPTED / PARTIAL ACCEPT**
-- Last reviewed work order: [WO-031](../WorkOrders/WO-031.md) — **AMENDMENT REQUIRED; diagnostic candidate rejected after proven lifetime crash**
-- Current objective: repair the bounded diagnostic channel's proven ownership defect, requalify it, then resume evidence-led exterior R1/R2 renderer correction without touch UX work
-- Engineering execution status: **STOPPED / READY; WO-031 Amendment 1 is issued but has no start directive**
+- Last reviewed work order: [WO-031 Amendment 1](../WorkOrders/WO-031.md) — **AMENDMENT REQUIRED; lifetime repaired, GL4ES/R2 observability absent**
+- Current objective: make the GL4ES and R2 probe paths demonstrably observable, then resume evidence-led exterior R1/R2 renderer correction without touch implementation work
+- Engineering execution status: **STOPPED / READY; WO-031 Amendment 2 is issued but has no start directive**
 - Current accepted correction: WO29's non-ARC icon ownership fix plus WO30's practical on-device touch editor and reduced-opacity controls
 - Last updated: 2026-08-22
 
@@ -69,7 +69,11 @@ Current unresolved renderer boundary exposed by exterior traversal:
 
 The original WO31 run stopped after its diagnostic candidate introduced a launch-time crash. The user-supplied IPS exactly matches the candidate Mach-O UUID and records a main-thread `EXC_BAD_ACCESS` in `openmw_ios_renderer_diag_record` while constructing the first later shader record. Direct source inspection proves that the non-ARC bridge persisted autoreleased path/session strings across the startup autorelease-pool boundary. Candidate `50aa047c3010be5380393a81c452bcfae206407d` is rejected; accepted engineering baseline `195f3a4bbcfd17ecd46546f3e28d3ee8558bed27` is unchanged.
 
-WO31 Amendment 1 is READY, not ACTIVE. It authorizes one replacement diagnostic build solely after correcting that ownership defect and adding focused lifetime checks. After the replacement artifact reaches runtime and yields later OpenMW plus GL4ES records, the original R1/R2 investigation may resume. No renderer cause or correction has yet been accepted.
+WO31 Amendment 1 repaired the ownership defect and its exact artifact reached Seyda Neen without the former crash. The supplied 7,028-byte JSONL is valid and contains 23 records: one iOS startup record and 22 OpenMW R1 records. It contains zero GL4ES records and zero R2 records. Sharing the file was correct and sufficient to prove partial operation plus diagnostic insufficiency, but it cannot localize the renderer defect because it lacks the intended/applied lower-renderer half.
+
+The user also observed short-tap Menu failing while long-press editor entry still worked. No touch source changed. This remains an unclassified candidate regression and must be rechecked, but it does not authorize touch work or displace the user's renderer priority.
+
+WO31 Amendment 2 is READY, not ACTIVE. It requires source/linkage proof and an unconditional bounded GL4ES handshake before one additional diagnostic build. That build must capture a representative correlated R1 draw and an R2 OpenMW-intent/GL4ES-received/applied chain. No renderer cause or correction has yet been accepted.
 
 Secondary/deferred boundaries: menu/options touch scrolling; WO30 Reset-opacity and all-control-affordance gaps; reduced render scale `0.58`; the transient red effect; and warning-flood cleanup except where narrowly necessary to collect bounded renderer evidence. WO31 prohibits touch-control changes.
 
@@ -83,8 +87,11 @@ The accepted physical test did **not** record the post-install container UUID be
 
 ## Latest important evidence
 
-- [READY WO31 Amendment 1](../WorkOrders/WO-031.md)
+- [READY WO31 Amendment 2](../WorkOrders/WO-031.md)
 - [WO31 execution report](../Evidence/WO-031/report.md)
+- [WO31 Amendment 1 orchestrator review](../Evidence/WO-031/orchestrator-amendment1-review.md)
+- [WO31 supplied renderer diagnostic](../Evidence/WO-031/device-renderer-diagnostic-amendment1.jsonl)
+- [WO31 diagnostic observability decision](../Decisions/DEC-009.md)
 - [WO31 orchestrator crash review](../Evidence/WO-031/orchestrator-crash-review.md)
 - [WO31 diagnostic-candidate rejection decision](../Decisions/DEC-008.md)
 - [Accepted WO30](../WorkOrders/WO-030.md)
@@ -111,9 +118,9 @@ The accepted physical test did **not** record the post-install container UUID be
 ## Future orchestrator/worker recovery
 
 1. Read `Documentation/CURRENT_STATE.md`.
-2. Read accepted `WorkOrders/WO-030.md`, READY `WorkOrders/WO-031.md` Amendment 1, DEC-006, DEC-007, DEC-008, and only their directly referenced evidence.
+2. Read accepted `WorkOrders/WO-030.md`, READY `WorkOrders/WO-031.md` Amendment 2, DEC-006 through DEC-009, and only their directly referenced evidence.
 3. Read only the `Decisions/` and `Evidence/` records referenced by that work order.
 4. Inspect current Git state and active/recent CI before changing anything.
 5. Use the Google Docs ledger only when deeper historical context is required.
 
-WO31 Amendment 1 is READY and the existing worker is stopped. Do not infer activation from the completed original run. The exact next action is to deliver one explicit Amendment 1 start directive to the existing worker, then transition READY → ACTIVE without creating a duplicate worker or CI run.
+WO31 Amendment 2 is READY and the existing worker is stopped. Do not infer activation from the completed original or Amendment 1 runs. The exact next action is to deliver one explicit Amendment 2 start directive to the existing worker, then transition READY → ACTIVE without creating a duplicate worker or CI run.
