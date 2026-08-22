@@ -1,21 +1,21 @@
 # OpenMWiOS — Current State
 
 - Project: OpenMWiOS
-- Active branch: `codex/wo30-renderer-touch-customization`
-- Current engineering baseline commit: `45c1d8c696fb328d977893b79efc78689a3f4d08`
-- Control-plane baseline commit: `2b72ab9`
-- Active work order: [WO-030](../WorkOrders/WO-030.md)
-- Ready work order: none
-- Last completed work order: [WO-029](../WorkOrders/WO-029.md)
-- Last reviewed work order: [WO-029](../WorkOrders/WO-029.md) — **ACCEPTED with explicit validation limits**
-- Current objective: correct the exterior renderer defects and deliver persistent, user-customizable, substantially less opaque iOS touch controls under WO30
-- Engineering execution status: **ACTIVE; explicit WO-030 start directive delivered to the existing OpenMW worker on 2026-08-22**
-- Current accepted correction: `45c1d8c696fb328d977893b79efc78689a3f4d08` owns the process-lifetime touch icon cache under non-ARC and removes the proven WO28 launch/`New Game`/overlay crash mechanism
+- Active branch: `codex/wo29-ios-crash-isolation` (canonical ControlPlane); planned WO31 execution branch: `codex/wo31-exterior-renderer-correction`
+- Current engineering baseline commit: `195f3a4bbcfd17ecd46546f3e28d3ee8558bed27`
+- Control-plane issued baseline commit: `dfe9e1e875c7020658aa59d22121a7cc0061ac69`
+- Active work order: none
+- Ready work order: [WO-031](../WorkOrders/WO-031.md)
+- Last completed work order: [WO-030](../WorkOrders/WO-030.md) — **ACCEPTED / PARTIAL ACCEPT**
+- Last reviewed work order: [WO-030](../WorkOrders/WO-030.md) — **touch baseline accepted with limits; renderer unresolved**
+- Current objective: correct the exterior foliage/particle alpha defects and distance/fog/horizon defects without mixing in touch UX work
+- Engineering execution status: **STOPPED at READY; WO-031 has not received a start directive**
+- Current accepted correction: WO29's non-ARC icon ownership fix plus WO30's practical on-device touch editor and reduced-opacity controls
 - Last updated: 2026-08-22
 
 ## Qualified state
 
-The highest qualified runtime gate combines the completed WO26 and WO27 results with the accepted WO29 crash correction:
+The highest qualified runtime gate combines WO26/WO27, the accepted WO29 crash correction, and the qualified WO30 touch baseline:
 
 - OpenMW installs and launches on a physical iPhone.
 - Morrowind, Tribunal, and Bloodmoon content loads.
@@ -27,8 +27,12 @@ The highest qualified runtime gate combines the completed WO26 and WO27 results 
 - Thirteen reports from the rejected WO28 candidate match its executable UUID and converge at one dangling cached-`UIImage` fault in `OpenMWTouchOverlay drawRect:`.
 - WO29 corrects that ownership defect without changing touch mappings, layout, renderer, data path, dependencies, cache architecture, or workflow behavior.
 - The corrected artifact booted normally and supported controls, indoor play, Seyda Neen exterior traversal, HUD/overlay rendering, weapon/combat, and scene changes without a user-observed crash during the supplied session.
+- WO30 adds a practical on-device touch editor entered by a 0.75-second Menu long-press, movable/resizable fixed controls, movement-radius adjustment, live global opacity controls, and versioned safe-area-relative profile storage.
+- The WO30 final candidate uses nominal `0.20` idle opacity and the device-observed plus/minus controls visibly change opacity.
+- The user considers the touch result practically satisfactory apart from menu/options scrolling.
+- WO30 made no renderer correction; the exterior defects remain visible and causally unresolved.
 
-This is a qualified crash correction and sustained device pass, not a complete mobile-control qualification. The formal ten-launch, three-`New Game`, and per-control attempt counts were not recorded, and no independent post-test crash inventory was available. Those missing counts are not invented or used to broaden the accepted result.
+This remains a qualified runtime and touch baseline, not complete mobile-control qualification. WO30 did not independently verify force-quit/relaunch persistence, a post-test crash inventory, or the full action-control matrix. Reset currently preserves opacity instead of restoring nominal `0.20`, and only the selected fixed control shows the explicit resize ring. These limits are recorded without scheduling touch cleanup inside the renderer order.
 
 ## Versions and accepted candidate
 
@@ -38,20 +42,20 @@ This is a qualified crash correction and sustained device pass, not a complete m
 - GL4ES: `c9895df34cd466c23bc60c2bd3db3d87e98fcbe7` (1.1.6)
 - Deployment target: iOS 16.3
 - Architecture: arm64
-- Accepted Fast Development run: `32548876888`
-- Accepted source commit: `45c1d8c696fb328d977893b79efc78689a3f4d08`
-- Artifact: `OpenMW-iOS-fast-31` (ID `9470501854`)
-- Executable SHA-256: `6FF52E861FF44D4C4449E1A82481EE7F52B515932A56279EB5C057F9E740F0C2`
-- IPA SHA-256: `E295561EE9BF1F52A7337C6AACFE7777F530E9E394462F3C143DEB98E14BDD63`
-- Mach-O UUID: `52739477-31F4-3693-9D6F-30366E3D640D`
+- Accepted Fast Development run: `32573611821`
+- Accepted source commit: `195f3a4bbcfd17ecd46546f3e28d3ee8558bed27`
+- Artifact: `OpenMW-iOS-fast-34` (ID `9476386162`)
+- Executable SHA-256: `5ABD1BC40F5FDFF67747E329FE56D2593D2FCDCE9847139BBFF3C97749A85D66`
+- IPA SHA-256: `7ADADF613AC36DED1F63B2848B6622654231AF8243643B0791CC682536C426E6`
+- Mach-O UUID: `0BA296A8-24AC-364C-A804-F4601A399F99`
 
-See [WO29 evidence](../Evidence/WO-029/manifest.md) for the crash classification, correction, CI, artifact, and device references. WO27 remains the accepted data-path baseline carried forward by WO29.
+See [WO30 evidence](../Evidence/WO-030/manifest.md) for the current touch candidate, CI, artifact, and device limits. [WO29 evidence](../Evidence/WO-029/manifest.md) remains authoritative for the crash correction, and WO27 remains the accepted data-path baseline.
 
 ## Current blockers and unresolved boundary
 
 Primary engineering boundary: exterior renderer correctness. The accepted WO29 device session and later screenshots taken with view distance set to maximum show persistent foliage alpha/cutout failure, large white/blank distance regions, disconnected distant silhouettes, and a sharp blue horizon/cutoff band. Maximum view distance improved coverage somewhat but did not resolve the defects, so a low view-distance setting is not a complete explanation.
 
-The exact renderer cause remains unproven. Foliage alpha handling and distant fog/culling/paging/clipping presentation must remain separate hypotheses until source/runtime evidence establishes convergence.
+WO30 did not localize the earliest invalid renderer boundary. Its bounded OpenMW-side probes recorded intended fog state, but representative foliage state and GL4ES received-state records were not available in the user-shareable log. Foliage/particle alpha handling and distant fog/culling/paging/clipping presentation remain separate hypotheses until runtime evidence establishes convergence.
 
 Current unresolved renderer boundary exposed by exterior traversal:
 
@@ -63,9 +67,9 @@ Current unresolved renderer boundary exposed by exterior traversal:
 - `ColorMaski` warning activity remains noisy but was not proven to block rendering.
 - a transient blocky red combat effect was captured once and absent in the next screenshot; it remains unclassified.
 
-WO30 is the canonical READY order for the renderer boundary. It preserves foliage alpha/cutout and distance/fog/culling/paging/clipping as separate causal paths unless evidence establishes convergence.
+WO31 is the canonical READY renderer-only order. It first establishes a bounded app-owned GL4ES/OpenMW diagnostic channel, then conditionally corrects the earliest proven R1 and/or R2 invalid boundary. It preserves the paths as separate unless evidence establishes convergence.
 
-WO30 also authorizes the requested touch UX work as an independently reviewable track: a Serious Sam-style editor entered by long-pressing the existing Menu button, persistent on-device repositioning/resizing, movement-radius and opacity adjustment, reset/cancel behavior, and a nominal 20% default idle opacity. A short Menu tap must retain normal Pause behavior, while a recognized long-press must not leak a Pause action. It does not authorize action remapping or replacement of the qualified touch foundation.
+Secondary/deferred boundaries: menu/options touch scrolling; WO30 Reset-opacity and all-control-affordance gaps; reduced render scale `0.58`; the transient red effect; and warning-flood cleanup except where narrowly necessary to collect bounded renderer evidence. WO31 prohibits touch-control changes.
 
 These are observations or unresolved hypotheses, not established root causes. They must not be folded into the completed data-path correction.
 
@@ -77,7 +81,9 @@ The accepted physical test did **not** record the post-install container UUID be
 
 ## Latest important evidence
 
-- [ACTIVE WO30](../WorkOrders/WO-030.md)
+- [READY WO31](../WorkOrders/WO-031.md)
+- [Accepted WO30](../WorkOrders/WO-030.md)
+- [WO30 evidence manifest](../Evidence/WO-030/manifest.md)
 - [Accepted WO29](../WorkOrders/WO-029.md)
 - [WO29 evidence manifest](../Evidence/WO-029/manifest.md)
 - [WO29 execution report](../Evidence/WO-029/report.md)
@@ -94,14 +100,15 @@ The accepted physical test did **not** record the post-install container UUID be
 - [WO28 rejection and crash-path separation decision](../Decisions/DEC-004.md)
 - [WO29 crash-correction decision](../Decisions/DEC-005.md)
 - [Maximum view distance does not resolve exterior rendering decision](../Decisions/DEC-006.md)
+- [WO30 qualified touch acceptance and unresolved renderer decision](../Decisions/DEC-007.md)
 - Living historical ledger: [OpenMW iOS — Engineering Handoff Ledger](https://docs.google.com/document/d/1TOyBHA1tSKBIqoU_XFSIaTMbdCBAcNVsaczy29N_b18/edit)
 
 ## Future orchestrator/worker recovery
 
 1. Read `Documentation/CURRENT_STATE.md`.
-2. Read the accepted `WorkOrders/WO-029.md`, DEC-005, DEC-006, and their directly referenced evidence; read WO28/WO27 only as needed.
+2. Read accepted `WorkOrders/WO-030.md`, READY `WorkOrders/WO-031.md`, DEC-006, DEC-007, and only their directly referenced evidence.
 3. Read only the `Decisions/` and `Evidence/` records referenced by that work order.
 4. Inspect current Git state and active/recent CI before changing anything.
 5. Use the Google Docs ledger only when deeper historical context is required.
 
-WO30 is ACTIVE under the existing worker. Do not resend its start directive, create a duplicate worker, or issue another work order. Await the required `Evidence/WO-030/report.md` completion/blocker report and orchestrator review.
+WO31 is READY and has not started. Do not infer ACTIVE from file access. Execution requires the existing worker to receive a separate explicit orchestrator start directive.
