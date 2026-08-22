@@ -1,15 +1,15 @@
 # OpenMWiOS — Current State
 
 - Project: OpenMWiOS
-- Active branch: `codex/wo29-ios-crash-isolation` (canonical ControlPlane); planned WO31 execution branch: `codex/wo31-exterior-renderer-correction`
+- Active branch: `codex/wo31-exterior-renderer-correction` (worker execution); canonical ControlPlane branch: `codex/wo29-ios-crash-isolation`
 - Current engineering baseline commit: `195f3a4bbcfd17ecd46546f3e28d3ee8558bed27`
 - Control-plane issued baseline commit: `dfe9e1e875c7020658aa59d22121a7cc0061ac69`
-- Active work order: none
-- Ready work order: [WO-031](../WorkOrders/WO-031.md)
+- Active work order: [WO-031](../WorkOrders/WO-031.md)
+- Ready work order: none
 - Last completed work order: [WO-030](../WorkOrders/WO-030.md) — **ACCEPTED / PARTIAL ACCEPT**
 - Last reviewed work order: [WO-030](../WorkOrders/WO-030.md) — **touch baseline accepted with limits; renderer unresolved**
 - Current objective: correct the exterior foliage/particle alpha defects and distance/fog/horizon defects without mixing in touch UX work
-- Engineering execution status: **STOPPED at READY; WO-031 has not received a start directive**
+- Engineering execution status: **ACTIVE; explicit WO-031 start directive delivered to the existing worker through the user on 2026-08-22**
 - Current accepted correction: WO29's non-ARC icon ownership fix plus WO30's practical on-device touch editor and reduced-opacity controls
 - Last updated: 2026-08-22
 
@@ -67,7 +67,7 @@ Current unresolved renderer boundary exposed by exterior traversal:
 - `ColorMaski` warning activity remains noisy but was not proven to block rendering.
 - a transient blocky red combat effect was captured once and absent in the next screenshot; it remains unclassified.
 
-WO31 is the canonical READY renderer-only order. It first establishes a bounded app-owned GL4ES/OpenMW diagnostic channel, then conditionally corrects the earliest proven R1 and/or R2 invalid boundary. It preserves the paths as separate unless evidence establishes convergence.
+WO31 is the canonical ACTIVE renderer-only order. It first establishes a bounded app-owned GL4ES/OpenMW diagnostic channel, then conditionally corrects the earliest proven R1 and/or R2 invalid boundary. It preserves the paths as separate unless evidence establishes convergence.
 
 Secondary/deferred boundaries: menu/options touch scrolling; WO30 Reset-opacity and all-control-affordance gaps; reduced render scale `0.58`; the transient red effect; and warning-flood cleanup except where narrowly necessary to collect bounded renderer evidence. WO31 prohibits touch-control changes.
 
@@ -81,7 +81,7 @@ The accepted physical test did **not** record the post-install container UUID be
 
 ## Latest important evidence
 
-- [READY WO31](../WorkOrders/WO-031.md)
+- [ACTIVE WO31](../WorkOrders/WO-031.md)
 - [Accepted WO30](../WorkOrders/WO-030.md)
 - [WO30 evidence manifest](../Evidence/WO-030/manifest.md)
 - [Accepted WO29](../WorkOrders/WO-029.md)
@@ -106,9 +106,9 @@ The accepted physical test did **not** record the post-install container UUID be
 ## Future orchestrator/worker recovery
 
 1. Read `Documentation/CURRENT_STATE.md`.
-2. Read accepted `WorkOrders/WO-030.md`, READY `WorkOrders/WO-031.md`, DEC-006, DEC-007, and only their directly referenced evidence.
+2. Read accepted `WorkOrders/WO-030.md`, ACTIVE `WorkOrders/WO-031.md`, DEC-006, DEC-007, and only their directly referenced evidence.
 3. Read only the `Decisions/` and `Evidence/` records referenced by that work order.
 4. Inspect current Git state and active/recent CI before changing anything.
 5. Use the Google Docs ledger only when deeper historical context is required.
 
-WO31 is READY and has not started. Do not infer ACTIVE from file access. Execution requires the existing worker to receive a separate explicit orchestrator start directive.
+WO31 is ACTIVE under the existing worker. Do not resend its start directive, create a duplicate worker, or issue another work order. Await the required `Evidence/WO-031/report.md` completion/blocker report and orchestrator review.
