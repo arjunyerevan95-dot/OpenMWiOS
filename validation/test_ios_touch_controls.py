@@ -206,6 +206,12 @@ class IosTouchControlTests(unittest.TestCase):
         self.assertIn("imageForAction", adapter)
         self.assertIn("imageWithTintColor:UIColor.whiteColor", adapter)
 
+    def test_process_lifetime_icon_cache_owns_images_under_non_arc(self):
+        adapter = ADAPTER.read_text(encoding="utf-8")
+        self.assertIn("UIImage* image = [[UIImage alloc] initWithData:data];", adapter)
+        self.assertIn("[data release];", adapter)
+        self.assertNotIn("return [UIImage imageWithData:data];", adapter)
+
     def test_all_embedded_android_icons_are_valid_128px_pngs(self):
         icons = ICONS.read_text(encoding="utf-8")
         names = ("icon1", "icon2", "icon3", "icon4", "icon6", "icon7", "icon8", "icon9",

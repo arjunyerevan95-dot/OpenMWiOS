@@ -145,7 +145,11 @@ namespace
             const auto png = [](const char* encoded) {
                 NSString* string = [NSString stringWithUTF8String:encoded];
                 NSData* data = [[NSData alloc] initWithBase64EncodedString:string options:0];
-                return [UIImage imageWithData:data];
+                // This Objective-C++ source is compiled without ARC. The process-lifetime
+                // icon cache must own each image after the surrounding autorelease pool drains.
+                UIImage* image = [[UIImage alloc] initWithData:data];
+                [data release];
+                return image;
             };
             images[static_cast<std::size_t>(Action::Pause)] = png(icon1);
             images[static_cast<std::size_t>(Action::Attack)] = png(icon2);
