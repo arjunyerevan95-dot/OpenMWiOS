@@ -19,6 +19,7 @@ namespace
 {
     using OpenMWIOS::Touch::Action;
     using OpenMWIOS::Touch::Binding;
+    using OpenMWIOS::Touch::ControlProfile;
     using OpenMWIOS::Touch::Layout;
     using OpenMWIOS::Touch::Role;
 
@@ -26,6 +27,9 @@ namespace
     constexpr float MovementDeadZone = 0.2f;
     constexpr float LookSensitivity = 1.25f;
     constexpr int DiagnosticBudget = 48;
+    constexpr NSTimeInterval MenuLongPressSeconds = 0.75;
+    constexpr CGFloat EditorTouchSlop = 14.f;
+    NSString* const TouchProfileDefaultsKey = @"OpenMWIOSTouchProfileV1";
 
     std::uintptr_t touchId(UITouch* touch)
     {
@@ -278,6 +282,19 @@ namespace
     BOOL _gameplayMode;
     BOOL _inputReady;
     int _diagnosticBudget;
+    ControlProfile _profile;
+    ControlProfile _editorSnapshot;
+    BOOL _editing;
+    NSInteger _selectedControl;
+    std::uintptr_t _editorTouchId;
+    BOOL _editorResizing;
+    OpenMWIOS::Touch::Point _editorLastPoint;
+    std::uintptr_t _pendingMenuTouchId;
+    std::uintptr_t _consumedMenuLongPressId;
+    OpenMWIOS::Touch::Point _pendingMenuStart;
+    BOOL _resetArmed;
+    BOOL _resetApplied;
+    ControlProfile _preResetProfile;
 }
 
 - (instancetype)initWithFrame:(CGRect)frame
@@ -298,7 +315,16 @@ namespace
         _gameplayMode = NO;
         _inputReady = NO;
         _diagnosticBudget = DiagnosticBudget;
+        _editing = NO;
+        _selectedControl = -1;
+        _editorTouchId = 0;
+        _editorResizing = NO;
+        _pendingMenuTouchId = 0;
+        _consumedMenuLongPressId = 0;
+        _resetArmed = NO;
+        _resetApplied = NO;
         [self rebuildLayout];
+        [self loadProfile];
 
         _displayLink = [CADisplayLink displayLinkWithTarget:self selector:@selector(updateInputMode:)];
         [_displayLink addToRunLoop:NSRunLoop.mainRunLoop forMode:NSRunLoopCommonModes];
@@ -324,6 +350,8 @@ namespace
 - (void)layoutSubviews
 {
     [super layoutSubviews];
+    if (_editing)
+        [self captureLayoutIntoProfile];
     [self rebuildLayout];
 }
 
@@ -332,7 +360,9 @@ namespace
     (void)event;
     if (!_inputReady)
         return NO;
-    if (_gameplayMode)
+    if (_editing)
+        return YES;
+    if (_gameplayMode && !_editing)
         return YES;
 
     const OpenMWIOS::Touch::Point touchPoint{ static_cast<float>(point.x), static_cast<float>(point.y) };
@@ -350,6 +380,170 @@ namespace
     _layout = OpenMWIOS::Touch::makeLayout(CGRectGetWidth(self.bounds), CGRectGetHeight(self.bounds),
         { static_cast<float>(insets.top), static_cast<float>(insets.left), static_cast<float>(insets.bottom),
             static_cast<float>(insets.right) });
+    OpenMWIOS::Touch::applyProfile(_layout, _profile);
+    [self setNeedsDisplay];
+}
+
+- (void)loadProfile
+{
+    _profile = OpenMWIOS::Touch::profileFromLayout(_layout);
+    NSDictionary* stored = [NSUserDefaults.standardUserDefaults dictionaryForKey:TouchProfileDefaultsKey];
+    if (![stored isKindOfClass:NSDictionary.class]
+        || [stored[@"version"] unsignedIntValue] != OpenMWIOS::Touch::ProfileVersion)
+        return;
+
+    NSArray* controls = stored[@"controls"];
+    if (![controls isKindOfClass:NSArray.class] || controls.count != OpenMWIOS::Touch::ActionCount)
+        return;
+    _profile.version = OpenMWIOS::Touch::ProfileVersion;
+    _profile.customized = YES;
+    _profile.idleOpacity = OpenMWIOS::Touch::clamp([stored[@"opacity"] floatValue], 0.05f, 0.85f);
+    _profile.movementRadius = [stored[@"movementRadius"] floatValue];
+    for (std::size_t index = 0; index < OpenMWIOS::Touch::ActionCount; ++index)
+    {
+        NSDictionary* item = controls[index];
+        if (![item isKindOfClass:NSDictionary.class])
+        {
+            _profile.customized = false;
+            return;
+        }
+        _profile.buttons[index].center = { [item[@"x"] floatValue], [item[@"y"] floatValue] };
+        _profile.buttons[index].radius = [item[@"radius"] floatValue];
+    }
+    [self rebuildLayout];
+}
+
+- (void)captureLayoutIntoProfile
+{
+    _profile.version = OpenMWIOS::Touch::ProfileVersion;
+    _profile.customized = true;
+    _profile.movementRadius = _layout.movementRadius / OpenMWIOS::Touch::safeShortSide(_layout);
+    for (std::size_t index = 0; index < OpenMWIOS::Touch::ActionCount; ++index)
+        OpenMWIOS::Touch::updateProfileButton(_profile, _layout, index);
+}
+
+- (void)saveProfile
+{
+    [self captureLayoutIntoProfile];
+    NSMutableArray* controls = [NSMutableArray arrayWithCapacity:OpenMWIOS::Touch::ActionCount];
+    for (const auto& control : _profile.buttons)
+    {
+        [controls addObject:@{
+            @"x" : @(control.center.x),
+            @"y" : @(control.center.y),
+            @"radius" : @(control.radius),
+        }];
+    }
+    NSDictionary* stored = @{
+        @"version" : @(OpenMWIOS::Touch::ProfileVersion),
+        @"opacity" : @(_profile.idleOpacity),
+        @"movementRadius" : @(_profile.movementRadius),
+        @"controls" : controls,
+    };
+    [NSUserDefaults.standardUserDefaults setObject:stored forKey:TouchProfileDefaultsKey];
+}
+
+- (CGRect)editorToolbarRect
+{
+    const CGFloat width = MIN(CGRectGetWidth(self.bounds) - self.safeAreaInsets.left - self.safeAreaInsets.right - 24.f, 460.f);
+    return CGRectMake(CGRectGetMidX(self.bounds) - width * 0.5f,
+        CGRectGetHeight(self.bounds) - self.safeAreaInsets.bottom - 54.f, width, 42.f);
+}
+
+- (OpenMWIOS::Touch::Circle)editorMovementPreview
+{
+    const float radius = _layout.movementRadius;
+    return { { _layout.safeArea.left + radius + 18.f,
+                 _layout.height - _layout.safeArea.bottom - radius - 70.f },
+        radius };
+}
+
+- (NSInteger)editorToolbarItemAtPoint:(CGPoint)point
+{
+    const CGRect toolbar = [self editorToolbarRect];
+    if (!CGRectContainsPoint(toolbar, point))
+        return -1;
+    const CGFloat itemWidth = CGRectGetWidth(toolbar) / 5.f;
+    return MIN(4, MAX(0, static_cast<NSInteger>((point.x - CGRectGetMinX(toolbar)) / itemWidth)));
+}
+
+- (void)enterEditor
+{
+    const std::uintptr_t triggeringTouch = _pendingMenuTouchId;
+    [self releaseAllInputs];
+    _consumedMenuLongPressId = triggeringTouch;
+    _editorSnapshot = _profile.customized ? _profile : OpenMWIOS::Touch::profileFromLayout(_layout);
+    _editing = YES;
+    _selectedControl = static_cast<NSInteger>(Action::Pause);
+    _resetArmed = NO;
+    _resetApplied = NO;
+    [self diagnose:"touch_editor" detail:@"state=entered;trigger=menu-long-press;input=suppressed"];
+    [self setNeedsDisplay];
+}
+
+- (void)leaveEditorSaving:(BOOL)save
+{
+    if (save)
+        [self saveProfile];
+    else
+    {
+        _profile = _editorSnapshot;
+        [self rebuildLayout];
+    }
+    _editing = NO;
+    _selectedControl = -1;
+    _editorTouchId = 0;
+    _resetArmed = NO;
+    _resetApplied = NO;
+    [self diagnose:"touch_editor" detail:save ? @"state=done;profile=saved" : @"state=cancelled;profile=restored"];
+    [self setNeedsDisplay];
+}
+
+- (void)resetEditorLayout
+{
+    const float opacity = _profile.idleOpacity;
+    _layout = OpenMWIOS::Touch::makeLayout(_layout.width, _layout.height, _layout.safeArea);
+    _profile = OpenMWIOS::Touch::profileFromLayout(_layout);
+    _profile.idleOpacity = opacity;
+    [self setNeedsDisplay];
+}
+
+- (void)activateEditorToolbarItem:(NSInteger)item
+{
+    switch (item)
+    {
+        case 0:
+            _profile.idleOpacity = OpenMWIOS::Touch::clamp(_profile.idleOpacity - 0.05f, 0.05f, 0.85f);
+            break;
+        case 1:
+            _profile.idleOpacity = OpenMWIOS::Touch::clamp(_profile.idleOpacity + 0.05f, 0.05f, 0.85f);
+            break;
+        case 2:
+            [self leaveEditorSaving:YES];
+            return;
+        case 3:
+            if (_resetApplied)
+            {
+                _profile = _preResetProfile;
+                [self rebuildLayout];
+                _resetApplied = NO;
+                _resetArmed = NO;
+            }
+            else if (_resetArmed)
+            {
+                [self captureLayoutIntoProfile];
+                _preResetProfile = _profile;
+                [self resetEditorLayout];
+                _resetApplied = YES;
+                _resetArmed = NO;
+            }
+            else
+                _resetArmed = YES;
+            break;
+        case 4:
+            [self leaveEditorSaving:NO];
+            return;
+    }
     [self setNeedsDisplay];
 }
 
@@ -504,6 +698,7 @@ namespace
 
 - (void)releaseAllInputs
 {
+    _pendingMenuTouchId = 0;
     for (const auto& [identifier, binding] : _ownership.bindings())
     {
         (void)identifier;
@@ -526,6 +721,63 @@ namespace
     {
         const CGPoint location = [touch locationInView:self];
         const OpenMWIOS::Touch::Point point{ static_cast<float>(location.x), static_cast<float>(location.y) };
+
+        if (_editing)
+        {
+            if (touchId(touch) == _consumedMenuLongPressId)
+                continue;
+            const NSInteger toolbarItem = [self editorToolbarItemAtPoint:location];
+            if (toolbarItem >= 0)
+            {
+                [self activateEditorToolbarItem:toolbarItem];
+                continue;
+            }
+
+            const auto movementPreview = [self editorMovementPreview];
+            if (movementPreview.contains(point, 1.15f))
+            {
+                _selectedControl = OpenMWIOS::Touch::ActionCount;
+                _editorTouchId = touchId(touch);
+                _editorResizing = YES;
+                _editorLastPoint = point;
+                continue;
+            }
+            for (std::size_t index = 0; index < OpenMWIOS::Touch::ActionCount; ++index)
+            {
+                const auto& circle = _layout.buttons[index].bounds;
+                if (!circle.contains(point, 1.25f))
+                    continue;
+                _selectedControl = static_cast<NSInteger>(index);
+                _editorTouchId = touchId(touch);
+                const float distance = std::hypot(point.x - circle.center.x, point.y - circle.center.y);
+                _editorResizing = distance >= circle.radius * 0.68f;
+                _editorLastPoint = point;
+                break;
+            }
+            [self setNeedsDisplay];
+            continue;
+        }
+
+        for (const auto& button : _layout.buttons)
+        {
+            if (button.action != Action::Pause || !OpenMWIOS::Touch::visibleInMode(button.action, _gameplayMode)
+                || !button.bounds.contains(point, 1.15f) || _pendingMenuTouchId != 0)
+                continue;
+            _pendingMenuTouchId = touchId(touch);
+            _pendingMenuStart = point;
+            const std::uintptr_t candidate = _pendingMenuTouchId;
+            dispatch_after(dispatch_time(DISPATCH_TIME_NOW,
+                               static_cast<int64_t>(MenuLongPressSeconds * NSEC_PER_SEC)),
+                dispatch_get_main_queue(), ^{
+                    if (_pendingMenuTouchId == candidate && !_editing)
+                        [self enterEditor];
+                });
+            [self diagnose:"touch_menu_arbitration" detail:@"state=pending;pause_event=deferred"];
+            break;
+        }
+        if (_pendingMenuTouchId == touchId(touch))
+            continue;
+
         const auto binding = _ownership.begin(touchId(touch), point, _layout, _gameplayMode);
         if (!binding)
             continue;
@@ -561,6 +813,48 @@ namespace
     {
         const CGPoint location = [touch locationInView:self];
         const OpenMWIOS::Touch::Point point{ static_cast<float>(location.x), static_cast<float>(location.y) };
+        if (_editing)
+        {
+            if (touchId(touch) == _consumedMenuLongPressId || touchId(touch) != _editorTouchId)
+                continue;
+            if (_selectedControl == static_cast<NSInteger>(OpenMWIOS::Touch::ActionCount))
+            {
+                const auto preview = [self editorMovementPreview];
+                _layout.movementRadius = OpenMWIOS::Touch::clamp(
+                    std::hypot(point.x - preview.center.x, point.y - preview.center.y), 36.f,
+                    OpenMWIOS::Touch::safeShortSide(_layout) * 0.24f);
+            }
+            else if (_selectedControl >= 0
+                && _selectedControl < static_cast<NSInteger>(OpenMWIOS::Touch::ActionCount))
+            {
+                auto& circle = _layout.buttons[static_cast<std::size_t>(_selectedControl)].bounds;
+                if (_editorResizing)
+                    circle.radius = std::hypot(point.x - circle.center.x, point.y - circle.center.y);
+                else
+                {
+                    circle.center.x += point.x - _editorLastPoint.x;
+                    circle.center.y += point.y - _editorLastPoint.y;
+                }
+                const float minimum = _layout.buttons[static_cast<std::size_t>(_selectedControl)].action == Action::Pause
+                    ? 24.f
+                    : 18.f;
+                OpenMWIOS::Touch::clampCircleToSafeArea(circle, _layout, minimum);
+            }
+            _editorLastPoint = point;
+            _resetArmed = NO;
+            _resetApplied = NO;
+            [self setNeedsDisplay];
+            continue;
+        }
+        if (touchId(touch) == _pendingMenuTouchId)
+        {
+            if (std::hypot(point.x - _pendingMenuStart.x, point.y - _pendingMenuStart.y) > EditorTouchSlop)
+            {
+                _pendingMenuTouchId = 0;
+                [self diagnose:"touch_menu_arbitration" detail:@"state=cancelled;reason=movement"];
+            }
+            continue;
+        }
         const auto previous = _ownership.move(touchId(touch), point);
         if (!previous)
             continue;
@@ -582,6 +876,29 @@ namespace
 {
     for (UITouch* touch in touches)
     {
+        const std::uintptr_t identifier = touchId(touch);
+        if (identifier == _consumedMenuLongPressId)
+        {
+            _consumedMenuLongPressId = 0;
+            continue;
+        }
+        if (_editing && identifier == _editorTouchId)
+        {
+            _editorTouchId = 0;
+            _editorResizing = NO;
+            continue;
+        }
+        if (identifier == _pendingMenuTouchId)
+        {
+            _pendingMenuTouchId = 0;
+            if (!cancelled)
+            {
+                [self setAction:Action::Pause pressed:true];
+                [self setAction:Action::Pause pressed:false];
+                [self diagnose:"touch_menu_arbitration" detail:@"state=short-tap;pause_event=dispatched"];
+            }
+            continue;
+        }
         const auto binding = _ownership.end(touchId(touch));
         if (!binding)
             continue;
@@ -660,7 +977,7 @@ namespace
     };
     for (const auto& button : _layout.buttons)
     {
-        if (!OpenMWIOS::Touch::visibleInMode(button.action, _gameplayMode))
+        if (!_editing && !OpenMWIOS::Touch::visibleInMode(button.action, _gameplayMode))
             continue;
         const bool pressed = _pressedActions[static_cast<std::size_t>(button.action)];
         UIImage* icon = imageForAction(button.action);
@@ -669,7 +986,9 @@ namespace
         if (icon)
         {
             CGContextSaveGState(context);
-            CGContextSetAlpha(context, pressed ? 0.95f : 0.64f);
+            const CGFloat alpha = _editing ? 0.82f : (pressed ? MIN(0.92f, _profile.idleOpacity + 0.42f)
+                                                            : _profile.idleOpacity);
+            CGContextSetAlpha(context, alpha);
             UIImage* tinted = [icon imageWithTintColor:UIColor.whiteColor renderingMode:UIImageRenderingModeAlwaysOriginal];
             [tinted drawInRect:iconRect blendMode:kCGBlendModeNormal alpha:1.f];
             CGContextRestoreGState(context);
@@ -682,6 +1001,71 @@ namespace
                 button.bounds.center.y - size.height * 0.5f);
             [label drawAtPoint:origin withAttributes:attributes];
         }
+    }
+
+    if (_editing)
+    {
+        CGContextSetStrokeColorWithColor(context, [UIColor colorWithRed:0.25f green:0.85f blue:1.f alpha:0.95f].CGColor);
+        CGContextSetLineWidth(context, 3.f);
+        const auto movement = [self editorMovementPreview];
+        drawCircle(movement, false);
+
+        if (_selectedControl >= 0)
+        {
+            OpenMWIOS::Touch::Circle selected = movement;
+            NSString* selectedName = @"MOVE RADIUS";
+            if (_selectedControl < static_cast<NSInteger>(OpenMWIOS::Touch::ActionCount))
+            {
+                const auto& button = _layout.buttons[static_cast<std::size_t>(_selectedControl)];
+                selected = button.bounds;
+                selectedName = labelForAction(button.action);
+            }
+            drawCircle({ selected.center, selected.radius + 7.f }, false);
+            CGContextSetFillColorWithColor(context, [UIColor colorWithRed:0.25f green:0.85f blue:1.f alpha:0.95f].CGColor);
+            CGContextFillEllipseInRect(context, CGRectMake(selected.center.x + selected.radius - 7.f,
+                                                       selected.center.y - 7.f, 14.f, 14.f));
+            NSDictionary* selectedAttributes = @{
+                NSFontAttributeName : [UIFont boldSystemFontOfSize:13.f],
+                NSForegroundColorAttributeName : UIColor.whiteColor,
+            };
+            [selectedName drawAtPoint:CGPointMake(selected.center.x - selected.radius,
+                                          selected.center.y - selected.radius - 25.f)
+                         withAttributes:selectedAttributes];
+        }
+
+        const CGRect toolbar = [self editorToolbarRect];
+        UIBezierPath* toolbarPath = [UIBezierPath bezierPathWithRoundedRect:toolbar cornerRadius:10.f];
+        [[UIColor colorWithWhite:0.05f alpha:0.88f] setFill];
+        [toolbarPath fill];
+        NSArray<NSString*>* titles = @[
+            @"OPACITY -",
+            @"OPACITY +",
+            @"DONE",
+            _resetApplied ? @"UNDO" : (_resetArmed ? @"RESET?" : @"RESET"),
+            @"CANCEL",
+        ];
+        const CGFloat itemWidth = CGRectGetWidth(toolbar) / titles.count;
+        NSDictionary* toolbarAttributes = @{
+            NSFontAttributeName : [UIFont boldSystemFontOfSize:11.f],
+            NSForegroundColorAttributeName : UIColor.whiteColor,
+        };
+        for (NSUInteger index = 0; index < titles.count; ++index)
+        {
+            NSString* title = titles[index];
+            const CGSize size = [title sizeWithAttributes:toolbarAttributes];
+            [title drawAtPoint:CGPointMake(CGRectGetMinX(toolbar) + itemWidth * index + (itemWidth - size.width) * 0.5f,
+                                   CGRectGetMidY(toolbar) - size.height * 0.5f)
+                    withAttributes:toolbarAttributes];
+        }
+        NSString* help = @"Drag a control to move. Drag its edge dot to resize. Long-press MENU to edit.";
+        NSDictionary* helpAttributes = @{
+            NSFontAttributeName : [UIFont systemFontOfSize:12.f],
+            NSForegroundColorAttributeName : [UIColor colorWithWhite:1.f alpha:0.9f],
+        };
+        const CGSize helpSize = [help sizeWithAttributes:helpAttributes];
+        [help drawAtPoint:CGPointMake(CGRectGetMidX(self.bounds) - helpSize.width * 0.5f,
+                              CGRectGetMinY(toolbar) - helpSize.height - 8.f)
+              withAttributes:helpAttributes];
     }
     CGContextRestoreGState(context);
 }

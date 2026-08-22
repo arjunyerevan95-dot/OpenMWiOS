@@ -1,0 +1,63 @@
+diff --git a/src/gl/fog.c b/src/gl/fog.c
+index 75144a1..1478f67 100644
+--- a/src/gl/fog.c
++++ b/src/gl/fog.c
+@@ -1,5 +1,7 @@
+ #include "fog.h"
+ 
++#include <stdio.h>
++
+ #include "../glx/hardext.h"
+ #include "fpe.h"
+ #include "gl4es.h"
+@@ -10,6 +12,14 @@
+ 
+ void APIENTRY_GL4ES gl4es_glFogfv(GLenum pname, const GLfloat* params) {
+ 
++    static int wo30_fog_calls = 0;
++    if(wo30_fog_calls < 32 && (pname==GL_FOG_START || pname==GL_FOG_END || pname==GL_FOG_COLOR)) {
++        fprintf(stderr, "WO30 R2 gl4es fog pname=%u value=%g,%g,%g,%g\n", (unsigned)pname,
++            params[0], pname==GL_FOG_COLOR?params[1]:0.f, pname==GL_FOG_COLOR?params[2]:0.f,
++            pname==GL_FOG_COLOR?params[3]:0.f);
++        ++wo30_fog_calls;
++    }
++
+     if (glstate->list.active)
+         if (glstate->list.compiling) {
+                 NewStage(glstate->list.active, STAGE_FOG);
+diff --git a/src/gl/fpe.c b/src/gl/fpe.c
+index 23748ed..320ce6b 100644
+--- a/src/gl/fpe.c
++++ b/src/gl/fpe.c
+@@ -1313,6 +1313,14 @@ void realize_glenv(int ispoint, int first, int count, GLenum type, const void* i
+     // fog parameters
+     if(glprogram->builtin_fog.has)
+     {
++        static int wo30_fog_uniforms = 0;
++        if(wo30_fog_uniforms < 24) {
++            fprintf(stderr, "WO30 R2 builtin fog program=%u start=%g end=%g scale=%g color=%g,%g,%g\n",
++                glprogram->id, glstate->fog.start, glstate->fog.end,
++                1.f/(glstate->fog.end-glstate->fog.start), glstate->fog.color[0],
++                glstate->fog.color[1], glstate->fog.color[2]);
++            ++wo30_fog_uniforms;
++        }
+         GoUniformfv(glprogram, glprogram->builtin_fog.color, 4, 1, glstate->fog.color);
+         GoUniformfv(glprogram, glprogram->builtin_fog.density, 1, 1, &glstate->fog.density);
+         GoUniformfv(glprogram, glprogram->builtin_fog.start, 1, 1, &glstate->fog.start);
+diff --git a/src/gl/texture_compressed.c b/src/gl/texture_compressed.c
+index 2a17bf0..6ce3c25 100644
+--- a/src/gl/texture_compressed.c
++++ b/src/gl/texture_compressed.c
+@@ -248,6 +248,12 @@ void APIENTRY_GL4ES gl4es_glCompressedTexImage2D(GLenum target, GLint level, GLe
+             } else {
+                 pixels = uncompressDXTc(width, height, internalformat, imageSize, transparent0, &simpleAlpha, &complexAlpha, datab);
+             }
++            static int wo30_dxt_samples = 0;
++            if(level==0 && wo30_dxt_samples < 96) {
++                fprintf(stderr, "WO30 R1 dxt upload format=%u size=%dx%d transparent0=%d simple=%d complex=%d\n",
++                    (unsigned)internalformat, width, height, transparent0, simpleAlpha, complexAlpha);
++                ++wo30_dxt_samples;
++            }
+             if(srgb)
+                 pixel_srgb_inplace(pixels, width, height);
+             // automaticaly reduce the pixel size

@@ -241,6 +241,41 @@ class IosTouchControlTests(unittest.TestCase):
         self.assertIn("if (_diagnosticBudget <= 0)", adapter)
         self.assertNotIn("openmw_ios_log(\"touch_move\"", adapter)
 
+    def test_long_press_menu_arbitrates_without_leaking_pause(self):
+        adapter = ADAPTER.read_text(encoding="utf-8")
+        self.assertIn("constexpr NSTimeInterval MenuLongPressSeconds = 0.75", adapter)
+        self.assertIn('state=pending;pause_event=deferred', adapter)
+        self.assertIn("if (_pendingMenuTouchId == candidate && !_editing)", adapter)
+        self.assertIn("[self enterEditor]", adapter)
+        self.assertIn('state=short-tap;pause_event=dispatched', adapter)
+        self.assertNotRegex(adapter, r"_pendingMenuTouchId\s*=\s*touchId\(touch\);\s*\[self setAction:Action::Pause")
+
+    def test_editor_is_persistent_normalized_and_suppresses_game_input(self):
+        model = MODEL.read_text(encoding="utf-8")
+        adapter = ADAPTER.read_text(encoding="utf-8")
+        self.assertIn("ProfileVersion = 1", model)
+        self.assertIn("normalizedPoint", model)
+        self.assertIn("denormalizedPoint", model)
+        self.assertIn("NSUserDefaults.standardUserDefaults", adapter)
+        self.assertIn("OpenMWIOSTouchProfileV1", adapter)
+        self.assertIn("if (_editing)", adapter)
+        self.assertIn('state=entered;trigger=menu-long-press;input=suppressed', adapter)
+        self.assertIn("OPACITY -", adapter)
+        self.assertIn("OPACITY +", adapter)
+        self.assertIn("DONE", adapter)
+        self.assertIn("RESET?", adapter)
+        self.assertIn("UNDO", adapter)
+        self.assertIn("CANCEL", adapter)
+
+    def test_editor_idle_opacity_and_menu_safety_contract(self):
+        model = MODEL.read_text(encoding="utf-8")
+        adapter = ADAPTER.read_text(encoding="utf-8")
+        self.assertIn("float idleOpacity = 0.20f", model)
+        self.assertIn("action == Action::Pause ? 24.f : 18.f", model)
+        self.assertIn("_profile.idleOpacity + 0.42f", adapter)
+        self.assertIn("clamp(_profile.idleOpacity - 0.05f, 0.05f, 0.85f)", adapter)
+        self.assertIn("clamp(_profile.idleOpacity + 0.05f, 0.05f, 0.85f)", adapter)
+
     def test_openmw_patch_integrates_only_ios_touch_adapter(self):
         patch = PATCH.read_text(encoding="utf-8")
         self.assertIn("openmw_ios_touch_controls.mm", patch)
@@ -259,6 +294,18 @@ class IosTouchControlTests(unittest.TestCase):
 int main() {
     using namespace OpenMWIOS::Touch;
     auto layout = makeLayout(956.f, 440.f, {0.f, 62.f, 21.f, 62.f});
+    auto profile = profileFromLayout(layout);
+    profile.customized = true;
+    profile.buttons[0].center = {0.5f, 0.5f};
+    profile.buttons[0].radius = 0.1f;
+    auto ipad = makeLayout(1366.f, 1024.f, {24.f, 0.f, 20.f, 0.f});
+    applyProfile(ipad, profile);
+    assert(std::abs(normalizedPoint(ipad, ipad.buttons[0].bounds.center).x - 0.5f) < 0.001f);
+    assert(std::abs(normalizedPoint(ipad, ipad.buttons[0].bounds.center).y - 0.5f) < 0.001f);
+    assert(ipad.buttons[0].bounds.radius >= 18.f);
+    auto& menu = ipad.buttons[static_cast<std::size_t>(Action::Pause)].bounds;
+    assert(menu.radius >= 24.f);
+    assert(menu.center.x + menu.radius <= ipad.width - ipad.safeArea.right + 0.001f);
     Ownership ownership;
     Point movementPoint{layout.safeArea.left + 20.f, 220.f};
     Point lookPoint{layout.width * 0.55f, 220.f};
