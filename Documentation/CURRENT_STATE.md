@@ -1,15 +1,15 @@
 # OpenMWiOS — Current State
 
 - Project: OpenMWiOS
-- Active branch: `codex/wo29-ios-crash-isolation` (canonical ControlPlane); stopped WO32 execution branch: `codex/wo32-targeted-renderer-boundary`
+- Active branch: `codex/wo29-ios-crash-isolation` (canonical ControlPlane); active WO32 execution branch: `codex/wo32-targeted-renderer-boundary`
 - Current engineering baseline commit: `195f3a4bbcfd17ecd46546f3e28d3ee8558bed27`
 - Control-plane issued baseline commit: `bbd7ce4fd5c82520c630f49fb768e0b1a284d940`
-- Active work order: none
-- Ready work order: [WO-032 Amendment 2](../WorkOrders/WO-032.md)
+- Active work order: [WO-032 Amendment 2](../WorkOrders/WO-032.md)
+- Ready work order: none
 - Last completed work order: [WO-031](../WorkOrders/WO-031.md) — **ACCEPTED / PARTIAL ACCEPT; diagnostic localization only**
 - Last reviewed work order: [WO-032](../WorkOrders/WO-032.md) — **PARTIAL ACCEPT / AMENDMENT REQUIRED; R1 smoke cause proven, correction unbuilt**
 - Current objective: compile and device-qualify the unchanged R1 smoke/particle blend-state correction through one timeout-bounded replacement Fast build; do not infer or begin foliage/R2 correction
-- Engineering execution status: **STOPPED / READY; WO-032 Amendment 2 is issued but has no start directive**
+- Engineering execution status: **ACTIVE; WO-032 Amendment 2 start directive was relayed to the existing worker on 2026-08-23**
 - Current accepted correction: WO29's non-ARC icon ownership fix plus WO30's practical on-device touch editor and reduced-opacity controls
 - Last updated: 2026-08-23
 
@@ -86,7 +86,7 @@ Correction candidate `1625713b949ddb0cde5471feead75f29fedadfaa` routes only the 
 
 Foliage is a distinct unresolved path: the captured `tx_bc_moss.dds` draw is already opaque before raster output. R2 is also unresolved: only one stable maximum-distance generation exists, so the white distance region and blue horizon boundary remain unlocalized. Neither may be inferred fixed by the smoke correction.
 
-WO32 Amendment 2 is READY, not ACTIVE. It authorizes only a Fast job timeout change from 120 to 180 minutes, one replacement build containing the unchanged R1 correction, and exact-artifact smoke/particle device qualification. It prohibits any foliage, R2, touch, cache-design, dependency, or further renderer-source change.
+WO32 Amendment 2 is ACTIVE. It authorizes only a Fast job timeout change from 120 to 180 minutes, one replacement build containing the unchanged R1 correction, and exact-artifact smoke/particle device qualification. It prohibits any foliage, R2, touch, cache-design, dependency, or further renderer-source change.
 
 Secondary/deferred boundaries: menu/options touch scrolling; WO30 Reset-opacity and all-control-affordance gaps; reduced render scale `0.58`; the transient red effect; and warning-flood cleanup except where narrowly necessary to collect bounded renderer evidence. WO32 prohibits touch-control changes.
 
@@ -147,4 +147,4 @@ The accepted physical test did **not** record the post-install container UUID be
 4. Inspect current Git state and active/recent CI before changing anything.
 5. Use the Google Docs ledger only when deeper historical context is required.
 
-WO32 Amendment 2 is READY and the existing worker is stopped. The exact next action is to deliver one explicit Amendment 2 start directive to the existing worker, then transition READY → ACTIVE without creating a duplicate worker or CI run.
+WO32 Amendment 2 is ACTIVE with the existing worker. The exact next action is to allow that execution to reach its natural completion, blocker, CI-wait, or device-evidence boundary. Do not resend the start directive, create another worker, or duplicate the authorized build.
