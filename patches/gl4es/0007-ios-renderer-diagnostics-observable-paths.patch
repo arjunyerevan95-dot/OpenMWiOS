@@ -20,12 +20,12 @@ diff --git a/src/gl/gl_lookup.c b/src/gl/gl_lookup.c
  #include "samplers.h"
  #include "matrix.h"
 +#include "ios_renderer_diag.h"
- 
+
  #include "../glx/hardext.h"
- 
+
 @@ -35,6 +36,7 @@ void APIENTRY_GL4ES gl4es_Stub(void *x) {}
  #endif
- 
+
  void* APIENTRY_GL4ES gl4es_GetProcAddress(const char *name) {
 +    wo31_diag_handshake("gl4es_GetProcAddress");
      DBG(printf("glGetProcAddress(\"%s\")", name);)
@@ -37,7 +37,7 @@ diff --git a/src/gl/ios_renderer_diag.c b/src/gl/ios_renderer_diag.c
 @@ -3,12 +3,19 @@
  #include <stdio.h>
  #include <string.h>
- 
+
 +#if defined(__APPLE__) || defined(WO31_DIAGNOSTIC_TEST_BRIDGE)
  #if defined(__APPLE__)
 -extern int openmw_ios_renderer_diag_enabled(void) __attribute__((weak_import));
@@ -56,15 +56,15 @@ diff --git a/src/gl/ios_renderer_diag.c b/src/gl/ios_renderer_diag.c
 +extern uint64_t openmw_ios_renderer_diag_hash(const void*, size_t) WO31_WEAK_IMPORT;
 +#undef WO31_WEAK_IMPORT
  #endif
- 
+
  typedef struct
 @@ -20,18 +27,37 @@ typedef struct
- 
+
  static wo31_texture_entry wo31_textures[192];
  static unsigned int wo31_texture_count;
 +static unsigned int wo31_fog_received_count;
 +static int wo31_handshake_written;
- 
+
 -static int available(void)
 +static int available_core(void)
  {
@@ -77,7 +77,7 @@ diff --git a/src/gl/ios_renderer_diag.c b/src/gl/ios_renderer_diag.c
      return 0;
  #endif
  }
- 
+
 +static int available_texture(void)
 +{
 +#if defined(__APPLE__) || defined(WO31_DIAGNOSTIC_TEST_BRIDGE)
@@ -115,7 +115,7 @@ diff --git a/src/gl/ios_renderer_diag.c b/src/gl/ios_renderer_diag.c
          return;
      unsigned int slot = wo31_texture_count < 192 ? wo31_texture_count++ : 191;
 @@ -67,6 +95,14 @@ void wo31_diag_texture_upload(unsigned int texture, const void* data, size_t siz
- 
+
  int wo31_diag_texture_category_for_name(unsigned int texture)
  {
 +#if defined(__APPLE__) || defined(WO31_DIAGNOSTIC_TEST_BRIDGE)
@@ -139,7 +139,7 @@ diff --git a/src/gl/ios_renderer_diag.c b/src/gl/ios_renderer_diag.c
      char correlation[48];
      char detail[448];
 @@ -91,8 +127,9 @@ void wo31_diag_draw(unsigned int program, unsigned int texture, int category, in
- 
+
  void wo31_diag_fog_received(unsigned int pname, const float* params)
  {
 -    if (!available() || !params)
@@ -150,7 +150,7 @@ diff --git a/src/gl/ios_renderer_diag.c b/src/gl/ios_renderer_diag.c
      snprintf(detail, sizeof(detail), "pname=%u;value=%.6g,%.6g,%.6g,%.6g", pname, params[0],
          pname == 0x0B66 ? params[1] : 0.f, pname == 0x0B66 ? params[2] : 0.f,
 @@ -102,14 +139,14 @@ void wo31_diag_fog_received(unsigned int pname, const float* params)
- 
+
  void wo31_diag_fog_applied(unsigned int program, int has_fog, float start, float end, const float* color)
  {
 -    if (!available() || !color || !has_fog)
@@ -173,7 +173,7 @@ diff --git a/src/gl/ios_renderer_diag.h b/src/gl/ios_renderer_diag.h
 @@ -4,6 +4,7 @@
  #include <stddef.h>
  #include <stdint.h>
- 
+
 +void wo31_diag_handshake(const char* entry);
  void wo31_diag_texture_upload(unsigned int texture, const void* data, size_t size, unsigned int format,
      int width, int height, int alpha, int simple_alpha, int complex_alpha);
