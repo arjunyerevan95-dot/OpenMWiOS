@@ -43,7 +43,11 @@ def apply_file_patch(source: str, patch: str, path: str) -> str:
         output.extend(original[cursor:old_start])
         cursor = old_start
         for line in lines[1:]:
-            if line.startswith(" "):
+            if line == "":
+                assert original[cursor] == ""
+                output.append(original[cursor])
+                cursor += 1
+            elif line.startswith(" "):
                 assert original[cursor] == line[1:]
                 output.append(original[cursor])
                 cursor += 1
@@ -65,6 +69,19 @@ class WorkOrder32TargetedRendererDiagnosticTests(unittest.TestCase):
         cls.gl4es_observability = GL4ES_OBSERVABILITY.read_text(encoding="utf-8")
         cls.gl4es_targeted = GL4ES_TARGETED.read_text(encoding="utf-8")
         cls.openmw_targeted = OPENMW_TARGETED.read_text(encoding="utf-8")
+
+    def test_apply_file_patch_preserves_empty_blank_context(self) -> None:
+        source = "alpha\n\nomega\n"
+        patch = """diff --git a/fixture.txt b/fixture.txt
+--- a/fixture.txt
++++ b/fixture.txt
+@@ -1,3 +1,3 @@
+ alpha
+
+-omega
++beta
+"""
+        self.assertEqual(apply_file_patch(source, patch, "fixture.txt"), "alpha\n\nbeta\n")
 
     def test_bridge_classifies_only_named_targets_and_arms_miss_summaries(self) -> None:
         for token in ("moss", "fern", "leaf", "flora", "tree", "smoke"):
