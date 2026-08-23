@@ -67,6 +67,8 @@ Production compile/link, package validation, IPA upload, and device testing were
 - Renderer correction: none.
 - Device candidate/evidence: none.
 
+Pushing the required evidence-only completion commit caused PR run `32625672214` to start. It was cancelled immediately and completed with conclusion `cancelled` before any additional build could proceed. It produced no artifact and is not counted as a diagnostic build.
+
 The narrow repair would be to teach both test helpers that an empty embedded-diff line represents blank context (advance and preserve one blank source line), then rerun the compiler-backed fixtures. WO-032 does not authorize another diagnostic run, so that repair is not applied or built here.
 
 ## Renderer conclusion

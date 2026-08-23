@@ -50,6 +50,7 @@
 - Diagnostic build budget: 1 of 1 consumed.
 - Full Qualification: not run.
 - Stop condition: **G — build budget exhausted**.
+- Evidence-only push run `32625672214` was cancelled immediately before build work; conclusion `cancelled`. It is not a diagnostic build and produced no artifact.
 
 ## Pending device evidence
 
