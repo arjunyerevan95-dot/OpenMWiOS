@@ -15,6 +15,7 @@ GL4ES_BASE = ROOT / "patches" / "gl4es" / "0006-ios-file-backed-renderer-diagnos
 GL4ES_OBSERVABILITY = ROOT / "patches" / "gl4es" / "0007-ios-renderer-diagnostics-observable-paths.patch"
 GL4ES_TARGETED = ROOT / "patches" / "gl4es" / "0008-ios-renderer-diagnostics-targeted-boundaries.patch"
 OPENMW_TARGETED = ROOT / "patches" / "openmw" / "0015-ios-renderer-diagnostics-targeted-boundaries.patch"
+OSG_ROUTE = ROOT / "ios" / "patches" / "osg-route-gl-entry-points-through-gl4es.patch"
 FIXTURE = ROOT / "validation" / "fixtures" / "wo32_gl4es_target_fixture.c"
 
 
@@ -69,6 +70,7 @@ class WorkOrder32TargetedRendererDiagnosticTests(unittest.TestCase):
         cls.gl4es_observability = GL4ES_OBSERVABILITY.read_text(encoding="utf-8")
         cls.gl4es_targeted = GL4ES_TARGETED.read_text(encoding="utf-8")
         cls.openmw_targeted = OPENMW_TARGETED.read_text(encoding="utf-8")
+        cls.osg_route = OSG_ROUTE.read_text(encoding="utf-8")
 
     def test_apply_file_patch_preserves_empty_blank_context(self) -> None:
         source = "alpha\n\nomega\n"
@@ -133,6 +135,17 @@ class WorkOrder32TargetedRendererDiagnosticTests(unittest.TestCase):
             "gl4es_glAlphaFunc(", "gles_gl", "glBindFramebuffer(", "glClear(", "glViewport(",
         ):
             self.assertNotIn(token, additions)
+
+    def test_ios_osg_core_blend_state_uses_the_same_gl4es_owner_as_draws(self) -> None:
+        self.assertIn("diff --git a/include/osg/State b/include/osg/State", self.osg_route)
+        self.assertIn("extern \"C\" void gl4es_glEnable(GLenum cap);", self.osg_route)
+        self.assertIn("extern \"C\" void gl4es_glDisable(GLenum cap);", self.osg_route)
+        self.assertEqual(2, self.osg_route.count("if (enabled) gl4es_glEnable(mode);"))
+        self.assertEqual(2, self.osg_route.count("else gl4es_glDisable(mode);"))
+        self.assertIn("extern \"C\" void gl4es_glBlendFunc(GLenum sfactor, GLenum dfactor);", self.osg_route)
+        self.assertIn("gl4es_glBlendFunc( _source_factor, _destination_factor );", self.osg_route)
+        self.assertIn("+#else\n                 if (enabled) glEnable(mode);", self.osg_route)
+        self.assertIn("+#else\n     glBlendFunc( _source_factor, _destination_factor );", self.osg_route)
 
     def test_gl4es_fixture_proves_target_and_two_generation_gates(self) -> None:
         compiler = os.environ.get("CC") or shutil.which("cc") or shutil.which("clang") or shutil.which("gcc")

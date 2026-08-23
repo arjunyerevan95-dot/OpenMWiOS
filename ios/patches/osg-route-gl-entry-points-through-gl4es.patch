@@ -24,6 +24,73 @@ index 5ecf63a..bffbc7f 100644
              std::string temp( "_" );
              temp += funcName;    // Mac OS X prepends an underscore on function names
              if ( NSIsSymbolNameDefined( temp.c_str() ) )
+diff --git a/include/osg/State b/include/osg/State
+--- a/include/osg/State
++++ b/include/osg/State
+@@ -35,6 +35,11 @@
+ #include <set>
+ #include <string>
+
++#if defined(__APPLE__) && defined(OPENMW_GL4ES_MANUAL_INIT)
++extern "C" void gl4es_glEnable(GLenum cap);
++extern "C" void gl4es_glDisable(GLenum cap);
++#endif
++
+ #ifndef GL_TEXTURE0
+ #define GL_TEXTURE0 0x84C0
+ #endif
+@@ -1146,8 +1151,13 @@ class OSG_EXPORT State : public Referenced
+             {
+                 ms.last_applied_value = enabled;
+
++#if defined(__APPLE__) && defined(OPENMW_GL4ES_MANUAL_INIT)
++                if (enabled) gl4es_glEnable(mode);
++                else gl4es_glDisable(mode);
++#else
+                 if (enabled) glEnable(mode);
+                 else glDisable(mode);
++#endif
+
+                 if (_checkGLErrors==ONCE_PER_ATTRIBUTE) checkGLErrors(mode);
+
+@@ -1165,8 +1175,13 @@ class OSG_EXPORT State : public Referenced
+                 {
+                     ms.last_applied_value = enabled;
+
++#if defined(__APPLE__) && defined(OPENMW_GL4ES_MANUAL_INIT)
++                    if (enabled) gl4es_glEnable(mode);
++                    else gl4es_glDisable(mode);
++#else
+                     if (enabled) glEnable(mode);
+                     else glDisable(mode);
++#endif
+
+                     if (_checkGLErrors==ONCE_PER_ATTRIBUTE) checkGLErrors(mode);
+
+diff --git a/src/osg/BlendFunc.cpp b/src/osg/BlendFunc.cpp
+--- a/src/osg/BlendFunc.cpp
++++ b/src/osg/BlendFunc.cpp
+@@ -17,6 +17,10 @@
+ #include <osg/State>
+ #include <osg/Notify>
+
++#if defined(__APPLE__) && defined(OPENMW_GL4ES_MANUAL_INIT)
++extern "C" void gl4es_glBlendFunc(GLenum sfactor, GLenum dfactor);
++#endif
++
+ using namespace osg;
+
+ BlendFunc::BlendFunc():
+@@ -62,5 +66,9 @@ void BlendFunc::apply(State& state) const
+         }
+     }
+
++#if defined(__APPLE__) && defined(OPENMW_GL4ES_MANUAL_INIT)
++    gl4es_glBlendFunc( _source_factor, _destination_factor );
++#else
+     glBlendFunc( _source_factor, _destination_factor );
++#endif
+ }
 diff --git a/src/osg/Texture2D.cpp b/src/osg/Texture2D.cpp
 --- a/src/osg/Texture2D.cpp
 +++ b/src/osg/Texture2D.cpp
