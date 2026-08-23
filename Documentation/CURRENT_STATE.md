@@ -5,11 +5,11 @@
 - Current engineering baseline commit: `195f3a4bbcfd17ecd46546f3e28d3ee8558bed27`
 - Control-plane issued baseline commit: `bbd7ce4fd5c82520c630f49fb768e0b1a284d940`
 - Active work order: none
-- Ready work order: [WO-032 Amendment 1](../WorkOrders/WO-032.md)
+- Ready work order: [WO-032 Amendment 2](../WorkOrders/WO-032.md)
 - Last completed work order: [WO-031](../WorkOrders/WO-031.md) — **ACCEPTED / PARTIAL ACCEPT; diagnostic localization only**
-- Last reviewed work order: [WO-032](../WorkOrders/WO-032.md) — **AMENDMENT REQUIRED; pre-build test-parser failure, no IPA**
-- Current objective: repair two test-only blank-context parsers, produce the targeted diagnostic IPA, then capture foliage/chimney-smoke and post-receipt distance/fog state before any correction
-- Engineering execution status: **STOPPED / READY; WO-032 Amendment 1 is issued but has no start directive**
+- Last reviewed work order: [WO-032](../WorkOrders/WO-032.md) — **PARTIAL ACCEPT / AMENDMENT REQUIRED; R1 smoke cause proven, correction unbuilt**
+- Current objective: compile and device-qualify the unchanged R1 smoke/particle blend-state correction through one timeout-bounded replacement Fast build; do not infer or begin foliage/R2 correction
+- Engineering execution status: **STOPPED / READY; WO-032 Amendment 2 is issued but has no start directive**
 - Current accepted correction: WO29's non-ARC icon ownership fix plus WO30's practical on-device touch editor and reduced-opacity controls
 - Last updated: 2026-08-23
 
@@ -31,6 +31,7 @@ The highest qualified runtime gate combines WO26/WO27, the accepted WO29 crash c
 - The WO30 final candidate uses nominal `0.20` idle opacity and the device-observed plus/minus controls visibly change opacity.
 - The user considers the touch result practically satisfactory apart from menu/options scrolling.
 - WO30 made no renderer correction; the exterior defects remain visible and causally unresolved.
+- WO32's targeted diagnostic artifact proves that OSG direct core blend-state calls bypass GL4ES tracking for the representative chimney-smoke draw. A narrow correction exists but has not compiled or produced a device artifact, so the accepted runtime baseline is unchanged.
 
 This remains a qualified runtime and touch baseline, not complete mobile-control qualification. WO30 did not independently verify force-quit/relaunch persistence, a post-test crash inventory, or the full action-control matrix. Reset currently preserves opacity instead of restoring nominal `0.20`, and only the selected fixed control shows the explicit resize ring. These limits are recorded without scheduling touch cleanup inside the renderer order.
 
@@ -79,7 +80,13 @@ The user did not deliberately cast a fire spell during the WO31 device run. Visi
 
 The original WO32 run prepared target-gated late-session sampling but failed during regression validation before compilation. All ordered production patches applied; two test-only patch parsers mishandled whitespace-cleaned blank context lines. No IPA, device evidence, renderer correction, or new accepted runtime state resulted. The redundant evidence-triggered run was cancelled immediately without an artifact.
 
-WO32 Amendment 1 is READY, not ACTIVE. It authorizes only the two test-helper blank-context repairs, compiler-independent regressions, and one replacement Fast diagnostic run. If that run produces the intended IPA, the original foliage/chimney-smoke and post-exterior-receipt R2 device phases resume unchanged.
+WO32 Amendment 1 repaired the two test-helper parsers and produced successful diagnostic run `32627872506`, artifact `OpenMW-iOS-fast-47`. The matching 317-record device JSONL captured foliage, chimney smoke, and an opaque control. It proves a split state-owner boundary for smoke/particles: pinned OSG calls native core `glEnable`/`glDisable`/`glBlendFunc` directly while GL4ES owns the converted program and draw, leaving the representative smoke draw with `blend=0` despite correct alpha factors, depth-write state, and shader alpha behavior.
+
+Correction candidate `1625713b949ddb0cde5471feead75f29fedadfaa` routes only the relevant Apple manual-init OSG mode/blend calls through GL4ES. Its Fast run `32634038454` passed bootstrap and patch application but missed both dependency caches and was cancelled at the two-hour limit during dependency preparation. OpenMW compile/link, package, upload, and device validation were skipped; no artifact exists. The correction is not accepted and the runtime baseline remains `195f3a4bbcfd17ecd46546f3e28d3ee8558bed27`.
+
+Foliage is a distinct unresolved path: the captured `tx_bc_moss.dds` draw is already opaque before raster output. R2 is also unresolved: only one stable maximum-distance generation exists, so the white distance region and blue horizon boundary remain unlocalized. Neither may be inferred fixed by the smoke correction.
+
+WO32 Amendment 2 is READY, not ACTIVE. It authorizes only a Fast job timeout change from 120 to 180 minutes, one replacement build containing the unchanged R1 correction, and exact-artifact smoke/particle device qualification. It prohibits any foliage, R2, touch, cache-design, dependency, or further renderer-source change.
 
 Secondary/deferred boundaries: menu/options touch scrolling; WO30 Reset-opacity and all-control-affordance gaps; reduced render scale `0.58`; the transient red effect; and warning-flood cleanup except where narrowly necessary to collect bounded renderer evidence. WO32 prohibits touch-control changes.
 
@@ -93,8 +100,12 @@ The accepted physical test did **not** record the post-install container UUID be
 
 ## Latest important evidence
 
-- [READY WO32 Amendment 1](../WorkOrders/WO-032.md)
-- [WO32 blocked execution report](../Evidence/WO-032/report.md)
+- [READY WO32 Amendment 2](../WorkOrders/WO-032.md)
+- [WO32 correction-timeout orchestrator review](../Evidence/WO-032/orchestrator-correction-timeout-review.md)
+- [WO32 R1 partial-acceptance decision](../Decisions/DEC-011.md)
+- [WO32 final worker report](../Evidence/WO-032/report.md)
+- [WO32 replacement-diagnostic device capture](../Evidence/WO-032/device-capture-analysis.md)
+- [WO32 evidence manifest](../Evidence/WO-032/manifest.md)
 - [WO32 pre-build failure orchestrator review](../Evidence/WO-032/orchestrator-prebuild-failure-review.md)
 - [Accepted partial WO31](../WorkOrders/WO-031.md)
 - [WO31 execution report](../Evidence/WO-031/report.md)
@@ -131,9 +142,9 @@ The accepted physical test did **not** record the post-install container UUID be
 ## Future orchestrator/worker recovery
 
 1. Read `Documentation/CURRENT_STATE.md`.
-2. Read accepted `WorkOrders/WO-031.md`, READY `WorkOrders/WO-032.md` Amendment 1, DEC-010, and only their directly referenced evidence.
+2. Read accepted `WorkOrders/WO-031.md`, READY `WorkOrders/WO-032.md` Amendment 2, DEC-010, DEC-011, and only their directly referenced evidence.
 3. Read only the `Decisions/` and `Evidence/` records referenced by that work order.
 4. Inspect current Git state and active/recent CI before changing anything.
 5. Use the Google Docs ledger only when deeper historical context is required.
 
-WO32 Amendment 1 is READY and the existing worker is stopped. The exact next action is to deliver one explicit Amendment 1 start directive to the existing worker, then transition READY → ACTIVE without creating a duplicate worker or CI run.
+WO32 Amendment 2 is READY and the existing worker is stopped. The exact next action is to deliver one explicit Amendment 2 start directive to the existing worker, then transition READY → ACTIVE without creating a duplicate worker or CI run.
