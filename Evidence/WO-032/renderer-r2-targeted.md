@@ -26,4 +26,13 @@ The program record cannot be emitted until all four GL4ES fog components have be
 
 ## Result
 
-Not reached. Fast run `32623652029` stopped in cheap Python validation before production compilation. The ordered GL4ES/OpenMW patch-stack checks passed, but no IPA or device JSONL exists. R2 remains unlocalized; no renderer correction was made.
+Partially reached by replacement diagnostic Fast run `32627872506`; see [device-capture-analysis.md](device-capture-analysis.md).
+
+- One effective fog generation was captured at selected/far 7168.
+- OpenMW intent, OSG application, GL4ES receipt, and eight of nine sampled live programs agree on fog start/end/color/scale.
+- Program 81 has no builtin fog locations, but this capture does not establish its render purpose.
+- The bounded projection records following 7168 are adjacent slider-transition values from the same max-distance test, not a second deliberately selected and stable view-distance generation.
+
+The mandatory two-distance comparison is absent. R2 therefore remains insufficient for a correction; no distance, fog, content, cull, sky, clear, or depth behavior was changed.
+
+The user explicitly confirmed that all supplied distance observations used maximum view distance. The failed final correction build concerned R1 blend-state ownership only and does not change this R2 result.
