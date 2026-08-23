@@ -1,0 +1,190 @@
+diff --git a/apps/openmw/mwrender/renderingmanager.cpp b/apps/openmw/mwrender/renderingmanager.cpp
+index 6b8ac8b01..0246a95f6 100644
+--- a/apps/openmw/mwrender/renderingmanager.cpp
++++ b/apps/openmw/mwrender/renderingmanager.cpp
+@@ -543,6 +543,15 @@ namespace MWRender
+         {
+             enableTerrain(true, store->getCell()->getWorldSpace());
+             mTerrain->loadCell(store->getCell()->getGridX(), store->getCell()->getGridY());
++#ifdef OPENMW_IOS
++            if (openmw_ios_renderer_diag_enabled())
++            {
++                char detail[160];
++                std::snprintf(detail, sizeof(detail), "action=load;cell=%d,%d",
++                    store->getCell()->getGridX(), store->getCell()->getGridY());
++                openmw_ios_renderer_diag_record("r2.content", "openmw", "exterior-cell", detail);
++            }
++#endif
+         }
+     }
+     void RenderingManager::removeCell(const MWWorld::CellStore* store)
+@@ -555,6 +564,15 @@ namespace MWRender
+         {
+             getWorldspaceChunkMgr(store->getCell()->getWorldSpace())
+                 .mTerrain->unloadCell(store->getCell()->getGridX(), store->getCell()->getGridY());
++#ifdef OPENMW_IOS
++            if (openmw_ios_renderer_diag_enabled())
++            {
++                char detail[160];
++                std::snprintf(detail, sizeof(detail), "action=unload;cell=%d,%d",
++                    store->getCell()->getGridX(), store->getCell()->getGridY());
++                openmw_ios_renderer_diag_record("r2.content", "openmw", "exterior-cell", detail);
++            }
++#endif
+         }
+
+         mWater->removeCell(store);
+@@ -693,6 +711,10 @@ namespace MWRender
+ #ifdef OPENMW_IOS
+         if (openmw_ios_renderer_diag_enabled())
+         {
++            const float diagnosticFogColor[4]
++                = { fogColor.r(), fogColor.g(), fogColor.b(), fogColor.a() };
++            openmw_ios_renderer_diag_arm_exterior_fog(
++                fogStart, fogEnd, diagnosticFogColor, mViewDistance);
+             char detail[320];
+             std::snprintf(detail, sizeof(detail),
+                 "start=%.6g;end=%.6g;far=%.6g;color=%.6g,%.6g,%.6g,%.6g;underwater=%d",
+@@ -1183,7 +1205,22 @@ namespace MWRender
+         // Since our fog is not radial yet, we should take FOV in account, otherwise terrain near viewing distance may
+         // disappear. Limit FOV here just for sure, otherwise viewing distance can be too high.
+         float distanceMult = std::cos(osg::DegreesToRadians(std::min(fov, 140.f)) / 2.f);
+-        mTerrain->setViewDistance(mViewDistance * (distanceMult ? 1.f / distanceMult : 1.f));
++        const float terrainViewDistance = mViewDistance * (distanceMult ? 1.f / distanceMult : 1.f);
++        mTerrain->setViewDistance(terrainViewDistance);
++#ifdef OPENMW_IOS
++        if (openmw_ios_renderer_diag_enabled())
++        {
++            const osg::Vec4f clearColor = mViewer->getCamera()->getClearColor();
++            char detail[512];
++            std::snprintf(detail, sizeof(detail),
++                "selected=%.6g;camera_near=%.6g;camera_far=%.6g;terrain_cull=%.6g;fov=%.6g;aspect=%.9g;resolution=%d,%d;reversed_z=%d;clear_mask=%u;clear_color=%.6g,%.6g,%.6g,%.6g",
++                mViewDistance, mNearClip, mViewDistance, terrainViewDistance, fov, aspect, width, height,
++                SceneUtil::AutoDepth::isReversed() ? 1 : 0,
++                static_cast<unsigned>(mViewer->getCamera()->getClearMask()), clearColor.r(), clearColor.g(),
++                clearColor.b(), clearColor.a());
++            openmw_ios_renderer_diag_record("r2.projection", "openmw", "view-distance-change", detail);
++        }
++#endif
+
+         if (mPostProcessor)
+         {
+@@ -1225,6 +1262,25 @@ namespace MWRender
+     void RenderingManager::setFogColor(const osg::Vec4f& color)
+     {
+         mViewer->getCamera()->setClearColor(color);
++#ifdef OPENMW_IOS
++        if (openmw_ios_renderer_diag_enabled())
++        {
++            static bool initialized = false;
++            static osg::Vec4f previous;
++            if (!initialized || previous != color)
++            {
++                initialized = true;
++                previous = color;
++                char detail[256];
++                std::snprintf(detail, sizeof(detail),
++                    "clear_color=%.6g,%.6g,%.6g,%.6g;clear_mask=%u;clear_depth=%.6g;sky_blending=%d",
++                    color.r(), color.g(), color.b(), color.a(),
++                    static_cast<unsigned>(mViewer->getCamera()->getClearMask()),
++                    mViewer->getCamera()->getClearDepth(), mSkyBlending ? 1 : 0);
++                openmw_ios_renderer_diag_record("r2.clear", "openmw", "scene-camera", detail);
++            }
++        }
++#endif
+
+         mStateUpdater->setFogColor(color);
+     }
+@@ -1571,6 +1627,15 @@ namespace MWRender
+     void RenderingManager::setActiveGrid(const osg::Vec4i& grid)
+     {
+         mTerrain->setActiveGrid(grid);
++#ifdef OPENMW_IOS
++        if (openmw_ios_renderer_diag_enabled())
++        {
++            char detail[192];
++            std::snprintf(detail, sizeof(detail), "active_grid=%d,%d,%d,%d;object_paging=%d",
++                grid.x(), grid.y(), grid.z(), grid.w(), mObjectPaging ? 1 : 0);
++            openmw_ios_renderer_diag_record("r2.content", "openmw", "active-grid", detail);
++        }
++#endif
+     }
+     bool RenderingManager::pagingEnableObject(int type, const MWWorld::ConstPtr& ptr, bool enabled)
+     {
+diff --git a/components/shader/shadervisitor.cpp b/components/shader/shadervisitor.cpp
+index b92b24dfa..9d0a3895c 100644
+--- a/components/shader/shadervisitor.cpp
++++ b/components/shader/shadervisitor.cpp
+@@ -640,32 +640,6 @@ namespace Shader
+
+         defineMap["alphaToCoverage"] = "0";
+         defineMap["adjustCoverage"] = "0";
+-#ifdef OPENMW_IOS
+-        if (openmw_ios_renderer_diag_enabled()
+-            && (reqs.mAlphaFunc != osg::AlphaFunc::ALWAYS || reqs.mAlphaBlend))
+-        {
+-            const osg::StateAttribute* textureAttribute
+-                = writableStateSet->getTextureAttribute(0, osg::StateAttribute::TEXTURE);
+-            const osg::Texture* texture = textureAttribute ? textureAttribute->asTexture() : nullptr;
+-            const osg::Image* image = texture ? texture->getImage(0) : nullptr;
+-            char correlation[32] = "unbound";
+-            if (image && image->data())
+-            {
+-                const std::uint64_t hash
+-                    = openmw_ios_renderer_diag_hash(image->data(), image->getImageSizeInBytes());
+-                std::snprintf(correlation, sizeof(correlation), "%016llx", (unsigned long long)hash);
+-            }
+-            char detail[512];
+-            std::snprintf(detail, sizeof(detail),
+-                "identity=%s;node=%s;alpha_func=%d;alpha_ref=%.6g;alpha_blend=%d;additive=%d;"
+-                "soft_particles=%d;textures=%zu;render_bin=%d;render_hint=%d",
+-                image ? image->getFileName().c_str() : "", node.getName().c_str(),
+-                static_cast<int>(reqs.mAlphaFunc), reqs.mAlphaRef, reqs.mAlphaBlend ? 1 : 0,
+-                reqs.mAdditiveBlending ? 1 : 0, reqs.mSoftParticles ? 1 : 0, reqs.mTextures.size(),
+-                writableStateSet->getBinNumber(), static_cast<int>(writableStateSet->getRenderingHint()));
+-            openmw_ios_renderer_diag_record("r1.state", "openmw", correlation, detail);
+-        }
+-#endif
+         if (reqs.mAlphaFunc != osg::AlphaFunc::ALWAYS)
+         {
+             writableStateSet->addUniform(new osg::Uniform("alphaRef", reqs.mAlphaRef));
+@@ -753,6 +727,39 @@ namespace Shader
+
+         defineMap["softParticles"] = reqs.mSoftParticles ? "1" : "0";
+
++#ifdef OPENMW_IOS
++        if (openmw_ios_renderer_diag_enabled())
++        {
++            const osg::StateAttribute* textureAttribute
++                = writableStateSet->getTextureAttribute(0, osg::StateAttribute::TEXTURE);
++            const osg::Texture* texture = textureAttribute ? textureAttribute->asTexture() : nullptr;
++            const osg::Image* image = texture ? texture->getImage(0) : nullptr;
++            std::uint64_t hash = 0;
++            int target = OPENMW_IOS_RENDERER_TARGET_NONE;
++            char correlation[32] = "unbound";
++            if (image && image->data())
++            {
++                hash = openmw_ios_renderer_diag_hash(image->data(), image->getImageSizeInBytes());
++                target = openmw_ios_renderer_diag_target_for_hash(hash);
++                std::snprintf(correlation, sizeof(correlation), "%016llx", (unsigned long long)hash);
++            }
++            if (target != OPENMW_IOS_RENDERER_TARGET_NONE)
++            {
++                char detail[640];
++                std::snprintf(detail, sizeof(detail),
++                    "target=%d;identity=%s;node=%s;alpha_func=%d;alpha_ref=%.6g;alpha_blend=%d;additive=%d;"
++                    "soft_particles=%d;textures=%zu;render_bin=%d;render_hint=%d;alpha_to_coverage=%s;"
++                    "adjust_coverage=%s",
++                    target, image ? image->getFileName().c_str() : "", node.getName().c_str(),
++                    static_cast<int>(reqs.mAlphaFunc), reqs.mAlphaRef, reqs.mAlphaBlend ? 1 : 0,
++                    reqs.mAdditiveBlending ? 1 : 0, reqs.mSoftParticles ? 1 : 0, reqs.mTextures.size(),
++                    writableStateSet->getBinNumber(), static_cast<int>(writableStateSet->getRenderingHint()),
++                    defineMap["alphaToCoverage"].c_str(), defineMap["adjustCoverage"].c_str());
++                openmw_ios_renderer_diag_record("r1.state.targeted", "openmw", correlation, detail);
++            }
++        }
++#endif
++
+         Stereo::shaderStereoDefines(defineMap);
+
+         std::string shaderPrefix;

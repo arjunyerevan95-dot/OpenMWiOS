@@ -1,0 +1,249 @@
+diff --git a/src/gl/drawing.c b/src/gl/drawing.c
+index c3b7436..0a12ebb 100644
+--- a/src/gl/drawing.c
++++ b/src/gl/drawing.c
+@@ -423,25 +423,41 @@ if(count>500000) return;
+                 ToBuffer(glstate->vao->first, glstate->vao->count);
+         }
+
++        program_t* wo31_program = glstate->glsl ? glstate->glsl->glprogram : NULL;
+         for (int wo31_unit = 0; wo31_unit < hardext.maxtex; ++wo31_unit)
+         {
+             gltexture_t* wo31_texture = glstate->texture.bound[wo31_unit][ENABLED_TEX2D];
+             const int wo31_category
+                 = wo31_texture ? wo31_diag_texture_category_for_name(wo31_texture->texture) : 0;
+-            if (wo31_category)
++            const int wo32_target
++                = wo31_texture ? wo32_diag_texture_target_for_name(wo31_texture->texture) : 0;
++            if (wo32_target)
+             {
+-                wo31_diag_draw(glstate->glsl ? glstate->glsl->program : 0, wo31_texture->texture, wo31_category,
++                const char* wo32_fragment_source
++                    = wo31_program && wo31_program->last_frag ? wo31_program->last_frag->source : NULL;
++                wo31_diag_draw(wo31_program ? wo31_program->id : 0, wo31_texture->texture,
++                    wo31_category, wo32_target,
+                     glstate->enable.blend, glstate->blendsfactorrgb, glstate->blenddfactorrgb,
+                     glstate->blendsfactoralpha, glstate->blenddfactoralpha, glstate->enable.alpha_test,
+-                    glstate->alphafunc, glstate->alpharef, glstate->enable.fog, glstate->fog.start,
+-                    glstate->fog.end, glstate->fog.color, count);
++                    glstate->alphafunc, glstate->alpharef, glstate->enable.depth_test, glstate->depth.mask,
++                    glstate->depth.func, glstate->enable.fog, glstate->fog.start, glstate->fog.end,
++                    glstate->fog.color, wo31_program ? wo31_program->has_fpe : 0,
++                    wo31_program ? wo31_program->default_fragment : 0,
++                    wo32_fragment_source && strstr(wo32_fragment_source, "discard"),
++                    wo32_fragment_source && (strstr(wo32_fragment_source, "gl_FragColor.a")
++                        || strstr(wo32_fragment_source, ".a =")), count);
+                 break;
+             }
+         }
+-        program_t* wo31_program = glstate->glsl ? glstate->glsl->glprogram : NULL;
+         wo31_diag_fog_applied(wo31_program ? wo31_program->id : 0,
+-            wo31_program ? wo31_program->builtin_fog.has : 0, glstate->fog.start,
+-            glstate->fog.end, glstate->fog.color);
++            wo31_program ? wo31_program->builtin_fog.has : 0,
++            wo31_program ? wo31_program->builtin_fog.start : -1,
++            wo31_program ? wo31_program->builtin_fog.end : -1,
++            wo31_program ? wo31_program->builtin_fog.scale : -1,
++            wo31_program ? wo31_program->builtin_fog.color : -1,
++            wo31_program ? wo31_program->has_fpe : 0,
++            wo31_program ? wo31_program->default_fragment : 0,
++            glstate->fog.start, glstate->fog.end, glstate->fog.color);
+         // POLYGON mode as LINE is "intercepted" and drawn using list
+         if(instancecount==1 || hardext.esversion==1) {
+             if(!iindices && !sindices)
+diff --git a/src/gl/fpe.c b/src/gl/fpe.c
+index 52edd37..23748ed 100644
+--- a/src/gl/fpe.c
++++ b/src/gl/fpe.c
+@@ -5,7 +5,6 @@
+ #include "fpe_shader.h"
+ #include "glcase.h"
+ #include "init.h"
+-#include "ios_renderer_diag.h"
+ #include "loader.h"
+ #include "matrix.h"
+ #include "matvec.h"
+@@ -1314,8 +1313,6 @@ void realize_glenv(int ispoint, int first, int count, GLenum type, const void* i
+     // fog parameters
+     if(glprogram->builtin_fog.has)
+     {
+-        wo31_diag_fog_applied(glprogram->id, glprogram->builtin_fog.has, glstate->fog.start,
+-            glstate->fog.end, glstate->fog.color);
+         GoUniformfv(glprogram, glprogram->builtin_fog.color, 4, 1, glstate->fog.color);
+         GoUniformfv(glprogram, glprogram->builtin_fog.density, 1, 1, &glstate->fog.density);
+         GoUniformfv(glprogram, glprogram->builtin_fog.start, 1, 1, &glstate->fog.start);
+diff --git a/src/gl/ios_renderer_diag.c b/src/gl/ios_renderer_diag.c
+index 7a2cf1a..af9ad73 100644
+--- a/src/gl/ios_renderer_diag.c
++++ b/src/gl/ios_renderer_diag.c
+@@ -14,6 +14,9 @@ extern unsigned int openmw_ios_renderer_diag_record(
+     const char*, const char*, const char*, const char*) WO31_WEAK_IMPORT;
+ extern int openmw_ios_renderer_diag_texture_category(uint64_t) WO31_WEAK_IMPORT;
+ extern int openmw_ios_renderer_diag_texture_category_for_gl_name(unsigned int) WO31_WEAK_IMPORT;
++extern int openmw_ios_renderer_diag_target_for_gl_name(unsigned int) WO31_WEAK_IMPORT;
++extern unsigned int openmw_ios_renderer_diag_matching_exterior_fog_generation(
++    float, float, const float*) WO31_WEAK_IMPORT;
+ extern uint64_t openmw_ios_renderer_diag_hash(const void*, size_t) WO31_WEAK_IMPORT;
+ #undef WO31_WEAK_IMPORT
+ #endif
+@@ -29,6 +32,18 @@ static wo31_texture_entry wo31_textures[192];
+ static unsigned int wo31_texture_count;
+ static unsigned int wo31_fog_received_count;
+ static int wo31_handshake_written;
++static unsigned int wo32_target_hits[4];
++static unsigned int wo32_fog_received_mask;
++static float wo32_fog_received_values[4][4];
++
++typedef struct
++{
++    unsigned int generation;
++    unsigned int program;
++} wo32_applied_entry;
++
++static wo32_applied_entry wo32_applied[64];
++static unsigned int wo32_applied_count;
+
+ static int available_core(void)
+ {
+@@ -109,26 +124,69 @@ int wo31_diag_texture_category_for_name(unsigned int texture)
+     return 0;
+ }
+
+-void wo31_diag_draw(unsigned int program, unsigned int texture, int category, int blend, unsigned int src_rgb,
++int wo32_diag_texture_target_for_name(unsigned int texture)
++{
++#if defined(__APPLE__) || defined(WO31_DIAGNOSTIC_TEST_BRIDGE)
++    if (available_core() && openmw_ios_renderer_diag_target_for_gl_name)
++        return openmw_ios_renderer_diag_target_for_gl_name(texture);
++#endif
++    return 0;
++}
++
++void wo31_diag_draw(unsigned int program, unsigned int texture, int category, int target, int blend, unsigned int src_rgb,
+     unsigned int dst_rgb, unsigned int src_alpha, unsigned int dst_alpha, int alpha_test, unsigned int alpha_func,
+-    float alpha_ref, int fog, float fog_start, float fog_end, const float* fog_color, int count)
++    float alpha_ref, int depth_test, int depth_write, unsigned int depth_func, int fog, float fog_start,
++    float fog_end, const float* fog_color, int has_fpe, int default_fragment, int fragment_has_discard,
++    int fragment_writes_alpha, int count)
+ {
+-    if (!available_core() || !category)
++    if (!available_core() || target <= 0 || target >= 4 || !fog_color
++        || !openmw_ios_renderer_diag_matching_exterior_fog_generation)
++        return;
++    const unsigned int generation
++        = openmw_ios_renderer_diag_matching_exterior_fog_generation(fog_start, fog_end, fog_color);
++    if (!generation || wo32_target_hits[target] >= 4)
+         return;
++    const int first_hit = wo32_target_hits[target]++ == 0;
+     char correlation[48];
+-    char detail[448];
++    char detail[768];
+     snprintf(correlation, sizeof(correlation), "texture-%u", texture);
+     snprintf(detail, sizeof(detail),
+-        "program=%u;texture=%u;category=%d;count=%d;blend=%d;blend_func=%u,%u,%u,%u;alpha_test=%d;alpha_func=%u;alpha_ref=%.6g;fog=%d;fog_start=%.6g;fog_end=%.6g;fog_color=%.6g,%.6g,%.6g,%.6g",
+-        program, texture, category, count, blend, src_rgb, dst_rgb, src_alpha, dst_alpha, alpha_test,
+-        alpha_func, alpha_ref, fog, fog_start, fog_end, fog_color[0], fog_color[1], fog_color[2], fog_color[3]);
+-    openmw_ios_renderer_diag_record("r1.draw", "gl4es", correlation, detail);
++        "generation=%u;program=%u;texture=%u;category=%d;target=%d;count=%d;blend=%d;blend_func=%u,%u,%u,%u;alpha_test=%d;alpha_func=%u;alpha_ref=%.6g;depth_test=%d;depth_write=%d;depth_func=%u;fog=%d;fog_start=%.6g;fog_end=%.6g;fog_color=%.6g,%.6g,%.6g,%.6g;has_fpe=%d;default_fragment=%d;fragment_has_discard=%d;fragment_writes_alpha=%d",
++        generation, program, texture, category, target, count, blend, src_rgb, dst_rgb, src_alpha, dst_alpha,
++        alpha_test, alpha_func, alpha_ref, depth_test, depth_write, depth_func, fog, fog_start, fog_end,
++        fog_color[0], fog_color[1], fog_color[2], fog_color[3], has_fpe, default_fragment,
++        fragment_has_discard, fragment_writes_alpha);
++    openmw_ios_renderer_diag_record("r1.draw.targeted", "gl4es", correlation, detail);
++    if (first_hit)
++    {
++        char summary[160];
++        snprintf(summary, sizeof(summary), "target=%d;status=hit;texture=%u;program=%u;generation=%u",
++            target, texture, program, generation);
++        openmw_ios_renderer_diag_record("summary", "gl4es", "r1-target", summary);
++    }
+ }
+
+ void wo31_diag_fog_received(unsigned int pname, const float* params)
+ {
+     if (!available_core() || !params)
+         return;
++    int slot = -1;
++    unsigned int bit = 0;
++    int components = 1;
++    if (pname == 0x0B65) { slot = 0; bit = 1u; }
++    else if (pname == 0x0B63) { slot = 1; bit = 2u; }
++    else if (pname == 0x0B64) { slot = 2; bit = 4u; }
++    else if (pname == 0x0B66) { slot = 3; bit = 8u; components = 4; }
++    if (slot < 0)
++        return;
++    int changed = !(wo32_fog_received_mask & bit);
++    for (int index = 0; index < components; ++index)
++        changed = changed || wo32_fog_received_values[slot][index] != params[index];
++    if (!changed)
++        return;
++    for (int index = 0; index < components; ++index)
++        wo32_fog_received_values[slot][index] = params[index];
++    wo32_fog_received_mask |= bit;
+     ++wo31_fog_received_count;
+     char detail[256];
+     snprintf(detail, sizeof(detail), "pname=%u;value=%.6g,%.6g,%.6g,%.6g", pname, params[0],
+@@ -137,16 +195,32 @@ void wo31_diag_fog_received(unsigned int pname, const float* params)
+     openmw_ios_renderer_diag_record("r2.received", "gl4es", "fog-state", detail);
+ }
+
+-void wo31_diag_fog_applied(unsigned int program, int has_fog, float start, float end, const float* color)
++void wo31_diag_fog_applied(unsigned int program, int has_fog, int fog_start_location, int fog_end_location,
++    int fog_scale_location, int fog_color_location, int has_fpe, int default_fragment,
++    float start, float end, const float* color)
+ {
+-    if (!available_core() || !color)
++    if (!available_core() || !color || wo32_fog_received_mask != 15u
++        || !openmw_ios_renderer_diag_matching_exterior_fog_generation)
++        return;
++    const unsigned int generation
++        = openmw_ios_renderer_diag_matching_exterior_fog_generation(start, end, color);
++    if (!generation)
+         return;
++    for (unsigned int index = 0; index < wo32_applied_count; ++index)
++        if (wo32_applied[index].generation == generation && wo32_applied[index].program == program)
++            return;
++    if (wo32_applied_count >= 64)
++        return;
++    wo32_applied[wo32_applied_count].generation = generation;
++    wo32_applied[wo32_applied_count].program = program;
++    ++wo32_applied_count;
+     char correlation[48];
+-    char detail[320];
+-    snprintf(correlation, sizeof(correlation), "program-%u", program);
++    char detail[512];
++    snprintf(correlation, sizeof(correlation), "generation-%u-program-%u", generation, program);
+     snprintf(detail, sizeof(detail),
+-        "program=%u;has_builtin_fog=%d;received_count=%u;start=%.6g;end=%.6g;scale=%.9g;color=%.6g,%.6g,%.6g,%.6g",
+-        program, has_fog, wo31_fog_received_count, start, end, end != start ? 1.f / (end - start) : 0.f,
+-        color[0], color[1], color[2], color[3]);
+-    openmw_ios_renderer_diag_record("r2.applied", "gl4es", correlation, detail);
++        "generation=%u;program=%u;has_builtin_fog=%d;received_count=%u;fog_locations=%d,%d,%d,%d;has_fpe=%d;default_fragment=%d;start=%.6g;end=%.6g;scale=%.9g;color=%.6g,%.6g,%.6g,%.6g",
++        generation, program, has_fog, wo31_fog_received_count, fog_start_location, fog_end_location,
++        fog_scale_location, fog_color_location, has_fpe, default_fragment, start, end,
++        end != start ? 1.f / (end - start) : 0.f, color[0], color[1], color[2], color[3]);
++    openmw_ios_renderer_diag_record("r2.applied.targeted", "gl4es", correlation, detail);
+ }
+diff --git a/src/gl/ios_renderer_diag.h b/src/gl/ios_renderer_diag.h
+index a7eb703..5bc1310 100644
+--- a/src/gl/ios_renderer_diag.h
++++ b/src/gl/ios_renderer_diag.h
+@@ -8,10 +8,15 @@ void wo31_diag_handshake(const char* entry);
+ void wo31_diag_texture_upload(unsigned int texture, const void* data, size_t size, unsigned int format,
+     int width, int height, int alpha, int simple_alpha, int complex_alpha);
+ int wo31_diag_texture_category_for_name(unsigned int texture);
+-void wo31_diag_draw(unsigned int program, unsigned int texture, int category, int blend, unsigned int src_rgb,
++int wo32_diag_texture_target_for_name(unsigned int texture);
++void wo31_diag_draw(unsigned int program, unsigned int texture, int category, int target, int blend, unsigned int src_rgb,
+     unsigned int dst_rgb, unsigned int src_alpha, unsigned int dst_alpha, int alpha_test, unsigned int alpha_func,
+-    float alpha_ref, int fog, float fog_start, float fog_end, const float* fog_color, int count);
++    float alpha_ref, int depth_test, int depth_write, unsigned int depth_func, int fog, float fog_start,
++    float fog_end, const float* fog_color, int has_fpe, int default_fragment, int fragment_has_discard,
++    int fragment_writes_alpha, int count);
+ void wo31_diag_fog_received(unsigned int pname, const float* params);
+-void wo31_diag_fog_applied(unsigned int program, int has_fog, float start, float end, const float* color);
++void wo31_diag_fog_applied(unsigned int program, int has_fog, int fog_start_location, int fog_end_location,
++    int fog_scale_location, int fog_color_location, int has_fpe, int default_fragment,
++    float start, float end, const float* color);
+
+ #endif

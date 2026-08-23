@@ -3,7 +3,7 @@ diff --git a/components/sceneutil/stateupdater.cpp b/components/sceneutil/stateu
 +++ b/components/sceneutil/stateupdater.cpp
 @@ -1,5 +1,7 @@
  #include "stateupdater.hpp"
- 
+
 +#include <cstdio>
 +
  #include <osg/Fog>
@@ -12,7 +12,7 @@ diff --git a/components/sceneutil/stateupdater.cpp b/components/sceneutil/stateu
 @@ -12,6 +14,10 @@
  #include <components/stereo/multiview.hpp>
  #include <components/stereo/stereomanager.hpp>
- 
+
 +#ifdef OPENMW_IOS
 +#include <ios/openmw_ios_renderer_diagnostics.h>
 +#endif
@@ -35,5 +35,5 @@ diff --git a/components/sceneutil/stateupdater.cpp b/components/sceneutil/stateu
 +        }
 +#endif
      }
- 
+
      void StateUpdater::setAmbientColor(const osg::Vec4f& col)
