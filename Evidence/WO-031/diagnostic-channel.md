@@ -91,3 +91,22 @@ Replacement Fast run `32588069228` compiled, linked, bundle-validated, packaged,
 The exact replacement candidate reached exterior runtime without the prior crash, proving the copied ownership survives the startup autorelease-pool boundary. The retrieved file was 7,028 bytes (SHA-256 `5A6113914B4D90EEF274588E8914CA01D37F53BFB4CAB45DAE22F8E8ABD5FAC0`) and contained one startup plus 22 later OpenMW records in session `02306F28-5A6E-45AB-ADAC-414235769F83`.
 
 It contained zero GL4ES records and zero R2 records. The 22 OpenMW records were 21 `r1.state` records and one `r1.asset` record; the asset was the non-translucent control texture `textures/_land_default.dds`, not a correlated defective foliage or particle sample. Therefore the required intended-versus-applied correlation was not established. Amendment 1 stops under Condition B; the final renderer-correction build was not used.
+
+## Amendment 2 observable-path design and result
+
+Commit `626b3321ee7ce83f82d22a707dfa4f9177cf6fff` supplements the original probes without changing renderer state:
+
+- guaranteed GL4ES handshake at `gl4es_GetProcAddress`;
+- OSG registers the actual GL texture object name with the app bridge after `Texture2D` upload;
+- GL4ES draw records look up the stable texture-name mapping rather than depending solely on byte hashes across compression/conversion boundaries;
+- fog receipt and applied-program observations run on the active GL4ES draw route;
+- OpenMW records fog intent where the OSG `Fog` state is actually applied.
+
+The deterministic fixture materializes the patched GL4ES diagnostic translation unit, compiles and links it with an app-side bridge, executes it, and requires a GL4ES handshake plus R1 draw and R2 received/applied records. Production Mach-O UUID `9A5D277A-AC2B-3E86-9E18-D1E85985EC88` retains all probe and bridge definitions. Direct AArch64 call inspection confirms every `_wo31_diag_*` function resolves to the corresponding `openmw_ios_renderer_diag_*` functions.
+
+The physical-device file proves both handshakes and all probe families can write. Its SHA-256 is `DE23923768DC05B302BC9FF4FF11AB4ECD7EF62579123A5667BB9076549DD0E9`. The remaining insufficiency is temporal budget ordering:
+
+- `r1.draw` exhausts at sample 199; defective asset-to-texture bindings begin at sample 210;
+- `r2.applied` exhausts at sample 41; exterior fog receipt begins at sample 324.
+
+Thus the channel is linked and active, but it still does not capture the mandated representative late exterior correlations. Amendment 2 permits no second diagnostic redesign build.

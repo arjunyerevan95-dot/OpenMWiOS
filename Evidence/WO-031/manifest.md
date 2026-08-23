@@ -6,8 +6,9 @@
 - Execution branch: `codex/wo31-exterior-renderer-correction`
 - Diagnostic infrastructure commit: `50aa047c3010be5380393a81c452bcfae206407d`
 - Amendment 1 ownership repair commit: `8140aa4ee2af00e335b9212605524883571e65ed`
-- Renderer correction commit(s): pending evidence; none selected
-- Final stop condition: **B — diagnostic channel insufficient, and F — accepted touch regression**
+- Amendment 2 observability commit: `626b3321ee7ce83f82d22a707dfa4f9177cf6fff`
+- Renderer correction commit(s): none selected
+- Final stop condition: **B — diagnostic channel insufficient, and G — diagnostic build budget exhausted**
 
 ## Pinned dependency identity
 
@@ -92,3 +93,41 @@ No dependency revision was changed.
   - `7-Photo-7.jpg`: `DE1DAB725B95A0A05B844B8F4FE41CC80CC40F11ADCD820ABC0B6137F7F8BEE1`
 - Amendment 1 qualification gate: failed because later GL4ES records were absent and accepted touch behavior regressed.
 - Renderer correction: none. Final renderer-correction build budget remains 0 used.
+
+## Amendment 2 observable-path diagnostic candidate
+
+- Amendment 2 ControlPlane commit: `0bfdb7a1efe243579b884489a89d457157a5db5c`.
+- Continuation baseline: `12cb515e63072abc98f5ca6a4e42ca15b1e95aaf`.
+- Observability commit: `626b3321ee7ce83f82d22a707dfa4f9177cf6fff`.
+- Source result: the shipped Amendment 1 Mach-O retained both GL4ES and app bridge definitions and direct calls. Zero GL4ES records therefore came from inactive or unrepresentative probes, not weak-symbol stripping.
+- Amendment 2 design: a guaranteed GL4ES handshake at `gl4es_GetProcAddress`; stable OSG GL texture-name registration; draw/fog observation in the active GL4ES draw path; and OpenMW fog intent at the actual OSG state application boundary.
+- Focused tests: 13/13 pass with the GL4ES-side fixture compiled and linked to the app bridge.
+- Full Python discovery: 120 pass, 4 skip, 2 pre-existing Windows-only errors executing the POSIX linked-product verifier; no WO31 test failed.
+- Ordered pinned OpenMW, OSG, and GL4ES patch-stack checks: pass.
+- Prohibited touch-source diff: empty. Dependency revisions: unchanged.
+- Diagnostic Fast run: `32597504051` (`success`, head `626b3321ee7ce83f82d22a707dfa4f9177cf6fff`).
+- Run duration: 1h00m47s (2026-08-22T20:43:19Z through 2026-08-22T21:44:06Z).
+- Configure/dependency preparation: 1,570 seconds. Production compile/link: 1,875 seconds.
+- Cache: source-download cache hit; vcpkg and qualified build-state hit fields empty. Cache ABI `ios-fast-v4-xcode16.4-ios16.3-arm64-bd21cdb2514b49e863eddfd1279828f0716342f2dee9c8578feb48b5abfb7d9b`; cache source `ba5afaffa54fd88ab36a86c557cb53e16e387a05a2524e74efc16037086a7c7b`.
+- Artifact: `OpenMW-iOS-fast-42`, ID `9482706450`, Actions size 39,171,265 bytes, digest `sha256:f48928d4f6b30c6b7e305fe27df69213f17405a35ac20c3367af6e98de6c41a5`.
+- IPA: 39,138,022 bytes, SHA-256 `824395081D76CBC7B5B164B4FC9CDC4CEBB752D7D7D451E011246B42674B6857`.
+- Executable SHA-256: `0B19227B2E7950307385BE5B467D36C7D2F01AC6AD05FFE0B74C239879314447`.
+- Mach-O UUID: `9A5D277A-AC2B-3E86-9E18-D1E85985EC88`.
+- Shipped-product symbol proof: every `_wo31_diag_*` definition and every `openmw_ios_renderer_diag_*` bridge definition is present; each GL4ES probe has direct resolved calls to the app bridge.
+- Bundle validation: qualified; bundle ID `org.openmw.ios`, executable `openmw`.
+- Full Qualification: not run.
+- Amendment 2 diagnostic build budget: 1 of 1 consumed. Final renderer-correction build budget: 0 used.
+
+## Amendment 2 device evidence
+
+- Exact diagnostic candidate installed, launched, reached Seyda Neen exterior, and reproduced the accepted defects without a reported crash.
+- Supplied diagnostic: [device-renderer-diagnostic-amendment2.jsonl](device-renderer-diagnostic-amendment2.jsonl), 119,299 bytes, SHA-256 `DE23923768DC05B302BC9FF4FF11AB4ECD7EF62579123A5667BB9076549DD0E9`, session `D439E773-231C-47E7-A41B-FC53A80BDDEB`, 396 records.
+- Handshake: one OpenMW `bridge-ready` record and one GL4ES `bridge-resolved` record. The cross-image diagnostic bridge is proven live on device.
+- R1: 48 OpenMW asset, 48 OSG texture-bound, 48 GL4ES upload, and 96 GL4ES draw records were captured. Defective smoke, fire, foliage, moss, fern, and kelp assets were identified and bound to GL texture IDs. However, the draw budget exhausted at sample 199 before the first defective bound asset at sample 210; all captured draws have `category=-1`. No representative defective asset-to-draw chain was completed.
+- R2: OpenMW emitted 16 exterior intents and 16 OSG fog-state applications. GL4ES received 32 fog state values, including mode `9729`, start `2007.04`, end `7168`, and color `0.960784,0.921569,0.878431,1`. However, the GL4ES applied-program budget exhausted at sample 41 before exterior receipt began at sample 324; all captured applied records are program 1 controls with `has_builtin_fog=0` and `received_count=0`. No exterior intended/received/applied chain was completed.
+- Two-distance requirement: not met. The file contains one repeated exterior intent (`start=2007.04`, `end/far=7168`) rather than two materially different settings.
+- Visible result: opaque foliage cards, white/blank distance regions, and blue horizon band unchanged.
+- Short-tap Menu smoke result: not reported for this run. No touch source changed.
+- Screenshot hashes: `2-Photo-2.jpg` `6DF9223565AEF12FBC66200EBB532396E8015F38B3874896381F16C99C0F7FD3`; `3-Photo-3.jpg` `5431D319237384C8BDCEFB38420616465E21D947AB4446C66E870014CBF75D6A`; `4-Photo-4.jpg` `DE42E1A43DC8E8B91F2C875F40582815CFC83FF59A3EFC937838D36A672E8558`; `5-Photo-5.jpg` `E29B44642BB29507CA92B9A7F0E35A9236264F9A70EAE67AA2155A7D66EF9239`.
+- Renderer correction: none. The required representative R1 draw and R2 intended/received/applied chains remain incomplete.
+- Amendment 2 stop: Conditions B and G. The sole diagnostic build cannot be redesigned again, and the reserved renderer-correction build was not spent speculatively.

@@ -2,9 +2,9 @@
 
 ## Outcome
 
-**BLOCKED / STOPPED — Amendment 1 Conditions B (diagnostic channel insufficient) and F (accepted touch regression).**
+**BLOCKED / STOPPED — Amendment 2 Conditions B (diagnostic channel insufficient) and G (diagnostic build budget exhausted).**
 
-The original diagnostic candidate hard-crashed and was rejected. Amendment 1 repaired its proven MRC ownership defect and produced one authorized replacement build. That exact IPA reached exterior runtime without the diagnostic crash, but its shareable file contained later OpenMW records and no GL4ES or R2 records. The user also observed that short-tap Menu no longer opened the menu while long-press editor entry still worked. No renderer correction was selected or attempted.
+The original diagnostic candidate hard-crashed and was rejected. Amendment 1 repaired its proven MRC ownership defect but did not observe GL4ES. Amendment 2 proved the bridge and active lower-renderer probes on the exact shipped product and device. Its bounded file identifies real defective R1 assets and confirms GL4ES receives the intended R2 fog values, but probe-budget ordering prevents the required representative R1 draw and exterior R2 applied-program correlations. The one Amendment 2 diagnostic build is consumed, so no renderer correction was selected or attempted.
 
 ## Execution identity
 
@@ -105,6 +105,38 @@ Amendment 1:
 - Final renderer-correction Fast builds: 0 used.
 - Full Qualification: not run.
 
-## Required orchestrator review
+## Amendment 1 required orchestrator review
 
 WO-031 Amendment 1 cannot continue. The diagnostic ownership defect is corrected, but the one replacement diagnostic build did not produce the required GL4ES/R2 evidence and showed a touch smoke regression. The orchestrator must decide whether to authorize a new diagnostic design/build and separately disposition the Menu observation. This report does not authorize either action.
+
+## Amendment 2 execution identity
+
+- Observability commit: `626b3321ee7ce83f82d22a707dfa4f9177cf6fff`
+- Fast run: `32597504051` (success, 1h00m47s)
+- Artifact: `OpenMW-iOS-fast-42`, ID `9482706450`, digest `sha256:f48928d4f6b30c6b7e305fe27df69213f17405a35ac20c3367af6e98de6c41a5`
+- IPA SHA-256: `824395081D76CBC7B5B164B4FC9CDC4CEBB752D7D7D451E011246B42674B6857`
+- Executable SHA-256: `0B19227B2E7950307385BE5B467D36C7D2F01AC6AD05FFE0B74C239879314447`
+- Mach-O UUID: `9A5D277A-AC2B-3E86-9E18-D1E85985EC88`
+- Diagnostic build budget: 1 of 1 consumed
+- Final renderer-correction build budget: 0 used
+- Full Qualification: not run
+
+## Amendment 2 device result
+
+The exact Amendment 2 artifact reached Seyda Neen and wrote 396 valid records to [device-renderer-diagnostic-amendment2.jsonl](device-renderer-diagnostic-amendment2.jsonl). Both handshakes are present. Production Mach-O inspection independently shows all GL4ES probes retained and directly resolved to the app bridge. The former zero-GL4ES result was therefore observability-path failure, not link stripping.
+
+R1 progressed to actual defective asset identification and GL texture IDs:
+
+- smoke: `textures/tx_smokealpha00a.dds` → texture 115;
+- fire: `textures/tx_firealpha01.dds` → texture 148;
+- foliage controls include `textures/tx_treering_wg_01.dds` → texture 118 and multiple moss/fern/kelp textures.
+
+But `r1.draw` exhausted at sample 199 and the first defective `r1.bound` record appears at sample 210. Every recorded draw is `category=-1`; none is a representative defective draw. The earliest invalid R1 renderer boundary therefore remains unknown.
+
+R2 proves a longer partial chain. OpenMW records the exterior intent and OSG applies it: start `2007.04`, end/far `7168`, color `0.960784,0.921569,0.878431,1`. GL4ES later receives those exact values at samples 324–327. However, `r2.applied` exhausted at sample 41, before the exterior values arrived; its 32 records are only program-1 controls with `has_builtin_fog=0` and `received_count=0`. This proves OpenMW→OSG→GL4ES fog receipt but not consumption by the representative exterior program. The file also contains only one repeated exterior view-distance setting.
+
+The user-visible defects remain unchanged. No source-backed R1 or R2 correction is authorized from this evidence, and the final build was not triggered. Short-tap Menu was not reported for this run; no touch source changed.
+
+## Final orchestrator review gate
+
+Amendment 2 must stop under Conditions B and G. A further probe-budget redesign would require a second diagnostic build, which the canonical order expressly forbids. The durable evidence establishes that the bridge works, real defective assets reach OSG texture objects, and GL4ES receives correct fog state; it does not establish the applied draw/program boundary. The orchestrator must decide whether a future order authorizes targeted late-session sampling. This report does not authorize or begin that work.

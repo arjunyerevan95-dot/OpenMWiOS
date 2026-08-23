@@ -1,15 +1,15 @@
 # OpenMWiOS — Current State
 
 - Project: OpenMWiOS
-- Active branch: `codex/wo31-exterior-renderer-correction` (worker execution); canonical ControlPlane branch: `codex/wo29-ios-crash-isolation`
+- Active branch: `codex/wo29-ios-crash-isolation` (canonical ControlPlane); stopped WO31 execution branch: `codex/wo31-exterior-renderer-correction`
 - Current engineering baseline commit: `195f3a4bbcfd17ecd46546f3e28d3ee8558bed27`
-- Control-plane issued baseline commit: `dfe9e1e875c7020658aa59d22121a7cc0061ac69`
-- Active work order: [WO-031 Amendment 2](../WorkOrders/WO-031.md)
-- Ready work order: none
-- Last completed work order: [WO-030](../WorkOrders/WO-030.md) — **ACCEPTED / PARTIAL ACCEPT**
-- Last reviewed work order: [WO-031 Amendment 1](../WorkOrders/WO-031.md) — **AMENDMENT REQUIRED; lifetime repaired, GL4ES/R2 observability absent**
-- Current objective: make the GL4ES and R2 probe paths demonstrably observable, then resume evidence-led exterior R1/R2 renderer correction without touch implementation work
-- Engineering execution status: **ACTIVE; explicit WO-031 Amendment 2 start directive delivered through the user on 2026-08-23**
+- Control-plane issued baseline commit: `bbd7ce4fd5c82520c630f49fb768e0b1a284d940`
+- Active work order: none
+- Ready work order: [WO-032](../WorkOrders/WO-032.md)
+- Last completed work order: [WO-031](../WorkOrders/WO-031.md) — **ACCEPTED / PARTIAL ACCEPT; diagnostic localization only**
+- Last reviewed work order: [WO-031 Amendment 2](../WorkOrders/WO-031.md) — **partial evidence accepted; no renderer correction**
+- Current objective: capture target-gated foliage/chimney-smoke draw state and post-receipt distance/fog program state, then minimally correct the first proven renderer boundary
+- Engineering execution status: **STOPPED / READY; WO-032 is issued but has no start directive**
 - Current accepted correction: WO29's non-ARC icon ownership fix plus WO30's practical on-device touch editor and reduced-opacity controls
 - Last updated: 2026-08-23
 
@@ -73,9 +73,13 @@ WO31 Amendment 1 repaired the ownership defect and its exact artifact reached Se
 
 The user also observed short-tap Menu failing while long-press editor entry still worked. No touch source changed. This remains an unclassified candidate regression and must be rechecked, but it does not authorize touch work or displace the user's renderer priority.
 
-WO31 Amendment 2 is ACTIVE. Its explicit start directive was delivered through the user to the existing worker on 2026-08-23. It requires source/linkage proof and an unconditional bounded GL4ES handshake before one additional diagnostic build. That build must capture a representative correlated R1 draw and an R2 OpenMW-intent/GL4ES-received/applied chain. No renderer cause or correction has yet been accepted.
+WO31 Amendment 2 proved the app/GL4ES bridge, identified defective assets and GL texture bindings, and established that OpenMW, OSG, and GL4ES agree on exterior fog receipt. Its broad budgets expired before representative exterior draw/program application. R1 is narrowed to the applied draw/program boundary after OSG binding; R2 is narrowed to exterior program consumption or later content/cull/sky/clear/depth presentation after correct GL4ES receipt. No renderer correction was attempted or accepted.
 
-Secondary/deferred boundaries: menu/options touch scrolling; WO30 Reset-opacity and all-control-affordance gaps; reduced render scale `0.58`; the transient red effect; and warning-flood cleanup except where narrowly necessary to collect bounded renderer evidence. WO31 prohibits touch-control changes.
+The user did not deliberately cast a fire spell during the WO31 device run. Visible blocky chimney smoke is the qualified particle reproduction and is sufficient for targeted R1 work. Cast-fire behavior remains optional.
+
+WO32 is READY, not ACTIVE. It replaces broad startup capture with target-gated late-session sampling for foliage/chimney smoke and post-exterior-receipt R2 state at two view distances. It permits one targeted diagnostic build and, only after a proven boundary, one final correction build.
+
+Secondary/deferred boundaries: menu/options touch scrolling; WO30 Reset-opacity and all-control-affordance gaps; reduced render scale `0.58`; the transient red effect; and warning-flood cleanup except where narrowly necessary to collect bounded renderer evidence. WO32 prohibits touch-control changes.
 
 These are observations or unresolved hypotheses, not established root causes. They must not be folded into the completed data-path correction.
 
@@ -87,8 +91,13 @@ The accepted physical test did **not** record the post-install container UUID be
 
 ## Latest important evidence
 
-- [ACTIVE WO31 Amendment 2](../WorkOrders/WO-031.md)
+- [READY WO32](../WorkOrders/WO-032.md)
+- [Accepted partial WO31](../WorkOrders/WO-031.md)
 - [WO31 execution report](../Evidence/WO-031/report.md)
+- [WO31 Amendment 2 orchestrator review](../Evidence/WO-031/orchestrator-amendment2-review.md)
+- [WO31 Amendment 2 diagnostic](../Evidence/WO-031/device-renderer-diagnostic-amendment2.jsonl)
+- [WO31 user coverage clarification](../Evidence/WO-031/user-amendment2-coverage.md)
+- [WO31 partial-acceptance and WO32 direction decision](../Decisions/DEC-010.md)
 - [WO31 Amendment 1 orchestrator review](../Evidence/WO-031/orchestrator-amendment1-review.md)
 - [WO31 supplied renderer diagnostic](../Evidence/WO-031/device-renderer-diagnostic-amendment1.jsonl)
 - [WO31 diagnostic observability decision](../Decisions/DEC-009.md)
@@ -118,9 +127,9 @@ The accepted physical test did **not** record the post-install container UUID be
 ## Future orchestrator/worker recovery
 
 1. Read `Documentation/CURRENT_STATE.md`.
-2. Read accepted `WorkOrders/WO-030.md`, ACTIVE `WorkOrders/WO-031.md` Amendment 2, DEC-006 through DEC-009, and only their directly referenced evidence.
+2. Read accepted `WorkOrders/WO-031.md`, READY `WorkOrders/WO-032.md`, DEC-006, DEC-009, DEC-010, and only their directly referenced evidence.
 3. Read only the `Decisions/` and `Evidence/` records referenced by that work order.
 4. Inspect current Git state and active/recent CI before changing anything.
 5. Use the Google Docs ledger only when deeper historical context is required.
 
-WO31 Amendment 2 is ACTIVE under the existing worker. Do not resend its start directive, create a duplicate worker, or start/duplicate CI. Await the required `Evidence/WO-031/report.md` completion or blocker report and orchestrator review.
+WO32 is READY and the existing worker is stopped. The exact next action is to deliver one explicit WO32 start directive to the existing worker, then transition READY → ACTIVE without creating a duplicate worker or CI run.
