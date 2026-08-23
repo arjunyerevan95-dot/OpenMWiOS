@@ -1,15 +1,15 @@
 # OpenMWiOS — Current State
 
 - Project: OpenMWiOS
-- Active branch: `codex/wo29-ios-crash-isolation` (canonical ControlPlane); stopped WO31 execution branch: `codex/wo31-exterior-renderer-correction`
+- Active branch: `codex/wo29-ios-crash-isolation` (canonical ControlPlane); stopped WO32 execution branch: `codex/wo32-targeted-renderer-boundary`
 - Current engineering baseline commit: `195f3a4bbcfd17ecd46546f3e28d3ee8558bed27`
 - Control-plane issued baseline commit: `bbd7ce4fd5c82520c630f49fb768e0b1a284d940`
 - Active work order: none
-- Ready work order: [WO-032](../WorkOrders/WO-032.md)
+- Ready work order: [WO-032 Amendment 1](../WorkOrders/WO-032.md)
 - Last completed work order: [WO-031](../WorkOrders/WO-031.md) — **ACCEPTED / PARTIAL ACCEPT; diagnostic localization only**
-- Last reviewed work order: [WO-031 Amendment 2](../WorkOrders/WO-031.md) — **partial evidence accepted; no renderer correction**
-- Current objective: capture target-gated foliage/chimney-smoke draw state and post-receipt distance/fog program state, then minimally correct the first proven renderer boundary
-- Engineering execution status: **STOPPED / READY; WO-032 is issued but has no start directive**
+- Last reviewed work order: [WO-032](../WorkOrders/WO-032.md) — **AMENDMENT REQUIRED; pre-build test-parser failure, no IPA**
+- Current objective: repair two test-only blank-context parsers, produce the targeted diagnostic IPA, then capture foliage/chimney-smoke and post-receipt distance/fog state before any correction
+- Engineering execution status: **STOPPED / READY; WO-032 Amendment 1 is issued but has no start directive**
 - Current accepted correction: WO29's non-ARC icon ownership fix plus WO30's practical on-device touch editor and reduced-opacity controls
 - Last updated: 2026-08-23
 
@@ -77,7 +77,9 @@ WO31 Amendment 2 proved the app/GL4ES bridge, identified defective assets and GL
 
 The user did not deliberately cast a fire spell during the WO31 device run. Visible blocky chimney smoke is the qualified particle reproduction and is sufficient for targeted R1 work. Cast-fire behavior remains optional.
 
-WO32 is READY, not ACTIVE. It replaces broad startup capture with target-gated late-session sampling for foliage/chimney smoke and post-exterior-receipt R2 state at two view distances. It permits one targeted diagnostic build and, only after a proven boundary, one final correction build.
+The original WO32 run prepared target-gated late-session sampling but failed during regression validation before compilation. All ordered production patches applied; two test-only patch parsers mishandled whitespace-cleaned blank context lines. No IPA, device evidence, renderer correction, or new accepted runtime state resulted. The redundant evidence-triggered run was cancelled immediately without an artifact.
+
+WO32 Amendment 1 is READY, not ACTIVE. It authorizes only the two test-helper blank-context repairs, compiler-independent regressions, and one replacement Fast diagnostic run. If that run produces the intended IPA, the original foliage/chimney-smoke and post-exterior-receipt R2 device phases resume unchanged.
 
 Secondary/deferred boundaries: menu/options touch scrolling; WO30 Reset-opacity and all-control-affordance gaps; reduced render scale `0.58`; the transient red effect; and warning-flood cleanup except where narrowly necessary to collect bounded renderer evidence. WO32 prohibits touch-control changes.
 
@@ -91,7 +93,9 @@ The accepted physical test did **not** record the post-install container UUID be
 
 ## Latest important evidence
 
-- [READY WO32](../WorkOrders/WO-032.md)
+- [READY WO32 Amendment 1](../WorkOrders/WO-032.md)
+- [WO32 blocked execution report](../Evidence/WO-032/report.md)
+- [WO32 pre-build failure orchestrator review](../Evidence/WO-032/orchestrator-prebuild-failure-review.md)
 - [Accepted partial WO31](../WorkOrders/WO-031.md)
 - [WO31 execution report](../Evidence/WO-031/report.md)
 - [WO31 Amendment 2 orchestrator review](../Evidence/WO-031/orchestrator-amendment2-review.md)
@@ -127,9 +131,9 @@ The accepted physical test did **not** record the post-install container UUID be
 ## Future orchestrator/worker recovery
 
 1. Read `Documentation/CURRENT_STATE.md`.
-2. Read accepted `WorkOrders/WO-031.md`, READY `WorkOrders/WO-032.md`, DEC-006, DEC-009, DEC-010, and only their directly referenced evidence.
+2. Read accepted `WorkOrders/WO-031.md`, READY `WorkOrders/WO-032.md` Amendment 1, DEC-010, and only their directly referenced evidence.
 3. Read only the `Decisions/` and `Evidence/` records referenced by that work order.
 4. Inspect current Git state and active/recent CI before changing anything.
 5. Use the Google Docs ledger only when deeper historical context is required.
 
-WO32 is READY and the existing worker is stopped. The exact next action is to deliver one explicit WO32 start directive to the existing worker, then transition READY → ACTIVE without creating a duplicate worker or CI run.
+WO32 Amendment 1 is READY and the existing worker is stopped. The exact next action is to deliver one explicit Amendment 1 start directive to the existing worker, then transition READY → ACTIVE without creating a duplicate worker or CI run.
