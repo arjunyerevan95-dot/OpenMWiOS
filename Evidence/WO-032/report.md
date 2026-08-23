@@ -2,73 +2,76 @@
 
 ## Outcome
 
-**BLOCKED / STOPPED — Condition G, build budget exhausted.**
+**BLOCKED / STOPPED — Amendment 2 explicit stop boundary and Condition C.**
 
-WO-032 successfully produced and device-tested its targeted diagnostic candidate. That evidence proves one R1 smoke/particle cause: OSG direct core blend-state calls bypass GL4ES state ownership while GL4ES owns converted programs and draw submission. A narrow Apple-only OSG routing correction was implemented and passed local/patch validation. The one authorized correction Fast run then missed both dependency caches and was terminated by GitHub's two-hour limit during dependency preparation, before OpenMW compilation. No corrected IPA exists, so the correction is not device-qualified and accepted product state does not change.
+Amendment 2 successfully compiled, linked, packaged, installed, and ran the exact previously prepared R1 smoke correction. The timeout-only workflow change cleared the prior two-hour build boundary. Device evidence then falsified the correction's acceptance prediction: GL4ES still recorded blending disabled for four representative smoke draws, and the matching screenshot shows the chimney smoke remains visibly blocky. The correction is not device-qualified.
 
-R2 remains unqualified because the supplied capture used maximum view distance only and contains no second materially different stable generation. The foliage target is also already opaque before raster output, so its distinct earliest cause remains unproven.
+WO-032 stops here. No second build, renderer adjustment, foliage work, R2 distance/horizon work, touch work, or canonical ControlPlane change was made.
 
 ## Execution identity
 
-- Original ControlPlane issue commit: `9100edc9ee3f9dc89ec6adafc28ec72a77ed48a8`.
-- Amendment 1 ControlPlane commit: `6cae3de751382cf764defc8ab783b338e2351d4a`.
-- Investigation continuation: `626b3321ee7ce83f82d22a707dfa4f9177cf6fff`.
+- Accepted product baseline: `195f3a4bbcfd17ecd46546f3e28d3ee8558bed27`.
+- ControlPlane Amendment 2 commit: `208b9e9eb654a44b58273803e1be24f85e5e9e62`.
 - Branch: `codex/wo32-targeted-renderer-boundary`.
-- Targeted diagnostics: `4b626d80dcf58bc5768c71f2e043c9f4edec6b07`.
-- Parser repair / diagnostic candidate: `79231c0fbf9293388f8f47456f8c2a2696291633`.
-- R1 correction source candidate: `1625713b949ddb0cde5471feead75f29fedadfaa`.
+- Diagnostic candidate: `79231c0fbf9293388f8f47456f8c2a2696291633`.
+- Unchanged R1 correction source: `1625713b949ddb0cde5471feead75f29fedadfaa`.
+- Timeout-only build commit: `c9161e579ff1814cc7fc5c86fb63a9ef177502f3`.
 - Full Qualification: not run.
 - Canonical ControlPlane changes: none.
 
-## Amendment 1 and diagnostic build
+## Amendment 2 validation and build
 
-Amendment 1 changed only the two test-side embedded-diff parsers and added synthetic blank-context regressions. Replacement Fast run `32627872506` succeeded in 58m09s, compiled and linked the real production app, validated and packaged one artifact, and uploaded `OpenMW-iOS-fast-47` (artifact ID `9490874268`, digest `sha256:d32529f56a7d495ffb689db40781aa4cf088517213579aa2b7e15ad132d25675`).
+The only implementation delta after the correction commit was `.github/workflows/ios-fast.yml` job `timeout-minutes` from 120 to 180. The correction source itself remained unchanged.
 
-The exact device candidate identities are:
+Local gates:
 
-- IPA SHA-256 `90C6AA65BBAADE4FF1C0D13D2BC7E124E1EBD119D2A91C513E80FA39C802A942`;
-- executable SHA-256 `BA7E32C8A3E5BBBFF0D38DBE89606D0D009C562E323F4F9B206C8BEE6513F316`;
-- Mach-O UUID `1173DA95-B273-3CE7-948D-BA2EDA504701`.
+- focused WO31/WO32 diagnostic tests: 22 run, 20 passed, 2 skipped because no host C compiler was available;
+- aggregate iOS validation excluding the POSIX-only verifier: 129 passed, 6 skipped;
+- ordered reconstruction: all 15 OpenMW patches, all 8 GL4ES patches, and the OSG patch passed;
+- `git diff --check`: passed.
 
-## Device evidence and R1 conclusion
+Exactly one replacement Fast Development run was triggered:
 
-The user supplied five matching screenshots plus a bounded 317-record JSONL. The screenshots visibly preserve opaque foliage cards, blocky chimney smoke, white/blank distance, the sharp blue horizon band, opaque blue spell cards, and opaque orange fire cards. Exact hashes and samples are in [device-capture-analysis.md](device-capture-analysis.md).
+- run `32649331052`, job `97218368995`;
+- result: success in 1h21m13s;
+- dependency preparation: 2,219 seconds;
+- production compile/link: 2,316 seconds;
+- source-download cache hit; vcpkg and qualified build-state caches did not restore;
+- production compile/link, bundle validation, resource validation, package, and upload all passed;
+- artifact `OpenMW-iOS-fast-51`, ID `9496797285`, digest `sha256:4c358ee09b35270cdc3d39b1d5887ca5e6331c0a9bd140ef728cbdf3461101b4`;
+- IPA SHA-256 `57B4A011E29C9116E451877169351B0A6A5D5B063AE843605CE0C0B4D4D031B7`;
+- executable SHA-256 `FC4A34EB321633BBEE4DD47F8AB3E8E0E3C3347091EA4B56CC415C2C6BB4CE95`;
+- Mach-O UUID `FAC81B2E-2852-37AF-A602-DED71C652E56`.
 
-The chimney-smoke asset `textures/tx_smokealpha00a.dds` is DXT5/translucent. Its applied program 9 draw has standard `SRC_ALPHA` / `ONE_MINUS_SRC_ALPHA` factors, depth writes disabled, and a fragment shader that writes alpha and contains discard, but GL4ES records blending disabled. This is not an asset-alpha or shader-alpha absence.
+Run: <https://github.com/arjunyerevan95-dot/OpenMWiOS/actions/runs/32649331052>
 
-Pinned OSG directly calls core `glEnable`, `glDisable`, and ordinary `glBlendFunc`; the existing routing patch covered dynamically resolved extension entry points only. The exact Mach-O defines the GL4ES wrapper symbols but imports the unprefixed core symbols from native GLES. Thus native GLES and GL4ES hold split state: OSG enables native blending while GL4ES submits the converted draw without observing that enable.
+## Device evidence
 
-This proves the earliest R1 cause for smoke/particles. It does not prove the foliage cause: `textures/tx_bc_moss.dds` reaches its program 21 draw as DXT1/RGB, `translucent=0`, with alpha test disabled, depth writes enabled, and no fragment discard/alpha output.
+The exact IPA was supplied for installation. The user reached the mandatory Seyda Neen chimney-smoke view and returned one screenshot plus a fresh bounded renderer JSONL.
 
-## R2 conclusion
+- JSONL: 97,681 bytes / 309 records; SHA-256 `E0289184EEE32FCA9DF38C66239EF71B061713F182F94646CE1032AA8ACA0AAE`.
+- Session: `5ED135B0-B449-4845-8A83-2251FF810A03`.
+- Screenshot SHA-256: `F0CCBDC60A0F44D4FDE01F3788D5D5FDCE70E417727518EE8D198CACF596D15B`.
+- Visual result: chimney smoke remains blocky/opaque against the sky.
 
-The device run captured one effective maximum-distance fog generation only. OpenMW intent, OSG application, GL4ES receipt, and eight of nine sampled consumers agree on fog start/end/color/scale. Program 81 lacks fog locations, but its purpose is unknown. The nearby projection values are slider-transition samples, not a second selected stable view distance.
+The capture dynamically identified `textures/tx_smokealpha00a.dds` as texture 115 / program 9. Samples 259, 262, 276, and 277 all report:
 
-The user's clarification that every supplied distance screenshot used maximum view distance is authoritative. R2 therefore remains insufficient; WO-032 made no distance, fog, paging, cull, sky, clear, or depth correction.
+```text
+blend=0;blend_func=770,771,770,771;alpha_test=0;depth_test=1;depth_write=0;fragment_has_discard=1;fragment_writes_alpha=1
+```
 
-## Minimal correction
+Thus the correction did not cause GL4ES to observe blend enable. The same invalid state and visible symptom remain. Detailed capture evidence is in [amendment2-device-capture.md](amendment2-device-capture.md).
 
-Commit `1625713b949ddb0cde5471feead75f29fedadfaa` modifies the deterministic OSG patch so Apple manual-init builds route the two OSG core mode sites and ordinary blend-function application through GL4ES. Other platforms preserve direct GL behavior. Focused and aggregate local gates passed, the patch applied cleanly to pinned OSG, and no touch, data path, shader, FBO, dependency revision, workflow, or canonical ControlPlane file changed.
+OpenMW reached the exterior with HUD, native landscape presentation, and diagnostic output functioning; no launch crash was reported. Separate indoor, water, touch-action, short-tap Menu, and extended traversal regression checks were not supplied and are **NOT RECORDED** rather than inferred.
 
-## Correction-build failure boundary
+## Causal disposition
 
-The only authorized correction Fast run was `32634038454`, job `97181008153`, at exact commit `1625713b949ddb0cde5471feead75f29fedadfaa`.
+The prior diagnostic evidence remains valid: the smoke asset, intended factors, depth-write state, and fragment alpha behavior reach the draw, while GL4ES records blend disabled. What Amendment 2 disproves is that correction commit `1625713` is sufficient to repair that boundary in the production device path.
 
-The OSG patch changed the cache ABI fingerprint to `e450a18045485e1ccbeb921b8d7c3abff8faaf3ebaa70756dfb02b8e53128786`. Source downloads restored, but the vcpkg binary cache and qualified incremental build-state cache both missed. The workflow therefore entered a cold dependency path. Bootstrap and every ordered patch passed; GL4ES rebuilt successfully. GitHub then cancelled the job at the two-hour limit while still in `Incremental configure and dependency preparation`.
+The next incorrect state-ownership mechanism is not established by this work order. Modifying the correction in response would require a new orchestrator decision and is prohibited here. Foliage and R2 distance/horizon remain independent unresolved boundaries.
 
-Consequences:
+## Stop boundary
 
-- production OpenMW compilation/link did not start;
-- bundle/package validation did not run;
-- no artifact, executable, or IPA was produced;
-- no corrected device test was possible;
-- no second Fast run was triggered;
-- Full Qualification did not run.
+The canonical Amendment 2 instruction requires an immediate stop if GL4ES still records disabled blending or the visible smoke does not improve. Both occurred. This also invokes general Condition C: the remaining cause is unproven, so do not guess.
 
-Run: <https://github.com/arjunyerevan95-dot/OpenMWiOS/actions/runs/32634038454>
-
-## Strongest conclusion and review boundary
-
-R1 smoke/particle state divergence is causally localized, and the prepared correction is narrow and locally validated. However, the build-timeout boundary prevents production and device qualification. Foliage and R2 remain separate unresolved boundaries; neither may be inferred fixed by the unbuilt correction.
-
-WO-032 must stop under Condition G. The orchestrator must decide whether and how to authorize a future build opportunity for this already-prepared correction. This execution report does not authorize another build, acceptance, a work-order amendment, or further renderer work.
+No second Fast build was triggered. No Full Qualification ran. No accepted project state, work order, or durable decision was modified.

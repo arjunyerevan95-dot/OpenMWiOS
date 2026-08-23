@@ -10,8 +10,9 @@
 - Targeted diagnostic implementation: `4b626d80dcf58bc5768c71f2e043c9f4edec6b07`.
 - Amendment 1 parser repair and replacement diagnostic candidate: `79231c0fbf9293388f8f47456f8c2a2696291633`.
 - R1 correction source candidate: `1625713b949ddb0cde5471feead75f29fedadfaa`.
+- Amendment 2 timeout-only build commit: `c9161e579ff1814cc7fc5c86fb63a9ef177502f3`.
 - Canonical ControlPlane files changed by the worker: none.
-- Touch/data-path/workflow changes: none.
+- Touch/data-path/source-correction changes in Amendment 2: none. The only Amendment 2 workflow change was job `timeout-minutes: 120` to `180`.
 
 ## Referenced evidence and sampling design
 
@@ -19,6 +20,7 @@
 - [R1 targeted evidence](renderer-r1-targeted.md)
 - [R2 targeted evidence](renderer-r2-targeted.md)
 - [Replacement diagnostic device capture](device-capture-analysis.md)
+- [Amendment 2 correction device capture](amendment2-device-capture.md)
 - [WO-031 R1 evidence](../WO-031/renderer-r1-alpha-particles.md)
 - [WO-031 R2 evidence](../WO-031/renderer-r2-distance-fog.md)
 - [WO-031 diagnostic channel](../WO-031/diagnostic-channel.md)
@@ -112,3 +114,48 @@
 - The R1 smoke/particle cause is proven and a narrow source correction exists, but no production artifact or device qualification exists for that correction.
 - The foliage and R2 distance/horizon causes remain unresolved.
 - Accepted project state is unchanged pending orchestrator review.
+
+## Amendment 2 replacement correction build
+
+- ControlPlane Amendment 2 commit: `208b9e9eb654a44b58273803e1be24f85e5e9e62`.
+- Fast run: `32649331052`.
+- Job: `97218368995`.
+- Commit: `c9161e579ff1814cc7fc5c86fb63a9ef177502f3`.
+- Correction source remained byte-for-byte unchanged from `1625713b949ddb0cde5471feead75f29fedadfaa`.
+- Authorized workflow delta: only `timeout-minutes: 120` to `180`.
+- Result: success in 1h21m13s.
+- Dependency preparation: 2,219 seconds.
+- Production compile/link: 2,316 seconds.
+- Source-download cache: hit.
+- vcpkg binary cache: miss / no restored key recorded.
+- Qualified build-state cache: miss / no restored key recorded.
+- Package/upload: pass.
+- Bundle validation: qualified; bundle ID `org.openmw.ios`, executable `openmw`.
+- Resource relocation: qualified; 349 files / 405 entries / 2,289,435 bytes, zero missing, unexpected, hash, size, or type mismatches.
+- Artifact: `OpenMW-iOS-fast-51`, ID `9496797285`, digest `sha256:4c358ee09b35270cdc3d39b1d5887ca5e6331c0a9bd140ef728cbdf3461101b4`, 39,180,451 artifact bytes.
+- IPA: `OpenMW-iOS-unsigned.ipa`, 39,147,199 bytes, SHA-256 `57B4A011E29C9116E451877169351B0A6A5D5B063AE843605CE0C0B4D4D031B7`.
+- Executable SHA-256: `FC4A34EB321633BBEE4DD47F8AB3E8E0E3C3347091EA4B56CC415C2C6BB4CE95`.
+- Mach-O UUID: `FAC81B2E-2852-37AF-A602-DED71C652E56`.
+- Fast-run URL: <https://github.com/arjunyerevan95-dot/OpenMWiOS/actions/runs/32649331052>.
+- Full Qualification: not run.
+- Local validation: focused 22 tests with 20 pass / 2 host-compiler skips; aggregate 129 pass / 6 skips; all 15 OpenMW patches, all 8 GL4ES patches, and the OSG patch reconstructed cleanly; `git diff --check` passed.
+
+## Amendment 2 device result
+
+- Device JSONL SHA-256: `E0289184EEE32FCA9DF38C66239EF71B061713F182F94646CE1032AA8ACA0AAE`.
+- JSONL size/records: 97,681 bytes / 309 records.
+- Session: `5ED135B0-B449-4845-8A83-2251FF810A03`.
+- Smoke screenshot SHA-256: `F0CCBDC60A0F44D4FDE01F3788D5D5FDCE70E417727518EE8D198CACF596D15B`.
+- Target: `textures/tx_smokealpha00a.dds`, texture 115, program 9.
+- Applied samples: 259, 262, 276, 277.
+- All four samples: `blend=0`, `blend_func=770,771,770,771`, depth writes disabled, fragment discard and alpha output present.
+- Visible result: smoke remains blocky/opaque; no material improvement.
+- App reached the Seyda Neen exterior without a reported launch crash. Separate water, indoor, touch-action, and short-tap Menu regression checks are **NOT RECORDED** for this capture.
+
+## Amendment 2 disposition
+
+- Stop condition: **Amendment 2 explicit stop boundary / Condition C — GL4ES still records disabled blending and visible smoke did not improve; do not guess**.
+- The timeout-only change successfully produced and ran the exact correction candidate, but the candidate did not change the invalid smoke blend state and is not device-qualified.
+- No second Amendment 2 build was triggered and no follow-on renderer change was made.
+- Foliage and R2 distance/horizon remain separate unresolved boundaries and were not investigated or modified.
+- Accepted project state remains unchanged pending orchestrator review.

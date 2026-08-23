@@ -1,17 +1,17 @@
 # OpenMWiOS — Current State
 
 - Project: OpenMWiOS
-- Active branch: `codex/wo29-ios-crash-isolation` (canonical ControlPlane); active WO32 execution branch: `codex/wo32-targeted-renderer-boundary`
+- Active branch: `codex/wo29-ios-crash-isolation` (canonical ControlPlane); stopped WO32 execution branch: `codex/wo32-targeted-renderer-boundary`
 - Current engineering baseline commit: `195f3a4bbcfd17ecd46546f3e28d3ee8558bed27`
 - Control-plane issued baseline commit: `bbd7ce4fd5c82520c630f49fb768e0b1a284d940`
-- Active work order: [WO-032 Amendment 2](../WorkOrders/WO-032.md)
-- Ready work order: none
-- Last completed work order: [WO-031](../WorkOrders/WO-031.md) — **ACCEPTED / PARTIAL ACCEPT; diagnostic localization only**
-- Last reviewed work order: [WO-032](../WorkOrders/WO-032.md) — **PARTIAL ACCEPT / AMENDMENT REQUIRED; R1 smoke cause proven, correction unbuilt**
-- Current objective: compile and device-qualify the unchanged R1 smoke/particle blend-state correction through one timeout-bounded replacement Fast build; do not infer or begin foliage/R2 correction
-- Engineering execution status: **ACTIVE; WO-032 Amendment 2 start directive was relayed to the existing worker on 2026-08-23**
+- Active work order: none
+- Ready work order: [WO-033](../WorkOrders/WO-033.md)
+- Last completed work order: [WO-032](../WorkOrders/WO-032.md) — **ACCEPTED / PARTIAL DIAGNOSTIC; CORRECTION REJECTED**
+- Last reviewed work order: [WO-032](../WorkOrders/WO-032.md) — **evidence accepted; OSG blend-routing correction falsified**
+- Current objective: trace the exact OSG-to-GL4ES blend enable/disable/context/render-list sequence for the target smoke draw before any new correction
+- Engineering execution status: **STOPPED / READY; WO-033 is issued but has no start directive**
 - Current accepted correction: WO29's non-ARC icon ownership fix plus WO30's practical on-device touch editor and reduced-opacity controls
-- Last updated: 2026-08-23
+- Last updated: 2026-08-24
 
 ## Qualified state
 
@@ -31,7 +31,7 @@ The highest qualified runtime gate combines WO26/WO27, the accepted WO29 crash c
 - The WO30 final candidate uses nominal `0.20` idle opacity and the device-observed plus/minus controls visibly change opacity.
 - The user considers the touch result practically satisfactory apart from menu/options scrolling.
 - WO30 made no renderer correction; the exterior defects remain visible and causally unresolved.
-- WO32's targeted diagnostic artifact proves that OSG direct core blend-state calls bypass GL4ES tracking for the representative chimney-smoke draw. A narrow correction exists but has not compiled or produced a device artifact, so the accepted runtime baseline is unchanged.
+- WO32's targeted diagnostics prove that representative smoke draws reach GL4ES with correct alpha factors/shader alpha behavior but `blend=0`. Its first OSG routing correction compiled and ran, yet four target draws and the visible symptom remained unchanged; that correction is rejected and the accepted runtime baseline is unchanged.
 
 This remains a qualified runtime and touch baseline, not complete mobile-control qualification. WO30 did not independently verify force-quit/relaunch persistence, a post-test crash inventory, or the full action-control matrix. Reset currently preserves opacity instead of restoring nominal `0.20`, and only the selected fixed control shows the explicit resize ring. These limits are recorded without scheduling touch cleanup inside the renderer order.
 
@@ -61,6 +61,7 @@ WO30 did not localize the earliest invalid renderer boundary. Its bounded OpenMW
 Current unresolved renderer boundary exposed by exterior traversal:
 
 - foliage alpha/transparency is incorrect, producing opaque leaf cards;
+- chimney smoke and sampled spell/fire particles render as opaque/blocky cards; the first OSG routing correction did not change GL4ES blend state;
 - distant scenery contains missing/white regions and a horizontal band;
 - water appearance improved after the user enabled OpenMW water shader effects, so the prior water concern is currently configuration-dependent rather than a proven renderer defect;
 - distance fog appears absent at the configured draw boundary, leaving white/empty regions beyond rendered geometry; its relationship to the foliage-alpha defect is unknown;
@@ -82,13 +83,15 @@ The original WO32 run prepared target-gated late-session sampling but failed dur
 
 WO32 Amendment 1 repaired the two test-helper parsers and produced successful diagnostic run `32627872506`, artifact `OpenMW-iOS-fast-47`. The matching 317-record device JSONL captured foliage, chimney smoke, and an opaque control. It proves a split state-owner boundary for smoke/particles: pinned OSG calls native core `glEnable`/`glDisable`/`glBlendFunc` directly while GL4ES owns the converted program and draw, leaving the representative smoke draw with `blend=0` despite correct alpha factors, depth-write state, and shader alpha behavior.
 
-Correction candidate `1625713b949ddb0cde5471feead75f29fedadfaa` routes only the relevant Apple manual-init OSG mode/blend calls through GL4ES. Its Fast run `32634038454` passed bootstrap and patch application but missed both dependency caches and was cancelled at the two-hour limit during dependency preparation. OpenMW compile/link, package, upload, and device validation were skipped; no artifact exists. The correction is not accepted and the runtime baseline remains `195f3a4bbcfd17ecd46546f3e28d3ee8558bed27`.
+Correction candidate `1625713b949ddb0cde5471feead75f29fedadfaa` routes the patched Apple/manual-init OSG mode/blend calls through GL4ES. Amendment 2 preserved that source byte-for-byte, increased only the Fast timeout to 180 minutes, and produced successful run `32649331052` / artifact `OpenMW-iOS-fast-51` at `c9161e579ff1814cc7fc5c86fb63a9ef177502f3`.
+
+The exact device IPA reached Seyda Neen and captured four `tx_smokealpha00a.dds` draws. All four still report `blend=0` with correct factors, disabled depth writes, and fragment discard/alpha output; the matching screenshot remains visibly blocky. The correction is therefore falsified and rejected. It is not part of the accepted baseline.
 
 Foliage is a distinct unresolved path: the captured `tx_bc_moss.dds` draw is already opaque before raster output. R2 is also unresolved: only one stable maximum-distance generation exists, so the white distance region and blue horizon boundary remain unlocalized. Neither may be inferred fixed by the smoke correction.
 
-WO32 Amendment 2 is ACTIVE. It authorizes only a Fast job timeout change from 120 to 180 minutes, one replacement build containing the unchanged R1 correction, and exact-artifact smoke/particle device qualification. It prohibits any foliage, R2, touch, cache-design, dependency, or further renderer-source change.
+WO32 is closed. The remaining smoke boundary is the actual transition sequence between OSG's cached mode decision, GL4ES enable/disable ingress, context/state identity, render-list capture/replay, and `glDrawElementsCommon`. WO33 is READY to trace that sequence. It prohibits a new fix until the first invalid transition is proven.
 
-Secondary/deferred boundaries: menu/options touch scrolling; WO30 Reset-opacity and all-control-affordance gaps; reduced render scale `0.58`; the transient red effect; and warning-flood cleanup except where narrowly necessary to collect bounded renderer evidence. WO32 prohibits touch-control changes.
+Secondary/deferred boundaries: foliage; R2 distance/horizon; menu/options touch scrolling; WO30 Reset-opacity and all-control-affordance gaps; reduced render scale `0.58`; the transient red effect; and warning-flood cleanup except where narrowly necessary to collect bounded renderer evidence. WO33 prohibits work on those boundaries.
 
 These are observations or unresolved hypotheses, not established root causes. They must not be folded into the completed data-path correction.
 
@@ -100,10 +103,14 @@ The accepted physical test did **not** record the post-install container UUID be
 
 ## Latest important evidence
 
-- [READY WO32 Amendment 2](../WorkOrders/WO-032.md)
+- [READY WO33](../WorkOrders/WO-033.md)
+- [Accepted WO32](../WorkOrders/WO-032.md)
+- [WO32 final orchestrator review](../Evidence/WO-032/orchestrator-amendment2-final-review.md)
+- [WO32 falsification decision](../Decisions/DEC-012.md)
+- [WO32 Amendment 2 device capture](../Evidence/WO-032/amendment2-device-capture.md)
+- [WO32 final worker report](../Evidence/WO-032/report.md)
 - [WO32 correction-timeout orchestrator review](../Evidence/WO-032/orchestrator-correction-timeout-review.md)
 - [WO32 R1 partial-acceptance decision](../Decisions/DEC-011.md)
-- [WO32 final worker report](../Evidence/WO-032/report.md)
 - [WO32 replacement-diagnostic device capture](../Evidence/WO-032/device-capture-analysis.md)
 - [WO32 evidence manifest](../Evidence/WO-032/manifest.md)
 - [WO32 pre-build failure orchestrator review](../Evidence/WO-032/orchestrator-prebuild-failure-review.md)
@@ -142,9 +149,9 @@ The accepted physical test did **not** record the post-install container UUID be
 ## Future orchestrator/worker recovery
 
 1. Read `Documentation/CURRENT_STATE.md`.
-2. Read accepted `WorkOrders/WO-031.md`, READY `WorkOrders/WO-032.md` Amendment 2, DEC-010, DEC-011, and only their directly referenced evidence.
+2. Read accepted `WorkOrders/WO-032.md`, READY `WorkOrders/WO-033.md`, DEC-012, and only their directly referenced evidence.
 3. Read only the `Decisions/` and `Evidence/` records referenced by that work order.
 4. Inspect current Git state and active/recent CI before changing anything.
 5. Use the Google Docs ledger only when deeper historical context is required.
 
-WO32 Amendment 2 is ACTIVE with the existing worker. The exact next action is to allow that execution to reach its natural completion, blocker, CI-wait, or device-evidence boundary. Do not resend the start directive, create another worker, or duplicate the authorized build.
+WO33 is READY and the existing worker is stopped. The exact next action is to deliver one explicit WO33 start directive to the existing worker, then transition READY → ACTIVE without creating a duplicate worker or CI run.
