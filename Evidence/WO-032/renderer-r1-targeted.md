@@ -23,4 +23,4 @@ OpenMW's targeted shader-state record includes finalized alpha function/referenc
 
 ## Result
 
-Pending the single authorized WO-032 diagnostic device run.
+Not reached. Fast run `32623652029` stopped in cheap Python validation before production compilation. The ordered GL4ES/OpenMW patch-stack checks passed, but no IPA or device JSONL exists. R1 remains unlocalized; no renderer correction was made.
