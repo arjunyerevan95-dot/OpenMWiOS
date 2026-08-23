@@ -1,15 +1,15 @@
 # OpenMWiOS — Current State
 
 - Project: OpenMWiOS
-- Active branch: `codex/wo29-ios-crash-isolation` (canonical ControlPlane); stopped WO32 execution branch: `codex/wo32-targeted-renderer-boundary`
+- Active branch: `codex/wo29-ios-crash-isolation` (canonical ControlPlane); active WO33 execution branch: `codex/wo33-blend-state-transition`
 - Current engineering baseline commit: `195f3a4bbcfd17ecd46546f3e28d3ee8558bed27`
 - Control-plane issued baseline commit: `bbd7ce4fd5c82520c630f49fb768e0b1a284d940`
-- Active work order: none
-- Ready work order: [WO-033](../WorkOrders/WO-033.md)
+- Active work order: [WO-033](../WorkOrders/WO-033.md)
+- Ready work order: none
 - Last completed work order: [WO-032](../WorkOrders/WO-032.md) — **ACCEPTED / PARTIAL DIAGNOSTIC; CORRECTION REJECTED**
 - Last reviewed work order: [WO-032](../WorkOrders/WO-032.md) — **evidence accepted; OSG blend-routing correction falsified**
 - Current objective: trace the exact OSG-to-GL4ES blend enable/disable/context/render-list sequence for the target smoke draw before any new correction
-- Engineering execution status: **STOPPED / READY; WO-033 is issued but has no start directive**
+- Engineering execution status: **ACTIVE; WO-033 start directive was relayed to the existing worker on 2026-08-24**
 - Current accepted correction: WO29's non-ARC icon ownership fix plus WO30's practical on-device touch editor and reduced-opacity controls
 - Last updated: 2026-08-24
 
@@ -89,7 +89,7 @@ The exact device IPA reached Seyda Neen and captured four `tx_smokealpha00a.dds`
 
 Foliage is a distinct unresolved path: the captured `tx_bc_moss.dds` draw is already opaque before raster output. R2 is also unresolved: only one stable maximum-distance generation exists, so the white distance region and blue horizon boundary remain unlocalized. Neither may be inferred fixed by the smoke correction.
 
-WO32 is closed. The remaining smoke boundary is the actual transition sequence between OSG's cached mode decision, GL4ES enable/disable ingress, context/state identity, render-list capture/replay, and `glDrawElementsCommon`. WO33 is READY to trace that sequence. It prohibits a new fix until the first invalid transition is proven.
+WO32 is closed. The remaining smoke boundary is the actual transition sequence between OSG's cached mode decision, GL4ES enable/disable ingress, context/state identity, render-list capture/replay, and `glDrawElementsCommon`. WO33 is ACTIVE to trace that sequence. It prohibits a new fix until the first invalid transition is proven.
 
 Secondary/deferred boundaries: foliage; R2 distance/horizon; menu/options touch scrolling; WO30 Reset-opacity and all-control-affordance gaps; reduced render scale `0.58`; the transient red effect; and warning-flood cleanup except where narrowly necessary to collect bounded renderer evidence. WO33 prohibits work on those boundaries.
 
@@ -154,4 +154,4 @@ The accepted physical test did **not** record the post-install container UUID be
 4. Inspect current Git state and active/recent CI before changing anything.
 5. Use the Google Docs ledger only when deeper historical context is required.
 
-WO33 is READY and the existing worker is stopped. The exact next action is to deliver one explicit WO33 start directive to the existing worker, then transition READY → ACTIVE without creating a duplicate worker or CI run.
+WO33 is ACTIVE with the existing worker. The exact next action is to allow that execution to reach its natural completion, blocker, CI-wait, or device-evidence boundary. Do not resend the start directive, create another worker, or duplicate either authorized build.
