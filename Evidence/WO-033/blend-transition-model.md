@@ -28,4 +28,4 @@ Every retained event carries a process-monotonic sequence, thread identity, site
 
 ## Status
 
-Runtime classification is **NOT OBTAINED** because run `32701930506` failed during patch bootstrap before compilation. No causal alternative can be selected from source evidence alone.
+Runtime classification is **NOT OBTAINED**. Original run `32701930506` failed during GL4ES patch bootstrap. Amendment 1 repaired that ordered stack, but replacement run `32723328194` stopped during bundled OSG patch application before production compilation. No causal alternative can be selected from source evidence alone.

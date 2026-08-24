@@ -5,11 +5,11 @@
 - Current engineering baseline commit: `195f3a4bbcfd17ecd46546f3e28d3ee8558bed27`
 - Control-plane issued baseline commit: `bbd7ce4fd5c82520c630f49fb768e0b1a284d940`
 - Active work order: none
-- Ready work order: [WO-033 Amendment 1](../WorkOrders/WO-033.md)
+- Ready work order: [WO-033 Amendment 2](../WorkOrders/WO-033.md)
 - Last completed work order: [WO-032](../WorkOrders/WO-032.md) — **ACCEPTED / PARTIAL DIAGNOSTIC; CORRECTION REJECTED**
-- Last reviewed work order: [WO-033](../WorkOrders/WO-033.md) — **original execution blocked before compilation; Amendment 1 READY**
-- Current objective: repair WO33's GL4ES patch-order hermeticity, then trace the exact OSG-to-GL4ES blend enable/disable/context/render-list sequence for the target smoke draw before any new correction
-- Engineering execution status: **STOPPED; WO-033 Amendment 1 is READY and awaits an explicit start directive**
+- Last reviewed work order: [WO-033](../WorkOrders/WO-033.md) — **Amendment 1 blocked before compilation; Amendment 2 READY**
+- Current objective: repair WO33's bundled OSG patch materialization, then trace the exact OSG-to-GL4ES blend enable/disable/context/render-list sequence for the target smoke draw before any new correction
+- Engineering execution status: **STOPPED; WO-033 Amendment 2 is READY and awaits an explicit start directive**
 - Current accepted correction: WO29's non-ARC icon ownership fix plus WO30's practical on-device touch editor and reduced-opacity controls
 - Last updated: 2026-08-24
 
@@ -93,7 +93,11 @@ WO32 is closed. The remaining smoke boundary is the actual transition sequence b
 
 The original WO33 execution added a bounded target-gated transition tracer, but Fast run `32701930506` failed during GL4ES patch bootstrap before compilation. Patch 0009 contained stale contexts for `enable.c` and `listdraw.c` after the preceding production patch stack. No IPA, device capture, runtime transition proof, or renderer correction resulted. The diagnostic source remains an unaccepted candidate and the accepted runtime baseline is unchanged.
 
-WO33 Amendment 1 is READY. It authorizes only rebasing those patch contexts against the pristine pinned post-0008 GL4ES tree, strengthening exact clean-tree ordered-patch validation, and one replacement Fast diagnostic run. It continues to prohibit any new renderer correction until the first invalid transition is proven on device.
+WO33 Amendment 1 successfully repaired the GL4ES patch-order hermeticity. Fast run `32723328194` passed all 146 source tests and the complete GL4ES 0001–0009 stack, then failed during bundled OSG population before compilation. The OSG patch contains empty, unprefixed context lines; Git reports `corrupt patch at line 33`, while production `/usr/bin/patch` reported `No file to patch` and rejected two hunks. Custom Python reconstruction had accepted that malformed representation and therefore did not reproduce the production parser.
+
+No IPA, device capture, runtime transition proof, or renderer correction resulted. The GL4ES diagnostic repair and transition source remain unaccepted candidates; the accepted runtime baseline is unchanged.
+
+WO33 Amendment 2 is READY. It authorizes only valid regeneration of the existing OSG routing/diagnostic patch against pristine pinned OSG, an exact production-parser hermetic test, and one replacement Fast diagnostic run. It continues to prohibit any renderer correction until the first invalid transition is proven on device.
 
 Secondary/deferred boundaries: foliage; R2 distance/horizon; menu/options touch scrolling; WO30 Reset-opacity and all-control-affordance gaps; reduced render scale `0.58`; the transient red effect; and warning-flood cleanup except where narrowly necessary to collect bounded renderer evidence. WO33 prohibits work on those boundaries.
 
@@ -107,7 +111,8 @@ The accepted physical test did **not** record the post-install container UUID be
 
 ## Latest important evidence
 
-- [READY WO33 Amendment 1](../WorkOrders/WO-033.md)
+- [READY WO33 Amendment 2](../WorkOrders/WO-033.md)
+- [WO33 Amendment 1 OSG patch failure review](../Evidence/WO-033/orchestrator-amendment1-osg-patch-review.md)
 - [WO33 pre-build failure orchestrator review](../Evidence/WO-033/orchestrator-prebuild-failure-review.md)
 - [WO33 worker report](../Evidence/WO-033/report.md)
 - [WO33 evidence manifest](../Evidence/WO-033/manifest.md)
@@ -156,9 +161,9 @@ The accepted physical test did **not** record the post-install container UUID be
 ## Future orchestrator/worker recovery
 
 1. Read `Documentation/CURRENT_STATE.md`.
-2. Read accepted `WorkOrders/WO-032.md`, READY WO33 Amendment 1, DEC-012, and the WO33 pre-build failure review.
+2. Read accepted `WorkOrders/WO-032.md`, READY WO33 Amendment 2, DEC-012, and both WO33 pre-build failure reviews.
 3. Read only the `Decisions/` and `Evidence/` records referenced by that work order.
 4. Inspect current Git state and active/recent CI before changing anything.
 5. Use the Google Docs ledger only when deeper historical context is required.
 
-WO33 Amendment 1 is READY and no work order is ACTIVE. The exact next action is to deliver its explicit start directive to the existing worker. Do not create another worker or start any other work order.
+WO33 Amendment 2 is READY and no work order is ACTIVE. The exact next action is to deliver its explicit start directive to the existing worker. Do not create another worker or start any other work order.
