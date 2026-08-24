@@ -36,6 +36,8 @@ void openmw_ios_renderer_diag_register_gl_texture(
 int openmw_ios_renderer_diag_texture_category_for_gl_name(unsigned int texture);
 int openmw_ios_renderer_diag_target_for_hash(uint64_t hash);
 int openmw_ios_renderer_diag_target_for_gl_name(unsigned int texture);
+void openmw_ios_renderer_diag_blend_event(
+    const char* source, const char* site, const char* detail);
 void openmw_ios_renderer_diag_arm_exterior_fog(
     float start, float end, const float* color, float view_distance);
 unsigned int openmw_ios_renderer_diag_matching_exterior_fog_generation(

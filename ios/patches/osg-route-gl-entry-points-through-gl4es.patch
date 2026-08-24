@@ -27,19 +27,39 @@ index 5ecf63a..bffbc7f 100644
 diff --git a/include/osg/State b/include/osg/State
 --- a/include/osg/State
 +++ b/include/osg/State
-@@ -35,6 +35,11 @@
+@@ -38,6 +38,14 @@
  #include <set>
  #include <string>
 
 +#if defined(__APPLE__) && defined(OPENMW_GL4ES_MANUAL_INIT)
++#include <cstdio>
 +extern "C" void gl4es_glEnable(GLenum cap);
 +extern "C" void gl4es_glDisable(GLenum cap);
++extern "C" void openmw_ios_renderer_diag_blend_event(
++    const char*, const char*, const char*) __attribute__((weak_import));
 +#endif
 +
  #ifndef GL_TEXTURE0
  #define GL_TEXTURE0 0x84C0
  #endif
-@@ -1146,8 +1151,13 @@ class OSG_EXPORT State : public Referenced
+@@ -1142,12 +1150,30 @@ class OSG_EXPORT State : public Referenced
+         */
+         inline bool applyMode(StateAttribute::GLMode mode,bool enabled,ModeStack& ms)
+         {
++#if defined(__APPLE__) && defined(OPENMW_GL4ES_MANUAL_INIT)
++            if (mode == GL_BLEND && openmw_ios_renderer_diag_blend_event)
++            {
++                char detail[256];
++                std::snprintf(detail, sizeof(detail),
++                    "mode=%u;requested=%d;valid=%d;last=%d;issued=%d;state=%p;context=%u;route=manual-gl4es",
++                    static_cast<unsigned int>(mode), enabled ? 1 : 0, ms.valid ? 1 : 0,
++                    ms.last_applied_value ? 1 : 0,
++                    ms.valid && ms.last_applied_value != enabled ? 1 : 0,
++                    static_cast<void*>(this), getContextID());
++                openmw_ios_renderer_diag_blend_event("osg", "State::applyMode", detail);
++            }
++#endif
+             if (ms.valid && ms.last_applied_value != enabled)
              {
                  ms.last_applied_value = enabled;
 
@@ -53,8 +73,22 @@ diff --git a/include/osg/State b/include/osg/State
 
                  if (_checkGLErrors==ONCE_PER_ATTRIBUTE) checkGLErrors(mode);
 
-@@ -1165,8 +1175,13 @@ class OSG_EXPORT State : public Referenced
+@@ -1163,10 +1189,27 @@ class OSG_EXPORT State : public Referenced
+             {
+                 if (setActiveTextureUnit(unit))
                  {
++#if defined(__APPLE__) && defined(OPENMW_GL4ES_MANUAL_INIT)
++                    if (mode == GL_BLEND && openmw_ios_renderer_diag_blend_event)
++                    {
++                        char detail[256];
++                        std::snprintf(detail, sizeof(detail),
++                            "mode=%u;requested=%d;valid=%d;last=%d;issued=1;state=%p;context=%u;unit=%u;route=manual-gl4es",
++                            static_cast<unsigned int>(mode), enabled ? 1 : 0, ms.valid ? 1 : 0,
++                            ms.last_applied_value ? 1 : 0, static_cast<void*>(this), getContextID(), unit);
++                        openmw_ios_renderer_diag_blend_event(
++                            "osg", "State::applyModeOnTexUnit", detail);
++                    }
++#endif
                      ms.last_applied_value = enabled;
 
 +#if defined(__APPLE__) && defined(OPENMW_GL4ES_MANUAL_INIT)
@@ -70,18 +104,43 @@ diff --git a/include/osg/State b/include/osg/State
 diff --git a/src/osg/BlendFunc.cpp b/src/osg/BlendFunc.cpp
 --- a/src/osg/BlendFunc.cpp
 +++ b/src/osg/BlendFunc.cpp
-@@ -17,6 +17,10 @@
+@@ -14,6 +14,13 @@
+ #include <osg/GLExtensions>
  #include <osg/State>
  #include <osg/Notify>
++#include <cstdio>
 
 +#if defined(__APPLE__) && defined(OPENMW_GL4ES_MANUAL_INIT)
 +extern "C" void gl4es_glBlendFunc(GLenum sfactor, GLenum dfactor);
++extern "C" void openmw_ios_renderer_diag_blend_event(
++    const char*, const char*, const char*) __attribute__((weak_import));
 +#endif
 +
  using namespace osg;
 
  BlendFunc::BlendFunc():
-@@ -62,5 +66,9 @@ void BlendFunc::apply(State& state) const
+@@ -47,6 +54,20 @@ BlendFunc::~BlendFunc()
+
+ void BlendFunc::apply(State& state) const
+ {
++#if defined(__APPLE__) && defined(OPENMW_GL4ES_MANUAL_INIT)
++    if (openmw_ios_renderer_diag_blend_event)
++    {
++        char detail[256];
++        std::snprintf(detail, sizeof(detail),
++            "src_rgb=%u;dst_rgb=%u;src_alpha=%u;dst_alpha=%u;separate=%d;state=%p;context=%u;route=manual-gl4es",
++            static_cast<unsigned int>(_source_factor), static_cast<unsigned int>(_destination_factor),
++            static_cast<unsigned int>(_source_factor_alpha),
++            static_cast<unsigned int>(_destination_factor_alpha),
++            (_source_factor != _source_factor_alpha || _destination_factor != _destination_factor_alpha) ? 1 : 0,
++            static_cast<void*>(&state), state.getContextID());
++        openmw_ios_renderer_diag_blend_event("osg", "BlendFunc::apply", detail);
++    }
++#endif
+     if (_source_factor != _source_factor_alpha ||
+         _destination_factor != _destination_factor_alpha)
+     {
+@@ -62,5 +83,9 @@ void BlendFunc::apply(State& state) const
          }
      }
 
