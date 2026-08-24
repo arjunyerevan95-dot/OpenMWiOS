@@ -1,8 +1,9 @@
 diff --git a/src/gl/drawing.c b/src/gl/drawing.c
-index 0a12ebb..bd4186f 100644
+index 0a12ebb..9a258f1 100644
 --- a/src/gl/drawing.c
 +++ b/src/gl/drawing.c
-@@ -287,0 +288,21 @@ GLuint len_indices(const GLushort *sindices, const GLuint *iindices, GLsizei cou
+@@ -286,2 +286,23 @@ GLuint len_indices(const GLushort *sindices, const GLuint *iindices, GLsizei cou
+ }
 +static int wo33_smoke_target_bound(void) {
 +    for (int unit = 0; unit < hardext.maxtex; ++unit) {
 +        gltexture_t* texture = glstate->texture.bound[unit][ENABLED_TEX2D];
@@ -24,30 +25,50 @@ index 0a12ebb..bd4186f 100644
 +    wo33_diag_blend_event(site, detail);
 +}
 +
-@@ -291,0 +313 @@ static void glDrawElementsCommon(GLenum mode, GLint first, GLsizei count, GLuint
+ 
+@@ -290,2 +311,3 @@ static void glDrawElementsCommon(GLenum mode, GLint first, GLsizei count, GLuint
+         bitmap_flush();
 +    wo33_diag_draw_phase("glDrawElementsCommon", mode, count);
-@@ -598,0 +621 @@ void APIENTRY_GL4ES gl4es_glDrawElements(GLenum mode, GLsizei count, GLenum type
+     DBG(printf("glDrawElementsCommon(%s, %d, %d, %d, %p, %p, %d)\n", PrintEnum(mode), first, count, len, sindices, iindices, instancecount);)
+@@ -597,2 +619,3 @@ AliasExport(void,glDrawRangeElements,EXT,(GLenum mode,GLuint start,GLuint end,GL
+ void APIENTRY_GL4ES gl4es_glDrawElements(GLenum mode, GLsizei count, GLenum type, const GLvoid *indices) {
 +    wo33_diag_draw_phase("glDrawElements.intake", mode, count);
-@@ -644,0 +668 @@ void APIENTRY_GL4ES gl4es_glDrawElements(GLenum mode, GLsizei count, GLenum type
+     DBG(printf("glDrawElements(%s, %d, %s, %p), vtx=%p map=%p, pending=%d\n", PrintEnum(mode), count, PrintEnum(type), indices, (glstate->vao->vertex)?glstate->vao->vertex->data:NULL, (glstate->vao->elements)?glstate->vao->elements->data:NULL, glstate->list.pending);)
+@@ -643,2 +666,3 @@ void APIENTRY_GL4ES gl4es_glDrawElements(GLenum mode, GLsizei count, GLenum type
+ 
 +        wo33_diag_draw_phase("glDrawElements.capture", mode, count);
-@@ -676,0 +701 @@ void APIENTRY_GL4ES gl4es_glDrawElements(GLenum mode, GLsizei count, GLenum type
+     if (compiling) {
+@@ -675,2 +699,3 @@ void APIENTRY_GL4ES gl4es_glDrawElements(GLenum mode, GLsizei count, GLenum type
+ 
 +        wo33_diag_draw_phase("glDrawElements.intercept", mode, count);
-@@ -706,0 +732 @@ void APIENTRY_GL4ES gl4es_glDrawArrays(GLenum mode, GLint first, GLsizei count)
+     if (intercept) {
+@@ -705,2 +730,3 @@ AliasExport(void,glDrawElements,,(GLenum mode, GLsizei count, GLenum type, const
+ void APIENTRY_GL4ES gl4es_glDrawArrays(GLenum mode, GLint first, GLsizei count) {
 +    wo33_diag_draw_phase("glDrawArrays.intake", mode, count);
-@@ -741,0 +768 @@ void APIENTRY_GL4ES gl4es_glDrawArrays(GLenum mode, GLint first, GLsizei count)
+     DBG(printf("glDrawArrays(%s, %d, %d), list=%p pending=%d\n", PrintEnum(mode), first, count, glstate->list.active, glstate->list.pending);)
+@@ -740,2 +766,3 @@ void APIENTRY_GL4ES gl4es_glDrawArrays(GLenum mode, GLint first, GLsizei count)
+ 
 +        wo33_diag_draw_phase("glDrawArrays.capture", mode, count);
-@@ -764,0 +792 @@ void APIENTRY_GL4ES gl4es_glDrawArrays(GLenum mode, GLint first, GLsizei count)
+     if (glstate->list.active) {
+@@ -763,2 +790,3 @@ void APIENTRY_GL4ES gl4es_glDrawArrays(GLenum mode, GLint first, GLsizei count)
+ 
 +        wo33_diag_draw_phase("glDrawArrays.intercept", mode, count);
+     if (intercept) {
 diff --git a/src/gl/enable.c b/src/gl/enable.c
-index d645568..1e112c4 100644
+index d645568..d12204e 100644
 --- a/src/gl/enable.c
 +++ b/src/gl/enable.c
-@@ -3,0 +4 @@
+@@ -2,2 +2,3 @@
+ #include "glstate.h"
 +#include "ios_renderer_diag.h"
-@@ -6,0 +8,2 @@
+ #include "init.h"
+@@ -5,2 +6,4 @@
+ #include "debug.h"
 +#include <stdio.h>
 +
-@@ -111 +114,20 @@ static void proxy_glEnable(GLenum cap, bool enable, void (APIENTRY_GLES *next)(G
+ 
+@@ -110,3 +113,22 @@ static void proxy_glEnable(GLenum cap, bool enable, void (APIENTRY_GLES *next)(G
+         proxy_GOFPE(GL_FOG, fog, glstate->fpe_state->fog=enable);
 -        case GL_BLEND: if(glstate->enable.blend != enable) {FLUSH_BEGINEND; glstate->enable.blend = enable; if(glstate->fpe_state && globals4es.shaderblend) { glstate->fpe_state->blend_enable = enable; } else next(cap);} break;
 +        case GL_BLEND: {
 +            const int previous = glstate->enable.blend;
@@ -69,14 +90,18 @@ index d645568..1e112c4 100644
 +            wo33_diag_blend_event("proxy_glEnable(GL_BLEND)", wo33_detail);
 +            break;
 +        }
+         proxy_GO(GL_CULL_FACE, cull_face);
 diff --git a/src/gl/ios_renderer_diag.c b/src/gl/ios_renderer_diag.c
-index af9ad73..076e2ef 100644
+index af9ad73..2a183fe 100644
 --- a/src/gl/ios_renderer_diag.c
 +++ b/src/gl/ios_renderer_diag.c
-@@ -20,0 +21,2 @@ extern uint64_t openmw_ios_renderer_diag_hash(const void*, size_t) WO31_WEAK_IMP
+@@ -19,2 +19,4 @@ extern unsigned int openmw_ios_renderer_diag_matching_exterior_fog_generation(
+     float, float, const float*) WO31_WEAK_IMPORT;
 +extern void openmw_ios_renderer_diag_blend_event(
 +    const char*, const char*, const char*) WO31_WEAK_IMPORT;
-@@ -135,0 +138,11 @@ int wo32_diag_texture_target_for_name(unsigned int texture)
+ extern uint64_t openmw_ios_renderer_diag_hash(const void*, size_t) WO31_WEAK_IMPORT;
+@@ -134,2 +136,13 @@ int wo32_diag_texture_target_for_name(unsigned int texture)
+ }
 +void wo33_diag_blend_event(const char* site, const char* detail)
 +{
 +#if defined(__APPLE__) || defined(WO31_DIAGNOSTIC_TEST_BRIDGE)
@@ -88,19 +113,25 @@ index af9ad73..076e2ef 100644
 +#endif
 +}
 +
+ 
 diff --git a/src/gl/ios_renderer_diag.h b/src/gl/ios_renderer_diag.h
-index 5bc1310..cc29409 100644
+index 5bc1310..2b9ff2d 100644
 --- a/src/gl/ios_renderer_diag.h
 +++ b/src/gl/ios_renderer_diag.h
-@@ -11,0 +12 @@ int wo32_diag_texture_target_for_name(unsigned int texture);
+@@ -10,2 +10,3 @@ void wo31_diag_texture_upload(unsigned int texture, const void* data, size_t siz
+ int wo31_diag_texture_category_for_name(unsigned int texture);
 +void wo33_diag_blend_event(const char* site, const char* detail);
+ int wo32_diag_texture_target_for_name(unsigned int texture);
 diff --git a/src/gl/listdraw.c b/src/gl/listdraw.c
-index d616b3b..85f4dd1 100644
+index d616b3b..197bb58 100644
 --- a/src/gl/listdraw.c
 +++ b/src/gl/listdraw.c
-@@ -6,0 +7 @@
+@@ -5,2 +5,3 @@
+ #include "fpe.h"
 +#include "ios_renderer_diag.h"
-@@ -13,0 +15,26 @@
+ #include "init.h"
+@@ -12,2 +13,28 @@
+ #include "fpe.h"
 +#include <stdio.h>
 +
 +static int wo33_smoke_target_bound(void)
@@ -127,10 +158,13 @@ index d616b3b..85f4dd1 100644
 +    wo33_diag_blend_event(site, detail);
 +}
 +
-@@ -727 +754 @@ void draw_renderlist(renderlist_t *list) {
+ 
+@@ -726,4 +753,7 @@ void draw_renderlist(renderlist_t *list) {
+ 			mode = GL_LINES;
 -		if ((glstate->polygon_mode == GL_POINT) && (mode>=GL_TRIANGLES))
 +        if ((glstate->polygon_mode == GL_POINT) && (mode>=GL_TRIANGLES))
-@@ -729,0 +757,3 @@ void draw_renderlist(renderlist_t *list) {
+ 			mode = GL_POINTS;
 +        wo33_diag_replay_phase("draw_renderlist.native-draw", list, mode,
 +            indices ? list->ilen : list->len);
 +
+ 

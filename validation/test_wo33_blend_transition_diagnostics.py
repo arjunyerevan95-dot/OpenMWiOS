@@ -1,3 +1,4 @@
+import hashlib
 import os
 import pathlib
 import re
@@ -5,6 +6,7 @@ import shutil
 import subprocess
 import tempfile
 import unittest
+import zipfile
 
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
@@ -16,6 +18,10 @@ GL4ES_OBSERVABILITY = ROOT / "patches" / "gl4es" / "0007-ios-renderer-diagnostic
 GL4ES_TARGETED = ROOT / "patches" / "gl4es" / "0008-ios-renderer-diagnostics-targeted-boundaries.patch"
 GL4ES_TRANSITIONS = ROOT / "patches" / "gl4es" / "0009-ios-blend-transition-diagnostics.patch"
 TRANSITION_FIXTURE = ROOT / "validation" / "fixtures" / "wo33_blend_transition_fixture.c"
+PINNED_PATCH_INPUTS = (
+    ROOT / "validation" / "fixtures" / "gl4es-c9895df-wo33-patch-inputs.zip"
+)
+PINNED_PATCH_INPUTS_SHA256 = "1601090e10fda84c4e9b8343219deea1ad5c4398638005f22977e8f7e5c6bda6"
 
 
 def extract_added_file(patch: str, path: str) -> str:
@@ -156,6 +162,67 @@ class WorkOrder33BlendTransitionDiagnosticTests(unittest.TestCase):
             ("osg", 1, "A"), ("gl4es", 1, "A"), ("replay", 0, "A"), ("common", 0, "A")]))
         self.assertEqual("consistent", classify_transition([
             ("osg", 1, "A"), ("gl4es", 1, "A"), ("common", 1, "A")]))
+
+    def test_complete_gl4es_patch_stack_applies_to_pristine_pinned_snapshot(self) -> None:
+        self.assertEqual(
+            PINNED_PATCH_INPUTS_SHA256,
+            hashlib.sha256(PINNED_PATCH_INPUTS.read_bytes()).hexdigest(),
+        )
+        patches = sorted((ROOT / "patches" / "gl4es").glob("*.patch"))
+        self.assertEqual(
+            [f"{index:04d}" for index in range(1, 10)],
+            [patch.name.split("-", 1)[0] for patch in patches],
+        )
+        with tempfile.TemporaryDirectory() as directory:
+            snapshot = pathlib.Path(directory)
+            with zipfile.ZipFile(PINNED_PATCH_INPUTS) as archive:
+                archive.extractall(snapshot)
+            for source in snapshot.rglob("*"):
+                if source.is_file():
+                    source.write_bytes(source.read_bytes().replace(b"\r\n", b"\n"))
+            subprocess.run(["git", "init", "-q"], cwd=snapshot, check=True)
+            subprocess.run(["git", "config", "core.autocrlf", "false"], cwd=snapshot, check=True)
+            subprocess.run(["git", "add", "-A"], cwd=snapshot, check=True)
+            subprocess.run(
+                ["git", "-c", "user.name=WO33", "-c", "user.email=wo33@example.invalid",
+                    "commit", "-q", "-m", "pinned-c9895df-patch-inputs"],
+                cwd=snapshot,
+                check=True,
+            )
+            for patch in patches:
+                normalized_patch = snapshot / f".wo33-{patch.name}"
+                normalized_patch.write_text(
+                    patch.read_text(encoding="utf-8"),
+                    encoding="utf-8",
+                    newline="\n",
+                )
+                check_result = subprocess.run(
+                    ["git", "apply", "--check", str(normalized_patch)],
+                    cwd=snapshot,
+                    capture_output=True,
+                    text=True,
+                )
+                self.assertEqual(
+                    0,
+                    check_result.returncode,
+                    f"{patch.name} failed clean-tree validation:\n{check_result.stderr}",
+                )
+                subprocess.run(
+                    ["git", "apply", str(normalized_patch)],
+                    cwd=snapshot,
+                    check=True,
+                    capture_output=True,
+                    text=True,
+                )
+            subprocess.run(
+                ["git", "diff", "--check"], cwd=snapshot, check=True, capture_output=True, text=True
+            )
+            drawing = (snapshot / "src" / "gl" / "drawing.c").read_text(encoding="utf-8")
+            enable = (snapshot / "src" / "gl" / "enable.c").read_text(encoding="utf-8")
+            replay = (snapshot / "src" / "gl" / "listdraw.c").read_text(encoding="utf-8")
+        self.assertIn('wo33_diag_draw_phase("glDrawElementsCommon", mode, count);', drawing)
+        self.assertIn('wo33_diag_blend_event("proxy_glEnable(GL_BLEND)", wo33_detail);', enable)
+        self.assertIn('wo33_diag_replay_phase("draw_renderlist.native-draw", list, mode,', replay)
 
     def test_compiled_transition_fixture_covers_ordered_alternatives(self) -> None:
         compiler = os.environ.get("CC") or shutil.which("cc") or shutil.which("clang") or shutil.which("gcc")
