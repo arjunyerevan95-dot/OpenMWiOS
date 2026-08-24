@@ -13,6 +13,7 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 BRIDGE = ROOT / "ios" / "openmw_ios_renderer_diagnostics.mm"
 HEADER = ROOT / "ios" / "openmw_ios_renderer_diagnostics.h"
 OSG_ROUTE = ROOT / "ios" / "patches" / "osg-route-gl-entry-points-through-gl4es.patch"
+OSG_PATCH_DRIVER = ROOT / "ios" / "cmake" / "apply-osg-patch.cmake"
 GL4ES_BASE = ROOT / "patches" / "gl4es" / "0006-ios-file-backed-renderer-diagnostics.patch"
 GL4ES_OBSERVABILITY = ROOT / "patches" / "gl4es" / "0007-ios-renderer-diagnostics-observable-paths.patch"
 GL4ES_TARGETED = ROOT / "patches" / "gl4es" / "0008-ios-renderer-diagnostics-targeted-boundaries.patch"
@@ -22,6 +23,19 @@ PINNED_PATCH_INPUTS = (
     ROOT / "validation" / "fixtures" / "gl4es-c9895df-wo33-patch-inputs.zip"
 )
 PINNED_PATCH_INPUTS_SHA256 = "1601090e10fda84c4e9b8343219deea1ad5c4398638005f22977e8f7e5c6bda6"
+OSG_PINNED_REVISION = "01cc2b585c8456a4ff843066b7e1a8715558289f"
+OSG_PINNED_PATCH_INPUTS = (
+    ROOT / "validation" / "fixtures" / "osg-01cc2b5-wo33-patch-inputs.zip"
+)
+OSG_PINNED_PATCH_INPUTS_SHA256 = (
+    "91f3e31c4bd6999162f91c0ed1acdebfe889902d7e79d16cecf505392020409e"
+)
+OSG_PATCHED_FILE_SHA256 = {
+    "include/osg/State": "92a5051cb05c3b773c1e54f1baaa4cdc5be96f80b75910bb17d20aa4ba49e602",
+    "src/osg/GLExtensions.cpp": "47cbf5fe3c077e92dca7b2dbfec1c8f3bafe1d43ec5cc1837aee4ceeab6dfee1",
+    "src/osg/BlendFunc.cpp": "4d79247a631be73f7c859cd6038ff3199ef5f0ef4a2fd0bfaffa7f80b7f8b7e8",
+    "src/osg/Texture2D.cpp": "678460b5e6b097b26cccab1d7f478d9de3b27eb3edf6bae01c770c1dff495229",
+}
 
 
 def extract_added_file(patch: str, path: str) -> str:
@@ -32,6 +46,8 @@ def extract_added_file(patch: str, path: str) -> str:
     ) + "\n"
 
 
+# GL4ES-only source reconstruction helper. It is deliberately not an OSG patch
+# parser; the pristine-input real-parser test below is authoritative for OSG.
 def apply_file_patch(source: str, patch: str, path: str) -> str:
     marker = f"diff --git a/{path} b/{path}"
     block = patch.split(marker, 1)[1].split("\ndiff --git ", 1)[0]
@@ -223,6 +239,70 @@ class WorkOrder33BlendTransitionDiagnosticTests(unittest.TestCase):
         self.assertIn('wo33_diag_draw_phase("glDrawElementsCommon", mode, count);', drawing)
         self.assertIn('wo33_diag_blend_event("proxy_glEnable(GL_BLEND)", wo33_detail);', enable)
         self.assertIn('wo33_diag_replay_phase("draw_renderlist.native-draw", list, mode,', replay)
+
+    def test_osg_patch_materializes_with_real_parsers_on_pristine_pinned_inputs(self) -> None:
+        """The custom GL4ES source reconstructor is not authoritative for this OSG patch."""
+        self.assertEqual(
+            OSG_PINNED_PATCH_INPUTS_SHA256,
+            hashlib.sha256(OSG_PINNED_PATCH_INPUTS.read_bytes()).hexdigest(),
+        )
+        self.assertNotIn(b"\r", OSG_ROUTE.read_bytes())
+        patch_driver = OSG_PATCH_DRIVER.read_text(encoding="utf-8")
+        for token in ("/usr/bin/patch", "-N", "-f", "-p1", "-i"):
+            self.assertIn(token, patch_driver)
+
+        with tempfile.TemporaryDirectory() as directory:
+            snapshot = pathlib.Path(directory)
+            with zipfile.ZipFile(OSG_PINNED_PATCH_INPUTS) as archive:
+                archive.extractall(snapshot)
+            subprocess.run(["git", "init", "-q"], cwd=snapshot, check=True)
+            subprocess.run(["git", "config", "core.autocrlf", "false"], cwd=snapshot, check=True)
+            subprocess.run(["git", "add", "-A"], cwd=snapshot, check=True)
+            subprocess.run(
+                ["git", "-c", "user.name=WO33", "-c", "user.email=wo33@example.invalid",
+                    "commit", "-q", "-m", f"pinned-osg-{OSG_PINNED_REVISION}"],
+                cwd=snapshot,
+                check=True,
+            )
+
+            parse_result = subprocess.run(
+                ["git", "apply", "--check", str(OSG_ROUTE)],
+                cwd=snapshot,
+                capture_output=True,
+                text=True,
+            )
+            self.assertEqual(0, parse_result.returncode, parse_result.stderr)
+
+            production_patch = pathlib.Path("/usr/bin/patch")
+            if production_patch.is_file():
+                materialize_command = [
+                    str(production_patch), "-N", "-f", "-p1", "-i", str(OSG_ROUTE)
+                ]
+            else:
+                # Windows developer hosts lack /usr/bin/patch. Git applies the already-checked
+                # blob locally; macOS CI must and does exercise the exact production command.
+                self.assertNotEqual("macOS", os.environ.get("RUNNER_OS"))
+                materialize_command = ["git", "apply", str(OSG_ROUTE)]
+            materialize_result = subprocess.run(
+                materialize_command,
+                cwd=snapshot,
+                capture_output=True,
+                text=True,
+            )
+            self.assertEqual(0, materialize_result.returncode, materialize_result.stderr)
+
+            actual_hashes = {
+                path: hashlib.sha256((snapshot / path).read_bytes()).hexdigest()
+                for path in OSG_PATCHED_FILE_SHA256
+            }
+            self.assertEqual(OSG_PATCHED_FILE_SHA256, actual_hashes)
+
+            status = subprocess.run(
+                ["git", "status", "--short"], cwd=snapshot, check=True,
+                capture_output=True, text=True
+            ).stdout.splitlines()
+            self.assertEqual(4, len(status), status)
+            self.assertTrue(all(line.startswith(" M ") for line in status), status)
 
     def test_compiled_transition_fixture_covers_ordered_alternatives(self) -> None:
         compiler = os.environ.get("CC") or shutil.which("cc") or shutil.which("clang") or shutil.which("gcc")
