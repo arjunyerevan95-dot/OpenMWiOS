@@ -1,15 +1,15 @@
 # OpenMWiOS — Current State
 
 - Project: OpenMWiOS
-- Active branch: `codex/wo29-ios-crash-isolation` (canonical ControlPlane); active WO33 execution branch: `codex/wo33-blend-state-transition`
+- Active branch: `codex/wo29-ios-crash-isolation` (canonical ControlPlane); WO33 execution branch: `codex/wo33-blend-state-transition`
 - Current engineering baseline commit: `195f3a4bbcfd17ecd46546f3e28d3ee8558bed27`
 - Control-plane issued baseline commit: `bbd7ce4fd5c82520c630f49fb768e0b1a284d940`
-- Active work order: [WO-033](../WorkOrders/WO-033.md)
-- Ready work order: none
+- Active work order: none
+- Ready work order: [WO-033 Amendment 1](../WorkOrders/WO-033.md)
 - Last completed work order: [WO-032](../WorkOrders/WO-032.md) — **ACCEPTED / PARTIAL DIAGNOSTIC; CORRECTION REJECTED**
-- Last reviewed work order: [WO-032](../WorkOrders/WO-032.md) — **evidence accepted; OSG blend-routing correction falsified**
-- Current objective: trace the exact OSG-to-GL4ES blend enable/disable/context/render-list sequence for the target smoke draw before any new correction
-- Engineering execution status: **ACTIVE; WO-033 start directive was relayed to the existing worker on 2026-08-24**
+- Last reviewed work order: [WO-033](../WorkOrders/WO-033.md) — **original execution blocked before compilation; Amendment 1 READY**
+- Current objective: repair WO33's GL4ES patch-order hermeticity, then trace the exact OSG-to-GL4ES blend enable/disable/context/render-list sequence for the target smoke draw before any new correction
+- Engineering execution status: **STOPPED; WO-033 Amendment 1 is READY and awaits an explicit start directive**
 - Current accepted correction: WO29's non-ARC icon ownership fix plus WO30's practical on-device touch editor and reduced-opacity controls
 - Last updated: 2026-08-24
 
@@ -89,7 +89,11 @@ The exact device IPA reached Seyda Neen and captured four `tx_smokealpha00a.dds`
 
 Foliage is a distinct unresolved path: the captured `tx_bc_moss.dds` draw is already opaque before raster output. R2 is also unresolved: only one stable maximum-distance generation exists, so the white distance region and blue horizon boundary remain unlocalized. Neither may be inferred fixed by the smoke correction.
 
-WO32 is closed. The remaining smoke boundary is the actual transition sequence between OSG's cached mode decision, GL4ES enable/disable ingress, context/state identity, render-list capture/replay, and `glDrawElementsCommon`. WO33 is ACTIVE to trace that sequence. It prohibits a new fix until the first invalid transition is proven.
+WO32 is closed. The remaining smoke boundary is the actual transition sequence between OSG's cached mode decision, GL4ES enable/disable ingress, context/state identity, render-list capture/replay, and `glDrawElementsCommon`.
+
+The original WO33 execution added a bounded target-gated transition tracer, but Fast run `32701930506` failed during GL4ES patch bootstrap before compilation. Patch 0009 contained stale contexts for `enable.c` and `listdraw.c` after the preceding production patch stack. No IPA, device capture, runtime transition proof, or renderer correction resulted. The diagnostic source remains an unaccepted candidate and the accepted runtime baseline is unchanged.
+
+WO33 Amendment 1 is READY. It authorizes only rebasing those patch contexts against the pristine pinned post-0008 GL4ES tree, strengthening exact clean-tree ordered-patch validation, and one replacement Fast diagnostic run. It continues to prohibit any new renderer correction until the first invalid transition is proven on device.
 
 Secondary/deferred boundaries: foliage; R2 distance/horizon; menu/options touch scrolling; WO30 Reset-opacity and all-control-affordance gaps; reduced render scale `0.58`; the transient red effect; and warning-flood cleanup except where narrowly necessary to collect bounded renderer evidence. WO33 prohibits work on those boundaries.
 
@@ -103,7 +107,10 @@ The accepted physical test did **not** record the post-install container UUID be
 
 ## Latest important evidence
 
-- [READY WO33](../WorkOrders/WO-033.md)
+- [READY WO33 Amendment 1](../WorkOrders/WO-033.md)
+- [WO33 pre-build failure orchestrator review](../Evidence/WO-033/orchestrator-prebuild-failure-review.md)
+- [WO33 worker report](../Evidence/WO-033/report.md)
+- [WO33 evidence manifest](../Evidence/WO-033/manifest.md)
 - [Accepted WO32](../WorkOrders/WO-032.md)
 - [WO32 final orchestrator review](../Evidence/WO-032/orchestrator-amendment2-final-review.md)
 - [WO32 falsification decision](../Decisions/DEC-012.md)
@@ -149,9 +156,9 @@ The accepted physical test did **not** record the post-install container UUID be
 ## Future orchestrator/worker recovery
 
 1. Read `Documentation/CURRENT_STATE.md`.
-2. Read accepted `WorkOrders/WO-032.md`, READY `WorkOrders/WO-033.md`, DEC-012, and only their directly referenced evidence.
+2. Read accepted `WorkOrders/WO-032.md`, READY WO33 Amendment 1, DEC-012, and the WO33 pre-build failure review.
 3. Read only the `Decisions/` and `Evidence/` records referenced by that work order.
 4. Inspect current Git state and active/recent CI before changing anything.
 5. Use the Google Docs ledger only when deeper historical context is required.
 
-WO33 is ACTIVE with the existing worker. The exact next action is to allow that execution to reach its natural completion, blocker, CI-wait, or device-evidence boundary. Do not resend the start directive, create another worker, or duplicate either authorized build.
+WO33 Amendment 1 is READY and no work order is ACTIVE. The exact next action is to deliver its explicit start directive to the existing worker. Do not create another worker or start any other work order.
