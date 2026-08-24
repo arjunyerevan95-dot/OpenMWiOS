@@ -1,5 +1,7 @@
 # WO-033 device capture
 
-Status: **NOT YET PERFORMED**
+Status: **NOT PERFORMED — NO INSTALLABLE CANDIDATE**
 
-Required candidate identity, install result, Seyda Neen chimney-smoke screenshot, bounded `renderer-diagnostic.jsonl`, and crash/termination observation will be recorded after the single authorized diagnostic Fast build.
+Fast run `32701930506` failed during GL4ES patch bootstrap before compilation. Therefore no IPA, installation, launch, Seyda Neen chimney-smoke screenshot, bounded `renderer-diagnostic.jsonl`, or crash/termination observation exists for WO-033.
+
+The last accepted device behavior remains the predecessor baseline; WO-033 produced no product-state change.

@@ -28,4 +28,4 @@ Every retained event carries a process-monotonic sequence, thread identity, site
 
 ## Status
 
-Model prepared before the one authorized diagnostic Fast build. Runtime classification remains **NOT YET RECORDED**.
+Runtime classification is **NOT OBTAINED** because run `32701930506` failed during patch bootstrap before compilation. No causal alternative can be selected from source evidence alone.
