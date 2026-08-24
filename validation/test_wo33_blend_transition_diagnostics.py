@@ -31,7 +31,7 @@ OSG_PINNED_PATCH_INPUTS_SHA256 = (
     "91f3e31c4bd6999162f91c0ed1acdebfe889902d7e79d16cecf505392020409e"
 )
 OSG_PATCHED_FILE_SHA256 = {
-    "include/osg/State": "92a5051cb05c3b773c1e54f1baaa4cdc5be96f80b75910bb17d20aa4ba49e602",
+    "include/osg/State": "378cb51658ba82278f8889f5e730ce114ac7b2ce30715dc499b0b2cabb17848b",
     "src/osg/GLExtensions.cpp": "47cbf5fe3c077e92dca7b2dbfec1c8f3bafe1d43ec5cc1837aee4ceeab6dfee1",
     "src/osg/BlendFunc.cpp": "4d79247a631be73f7c859cd6038ff3199ef5f0ef4a2fd0bfaffa7f80b7f8b7e8",
     "src/osg/Texture2D.cpp": "678460b5e6b097b26cccab1d7f478d9de3b27eb3edf6bae01c770c1dff495229",
@@ -83,9 +83,12 @@ def apply_file_patch(source: str, patch: str, path: str) -> str:
 
 
 def classify_transition(events):
+    osg_cache_match = next((event for event in events if event[0] == "osg-cache"), None)
     osg_enable = next((event for event in events if event[0] == "osg" and event[1] == 1), None)
     gl_enable = next((event for event in events if event[0] == "gl4es" and event[1] == 1), None)
     common = next((event for event in events if event[0] == "common"), None)
+    if osg_cache_match and common and common[1] == 0:
+        return "osg-cache-desync"
     if osg_enable and not gl_enable:
         return "route-not-exercised"
     if gl_enable and common and gl_enable[2] != common[2]:
@@ -129,8 +132,24 @@ class WorkOrder33BlendTransitionDiagnosticTests(unittest.TestCase):
             "last=%d", "issued=%d", "state=%p", "context=%u", "route=manual-gl4es",
         ):
             self.assertIn(token, self.osg)
-        self.assertEqual(2, self.osg.count("if (enabled) gl4es_glEnable(mode);"))
-        self.assertEqual(2, self.osg.count("else gl4es_glDisable(mode);"))
+        self.assertEqual(3, self.osg.count("if (enabled) gl4es_glEnable(mode);"))
+        self.assertEqual(3, self.osg.count("else gl4es_glDisable(mode);"))
+
+    def test_osg_reasserts_manual_gl4es_blend_when_the_osg_cache_matches(self) -> None:
+        self.assertIn(
+            "mode == GL_BLEND && ms.valid && ms.last_applied_value == enabled", self.osg
+        )
+        self.assertIn("reasserted=%d", self.osg)
+        self.assertIn(
+            "+            if (manualBlendCacheMatch)\n"
+            "+            {\n"
+            "+                if (enabled) gl4es_glEnable(mode);\n"
+            "+                else gl4es_glDisable(mode);\n"
+            "+                return false;\n"
+            "+            }",
+            self.osg,
+        )
+        self.assertNotIn("gl4es_glEnable(GL_BLEND)", self.osg)
 
     def test_osg_blend_func_records_factors_and_uses_manual_route(self) -> None:
         self.assertIn("BlendFunc::apply", self.osg)
@@ -168,6 +187,8 @@ class WorkOrder33BlendTransitionDiagnosticTests(unittest.TestCase):
             self.assertNotIn(forbidden, self.transitions)
 
     def test_transition_model_separates_all_ordered_alternatives(self) -> None:
+        self.assertEqual("osg-cache-desync", classify_transition([
+            ("osg-cache", 1, "A"), ("common", 0, "A")]))
         self.assertEqual("route-not-exercised", classify_transition([
             ("osg", 1, "A"), ("common", 0, "A")]))
         self.assertEqual("later-disable", classify_transition([
@@ -318,6 +339,7 @@ class WorkOrder33BlendTransitionDiagnosticTests(unittest.TestCase):
             subprocess.run(command, check=True, capture_output=True, text=True)
             result = subprocess.run([str(executable)], check=True, capture_output=True, text=True)
         self.assertEqual([
+            "osg-cache-desync=osg-cache-desync",
             "enable-only=consistent",
             "enable-disable=later-disable",
             "different-context=different-context",

@@ -17,21 +17,30 @@ index b74fcbb5b..4293e1627 100644
  #ifndef GL_TEXTURE0
  #define GL_TEXTURE0 0x84C0
  #endif
-@@ -1142,12 +1150,30 @@ class OSG_EXPORT State : public Referenced
+@@ -1142,12 +1150,39 @@ class OSG_EXPORT State : public Referenced
          */
          inline bool applyMode(StateAttribute::GLMode mode,bool enabled,ModeStack& ms)
          {
 +#if defined(__APPLE__) && defined(OPENMW_GL4ES_MANUAL_INIT)
++            const bool manualBlendCacheMatch =
++                mode == GL_BLEND && ms.valid && ms.last_applied_value == enabled;
 +            if (mode == GL_BLEND && openmw_ios_renderer_diag_blend_event)
 +            {
 +                char detail[256];
 +                std::snprintf(detail, sizeof(detail),
-+                    "mode=%u;requested=%d;valid=%d;last=%d;issued=%d;state=%p;context=%u;route=manual-gl4es",
++                    "mode=%u;requested=%d;valid=%d;last=%d;issued=%d;reasserted=%d;state=%p;context=%u;route=manual-gl4es",
 +                    static_cast<unsigned int>(mode), enabled ? 1 : 0, ms.valid ? 1 : 0,
 +                    ms.last_applied_value ? 1 : 0,
-+                    ms.valid && ms.last_applied_value != enabled ? 1 : 0,
++                    ms.valid && (ms.last_applied_value != enabled || manualBlendCacheMatch) ? 1 : 0,
++                    manualBlendCacheMatch ? 1 : 0,
 +                    static_cast<void*>(this), getContextID());
 +                openmw_ios_renderer_diag_blend_event("osg", "State::applyMode", detail);
++            }
++            if (manualBlendCacheMatch)
++            {
++                if (enabled) gl4es_glEnable(mode);
++                else gl4es_glDisable(mode);
++                return false;
 +            }
 +#endif
              if (ms.valid && ms.last_applied_value != enabled)

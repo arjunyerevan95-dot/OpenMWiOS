@@ -11,13 +11,16 @@ typedef struct
 static const char* classify(const blend_event* events, int count)
 {
     const blend_event* osg_enable = NULL;
+    const blend_event* osg_cache_match = NULL;
     const blend_event* gl4es_enable = NULL;
     const blend_event* common = NULL;
     int replay = 0;
     for (int index = 0; index < count; ++index)
     {
         const blend_event* event = &events[index];
-        if (!strcmp(event->site, "osg") && event->value == 1 && !osg_enable)
+        if (!strcmp(event->site, "osg-cache") && !osg_cache_match)
+            osg_cache_match = event;
+        else if (!strcmp(event->site, "osg") && event->value == 1 && !osg_enable)
             osg_enable = event;
         else if (!strcmp(event->site, "gl4es") && event->value == 1 && !gl4es_enable)
             gl4es_enable = event;
@@ -26,6 +29,8 @@ static const char* classify(const blend_event* events, int count)
         else if (!strcmp(event->site, "common") && !common)
             common = event;
     }
+    if (osg_cache_match && common && common->value == 0)
+        return "osg-cache-desync";
     if (osg_enable && !gl4es_enable)
         return "route-not-exercised";
     if (gl4es_enable && common && strcmp(gl4es_enable->context, common->context))
@@ -42,6 +47,9 @@ static void report(const char* name, const blend_event* events, int count)
 
 int main(void)
 {
+    const blend_event osg_cache_desync[] = {
+        { "osg-cache", 1, "A" }, { "common", 0, "A" }
+    };
     const blend_event enable_only[] = {
         { "osg", 1, "A" }, { "gl4es", 1, "A" }, { "common", 1, "A" }
     };
@@ -57,6 +65,7 @@ int main(void)
     const blend_event missing_route[] = {
         { "osg", 1, "A" }, { "common", 0, "A" }
     };
+    report("osg-cache-desync", osg_cache_desync, 2);
     report("enable-only", enable_only, 3);
     report("enable-disable", enable_disable, 4);
     report("different-context", different_context, 3);
