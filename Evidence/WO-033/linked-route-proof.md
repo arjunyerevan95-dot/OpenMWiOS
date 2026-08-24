@@ -11,11 +11,18 @@
 - The WO-033 OSG diagnostic additions reconstruct exactly against pinned OSG `01cc2b585c8456a4ff843066b7e1a8715558289f` in the local deterministic patch model.
 - Local source inspection established the intended GL4ES patch locations, but the production bootstrap gate proved that patch 0009 was not hermetic against the preceding production patch stack: its `enable.c` and `listdraw.c` contexts did not apply.
 
-This proves configuration and intended source inclusion, but not linked retention or runtime exercise.
+Amendment 1 replacement run `32723328194` strengthened the source-side proof:
+
+- The production macOS validation reconstructed pristine pinned OpenMW and GL4ES snapshots.
+- All OpenMW patches 0001-0015 and GL4ES patches 0001-0009 applied in production order.
+- All 146 CI regression tests and source/static gates passed.
+- Bundled OSG population then failed while applying `ios/patches/osg-route-gl-entry-points-through-gl4es.patch`: after naming `src/osg/BlendFunc.cpp`, `/usr/bin/patch` reported `No file to patch`, ignored two hunks into `Oops.rej`, and CMake stopped with `Failed to route OSG GL entry points through GL4ES`.
+
+This proves the repaired GL4ES production stack and intended OSG configuration, but the OSG patch failure still prevents linked retention or runtime exercise from being proven.
 
 ## Exact linked-product proof
 
-Not obtained. Fast run `32701930506` stopped during patch bootstrap before compilation. No executable exists to inspect for the manual-route marker or `openmw_ios_renderer_diag_blend_event` retention/resolution.
+Not obtained. Original run `32701930506` stopped during GL4ES patch bootstrap. Amendment 1 replacement run `32723328194` passed that boundary but stopped during OSG population before production compilation. No executable exists to inspect for the manual-route marker or `openmw_ios_renderer_diag_blend_event` retention/resolution.
 
 ## Runtime exercise proof
 
