@@ -1,0 +1,60 @@
+diff --git a/apps/openmw/mwrender/renderingmanager.cpp b/apps/openmw/mwrender/renderingmanager.cpp
+index 0246a95f6..fb584ce0b 100644
+--- a/apps/openmw/mwrender/renderingmanager.cpp
++++ b/apps/openmw/mwrender/renderingmanager.cpp
+@@ -1,5 +1,6 @@
+ #include "renderingmanager.hpp"
+ 
++#include <cmath>
+ #include <cstdio>
+ #include <cstdlib>
+ #include <limits>
+@@ -91,6 +92,19 @@
+ 
+ namespace MWRender
+ {
++    namespace
++    {
++        float terrainViewDistanceForProjection(float viewDistance, float verticalFov, double aspect)
++        {
++            const double halfFov = osg::DegreesToRadians(std::min(verticalFov, 140.f)) / 2.0;
++            const double tangent = std::tan(halfFov);
++            const double multiplier = std::sqrt(1.0 + tangent * tangent * (1.0 + aspect * aspect));
++            const double expandedDistance = static_cast<double>(viewDistance) * multiplier;
++            return static_cast<float>(
++                std::min(expandedDistance, static_cast<double>(std::numeric_limits<float>::max())));
++        }
++    }
++
+     class PreloadCommonAssetsWorkItem : public SceneUtil::WorkItem
+     {
+     public:
+@@ -1202,10 +1216,10 @@ namespace MWRender
+             setScreenRes(width, height);
+         }
+ 
+-        // Since our fog is not radial yet, we should take FOV in account, otherwise terrain near viewing distance may
+-        // disappear. Limit FOV here just for sure, otherwise viewing distance can be too high.
+-        float distanceMult = std::cos(osg::DegreesToRadians(std::min(fov, 140.f)) / 2.f);
+-        const float terrainViewDistance = mViewDistance * (distanceMult ? 1.f / distanceMult : 1.f);
++        // Since our fog is not radial yet, the radial terrain coverage must enclose the complete perspective frustum
++        // or terrain near the viewing distance may disappear. Limit FOV here just for sure, otherwise viewing
++        // distance can be too high.
++        const float terrainViewDistance = terrainViewDistanceForProjection(mViewDistance, fov, aspect);
+         mTerrain->setViewDistance(terrainViewDistance);
+ #ifdef OPENMW_IOS
+         if (openmw_ios_renderer_diag_enabled())
+@@ -1331,8 +1345,11 @@ namespace MWRender
+                 mTerrainStorage.get(), Mask_Terrain, worldspace, expiryDelay, Mask_PreCompile, Mask_Debug);
+ 
+         newChunkMgr.mTerrain->setTargetFrameRate(Settings::cells().mTargetFramerate);
+-        float distanceMult = std::cos(osg::DegreesToRadians(std::min(mFieldOfView, 140.f)) / 2.f);
+-        newChunkMgr.mTerrain->setViewDistance(mViewDistance * (distanceMult ? 1.f / distanceMult : 1.f));
++        const int width = Settings::video().mResolutionX;
++        const int height = Settings::video().mResolutionY;
++        const double aspect = (height == 0) ? 1.0 : static_cast<double>(width) / height;
++        const float fov = mFieldOfViewOverridden ? mFieldOfViewOverride : mFieldOfView;
++        newChunkMgr.mTerrain->setViewDistance(terrainViewDistanceForProjection(mViewDistance, fov, aspect));
+         newChunkMgr.mTerrain->enableHeightCullCallback(Settings::terrain().mWaterCulling);
+ 
+         return mWorldspaceChunks.emplace(worldspace, std::move(newChunkMgr)).first->second;
