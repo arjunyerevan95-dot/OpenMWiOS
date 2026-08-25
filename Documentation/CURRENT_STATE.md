@@ -3,13 +3,13 @@
 - Project: OpenMWiOS
 - Canonical ControlPlane branch: `codex/wo29-ios-crash-isolation`
 - Accepted engineering baseline commit: `93f892dd0cf9834259b4cad2045ddb2ef9c53ed9`
-- Active work order: none
-- Ready work order: [WO-036](../WorkOrders/WO-036.md)
+- Active work order: [WO-036](../WorkOrders/WO-036.md)
+- Ready work order: none
 - Last completed work order: [WO-035](../WorkOrders/WO-035.md) — **ACCEPTED / CONTROLLED FALSIFICATION; NO PRODUCT CHANGE**
 - Last durable decision: [DEC-015](../Decisions/DEC-015.md)
 - Current objective: prove whether disabled distant-terrain paging causes the exterior gaps, then test bounded higher view distances only with paging active
-- Engineering execution status: **STOPPED; WO-036 is READY and awaits an explicit start directive**
-- Last updated: 2026-08-25
+- Engineering execution status: **ACTIVE; WO-036 Phase 1 awaits Arm A device settings, diagnostic, and matching screenshots**
+- Last updated: 2026-08-26
 
 ## Highest qualified runtime milestone
 
@@ -101,11 +101,11 @@ WO35 is ACCEPTED and closed for controlled falsification value. Evidence commit 
 
 WO35's start directive was delivered and acknowledged through the user, but the separate canonical ACTIVE bookkeeping commit was missed after direct-delivery timeout. The final review records this discrepancy explicitly. Worker execution was authorized and no canonical files were modified by the worker.
 
-WO36 is READY but not ACTIVE. It begins from exact accepted engineering baseline `93f892dd0cf9834259b4cad2045ddb2ef9c53ed9`. No execution is authorized until the orchestrator delivers the explicit start directive; READY and ACTIVE remain separate transitions.
+WO36 is ACTIVE. Its explicit start directive was delivered through the user at `2026-08-25T17:53:21Z` and acknowledged at `2026-08-25T18:07:07Z`. The worker branch `codex/wo36-distant-terrain-qualification` is at exact accepted engineering baseline `93f892dd0cf9834259b4cad2045ddb2ef9c53ed9`; Phase 0 passed without source/build changes or CI, and execution is waiting for Arm A device inputs.
 
 ## Latest important evidence
 
-- [READY WO36](../WorkOrders/WO-036.md)
+- [ACTIVE WO36](../WorkOrders/WO-036.md)
 - [WO36 governing decision](../Decisions/DEC-015.md)
 - [Accepted WO35](../WorkOrders/WO-035.md)
 - [WO35 final orchestrator review](../Evidence/WO-035/orchestrator-final-review.md)
@@ -142,4 +142,4 @@ WO36 is READY but not ACTIVE. It begins from exact accepted engineering baseline
 4. Use Codebase Memory for structural navigation, then verify implementation facts against checked-out source.
 5. Use the Google ledger only for unresolved historical context.
 
-Current execution state is STOPPED. WO36 is READY and awaits an explicit start directive.
+Current execution state is ACTIVE. WO36 Phase 1 awaits the current device settings, a fresh 7168 diagnostic after force-quit/relaunch, and matching shoreline/tree-line screenshots.
