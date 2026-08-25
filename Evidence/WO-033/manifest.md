@@ -14,6 +14,7 @@
 - [Transition model](blend-transition-model.md)
 - [Linked route proof](linked-route-proof.md)
 - [Device capture](device-capture.md)
+- [Compact transition capture](blend-transition-capture.md)
 - [Execution report](report.md)
 - Focused tests: `validation/test_wo33_blend_transition_diagnostics.py`
 - Compiled sequence fixture: `validation/fixtures/wo33_blend_transition_fixture.c`
@@ -22,6 +23,8 @@
 - Original diagnostic commit: `f0427d8d40ea66a86f78f127082581bf10eae883`
 - Original evidence commit: `a54c7f832138c4719a000a6d3dc0fce5fe98cddd`
 - Amendment 1 patch-hermeticity commit: `10b88885e754121931cac2c3bbeed8230a5f997d`
+- Amendment 2 OSG-patch repair and diagnostic candidate: `fd300ba12351252ece9e7b481c0b2d366228f9e8`
+- Conditional correction commit: `93f892dd0cf9834259b4cad2045ddb2ef9c53ed9`
 
 ## Ordered GL4ES patch hashes in Amendment 1
 
@@ -58,6 +61,31 @@
 - All cache-hit fields were empty; benchmark mode was `none`.
 - No executable, IPA, Mach-O UUID, bundle validation, installation, or device capture exists for WO-033.
 
+### Amendment 2 diagnostic run
+
+- Fast run: https://github.com/arjunyerevan95-dot/OpenMWiOS/actions/runs/32742643722
+- Candidate: `fd300ba12351252ece9e7b481c0b2d366228f9e8`
+- Result: success; production compile/link, bundle validation, and packaging passed.
+- Artifact: `OpenMW-iOS-fast-54`, ID `9528845874`.
+- Artifact digest: `sha256:eb8c96d038e8e67a7f22b07b0c58f08e2ef8c4f7898b085c370b4acea153c306`.
+- IPA SHA-256: `9A5CD26DAAE7FF5C4B56B630EB5BAE148A2A80B120D2466B415BA9C89E87ED5B`.
+- Executable SHA-256: `05C86BB43574092B1D0AF26E7517DCFF1E576ABAC9AAC1D84B59F255FCED17FB`.
+- Mach-O UUID: `98B76201-B444-3844-8AB2-E5DF9B61B953`.
+- Device trace: installed and launched; smoke remained visibly opaque as expected for diagnostics; bounded trace proved the OSG/GL4ES cache split.
+
+### Conditional correction run
+
+- Fast run: https://github.com/arjunyerevan95-dot/OpenMWiOS/actions/runs/32771773194
+- Candidate: `93f892dd0cf9834259b4cad2045ddb2ef9c53ed9`.
+- Result: success; production compile/link, bundle validation, and packaging passed.
+- Job: `97573507624`.
+- Artifact: `OpenMW-iOS-fast-55`, ID `9538962155`, size 39,184,614 bytes.
+- Artifact digest: `sha256:1af36e00a09f9056bf1bb63eaf0c4c09a35e6ed14155009425913717f9840be7`.
+- IPA SHA-256: `34EB8106C60138F30DA8B59083CA026FDA013F68870DDC658C1584B6E939AC4E`.
+- Executable SHA-256: `C759B9D09DF6A2CFFE7657839BD3DB25999A399743E811A7846A406A5826874C`.
+- Correction trace SHA-256: `6D57F23FEE227608A5285BC52BB0AB386BB4E7ABEE7EB9F9787931E39E8B2C3B` (445 records; session `9504FA5C-CF45-46D9-908E-2F1838B8B0B9`).
+- Device result: qualified success; smoke, spell, and foliage transparency visibly fixed; no crash reported.
+
 ## Scope and stop
 
-WO-033 changed bounded diagnostics, patch context, and focused validation only. No blend, factor, depth, shader, texture, draw, foliage, distance/horizon, touch, data-path, dependency-version, accepted-runtime, or canonical ControlPlane change was made. The one Amendment 1 replacement build failed before IPA, so Stop Condition G applies and no second run is authorized.
+WO-033 diagnostics first changed observation only. The Amendment 2 trace then authorized one minimal blend correction: on the Apple/manual route only, OSG reasserts a cache-matching `GL_BLEND` request through GL4ES while preserving OSG's cache-match return value and leaving GL4ES's normal state-change suppression authoritative. The correction trace records all four targeted smoke records at `blend=1` and none at `blend=0`; matching screenshots visibly confirm smoke, spell, and foliage transparency. No factor, depth, shader, texture, draw-time force, distance/horizon, touch, data-path, dependency-version, workflow, or canonical ControlPlane change was made. Stop condition: **H — qualified success**. Remaining distance/horizon behavior is deferred for orchestrator review.

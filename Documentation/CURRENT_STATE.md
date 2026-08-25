@@ -1,169 +1,126 @@
 # OpenMWiOS — Current State
 
 - Project: OpenMWiOS
-- Active branch: `codex/wo29-ios-crash-isolation` (canonical ControlPlane); WO33 execution branch: `codex/wo33-blend-state-transition`
-- Current engineering baseline commit: `195f3a4bbcfd17ecd46546f3e28d3ee8558bed27`
-- Control-plane issued baseline commit: `bbd7ce4fd5c82520c630f49fb768e0b1a284d940`
+- Canonical ControlPlane branch: `codex/wo29-ios-crash-isolation`
+- Accepted engineering baseline commit: `93f892dd0cf9834259b4cad2045ddb2ef9c53ed9`
 - Active work order: none
-- Ready work order: [WO-033 Amendment 2](../WorkOrders/WO-033.md)
-- Last completed work order: [WO-032](../WorkOrders/WO-032.md) — **ACCEPTED / PARTIAL DIAGNOSTIC; CORRECTION REJECTED**
-- Last reviewed work order: [WO-033](../WorkOrders/WO-033.md) — **Amendment 1 blocked before compilation; Amendment 2 READY**
-- Current objective: repair WO33's bundled OSG patch materialization, then trace the exact OSG-to-GL4ES blend enable/disable/context/render-list sequence for the target smoke draw before any new correction
-- Engineering execution status: **STOPPED; WO-033 Amendment 2 is READY and awaits an explicit start directive**
-- Current accepted correction: WO29's non-ARC icon ownership fix plus WO30's practical on-device touch editor and reduced-opacity controls
-- Last updated: 2026-08-24
+- Ready work order: none
+- Last completed work order: [WO-033](../WorkOrders/WO-033.md) — **ACCEPTED / QUALIFIED SUCCESS**
+- Last durable decision: [DEC-013](../Decisions/DEC-013.md)
+- Current objective: localize and correct the remaining exterior distance/horizon rendering defect
+- Engineering execution status: **STOPPED; no work order is ACTIVE or READY**
+- Last updated: 2026-08-25
 
-## Qualified state
+## Highest qualified runtime milestone
 
-The highest qualified runtime gate combines WO26/WO27, the accepted WO29 crash correction, and the qualified WO30 touch baseline:
+The qualified OpenMWiOS runtime now combines the WO26/WO27 bootstrap and data-path work, WO29 crash correction, WO30 touch editor, and WO33 blend-state correction:
 
 - OpenMW installs and launches on a physical iPhone.
 - Morrowind, Tribunal, and Bloodmoon content loads.
-- Full-screen landscape rendering, UI, audio, input, and scene transitions remain intact.
-- The main menu, New Game, the prison-ship sequence, and Seyda Neen exterior traversal have been reached.
-- Touch movement and look permit ship traversal and exterior access.
-- WO27 resolves the default base-game path from the current iOS Documents directory at runtime. The accepted device launch required no manual `openmw.cfg` edit and no externally supplied container UUID/path.
-- No native crash or jetsam was observed in the accepted WO27 device run.
-- Thirteen reports from the rejected WO28 candidate match its executable UUID and converge at one dangling cached-`UIImage` fault in `OpenMWTouchOverlay drawRect:`.
-- WO29 corrects that ownership defect without changing touch mappings, layout, renderer, data path, dependencies, cache architecture, or workflow behavior.
-- The corrected artifact booted normally and supported controls, indoor play, Seyda Neen exterior traversal, HUD/overlay rendering, weapon/combat, and scene changes without a user-observed crash during the supplied session.
-- WO30 adds a practical on-device touch editor entered by a 0.75-second Menu long-press, movable/resizable fixed controls, movement-radius adjustment, live global opacity controls, and versioned safe-area-relative profile storage.
-- The WO30 final candidate uses nominal `0.20` idle opacity and the device-observed plus/minus controls visibly change opacity.
-- The user considers the touch result practically satisfactory apart from menu/options scrolling.
-- WO30 made no renderer correction; the exterior defects remain visible and causally unresolved.
-- WO32's targeted diagnostics prove that representative smoke draws reach GL4ES with correct alpha factors/shader alpha behavior but `blend=0`. Its first OSG routing correction compiled and ran, yet four target draws and the visible symptom remained unchanged; that correction is rejected and the accepted runtime baseline is unchanged.
+- Full-screen landscape presentation, UI, audio, input, scene transitions, and exterior traversal operate.
+- The main menu, New Game, prison-ship sequence, and Seyda Neen exterior have been reached.
+- WO27 resolves the default data path from the live iOS Documents directory without manual container-UUID edits.
+- WO29 fixed the cached-`UIImage` ownership crash; no comparable crash was reported in the accepted later device sessions.
+- WO30 provides a 0.75-second Menu long-press touch editor, movable/resizable controls, movement-radius adjustment, global opacity controls, and versioned safe-area-relative storage.
+- WO33 fixes the proven OSG/GL4ES blend-cache desynchronization. Representative smoke draws changed from `blend=0` to `blend=1` while their factors, depth behavior, and shader alpha behavior remained intact.
+- Device evidence shows chimney smoke and the sampled spell effect blending correctly. Foliage alpha/cutout presentation also materially improved.
+- HUD, overlay, native landscape presentation, exterior traversal, and gameplay remained intact, with no reported crash in the WO33 correction session.
 
-This remains a qualified runtime and touch baseline, not complete mobile-control qualification. WO30 did not independently verify force-quit/relaunch persistence, a post-test crash inventory, or the full action-control matrix. Reset currently preserves opacity instead of restoring nominal `0.20`, and only the selected fixed control shows the explicit resize ring. These limits are recorded without scheduling touch cleanup inside the renderer order.
+This is a qualified Fast Development runtime baseline, not a Full Qualification result.
 
-## Versions and accepted candidate
+## Accepted candidate
 
 - OpenMW: `f4bec41444214a7903bebd178389ca22ca13f646` (0.51.0)
-- SDL: 2.32.10
+- SDL: 2.32.10 / `5d249570393f7a37e037abf22cd6012a4cc56a71`
 - OSG: `01cc2b585c8456a4ff843066b7e1a8715558289f` (3.6.5)
 - GL4ES: `c9895df34cd466c23bc60c2bd3db3d87e98fcbe7` (1.1.6)
+- MyGUI: `dae9ac4be5a09e672bec509b1a8552b107c40214`
 - Deployment target: iOS 16.3
 - Architecture: arm64
-- Accepted Fast Development run: `32573611821`
-- Accepted source commit: `195f3a4bbcfd17ecd46546f3e28d3ee8558bed27`
-- Artifact: `OpenMW-iOS-fast-34` (ID `9476386162`)
-- Executable SHA-256: `5ABD1BC40F5FDFF67747E329FE56D2593D2FCDCE9847139BBFF3C97749A85D66`
-- IPA SHA-256: `7ADADF613AC36DED1F63B2848B6622654231AF8243643B0791CC682536C426E6`
-- Mach-O UUID: `0BA296A8-24AC-364C-A804-F4601A399F99`
+- Accepted source commit: `93f892dd0cf9834259b4cad2045ddb2ef9c53ed9`
+- Accepted Fast Development run: `32771773194`
+- Artifact: `OpenMW-iOS-fast-55` (ID `9538962155`)
+- Artifact digest: `sha256:1af36e00a09f9056bf1bb63eaf0c4c09a35e6ed14155009425913717f9840be7`
+- IPA SHA-256: `34EB8106C60138F30DA8B59083CA026FDA013F68870DDC658C1584B6E939AC4E`
+- Executable SHA-256: `C759B9D09DF6A2CFFE7657839BD3DB25999A399743E811A7846A406A5826874C`
+- Mach-O UUID: `FD8BB9B2-AF3F-3CFD-ACAE-B20D1E5D0664`
+- Bundle ID: `org.openmw.ios`
+- Executable name: `openmw`
 
-See [WO30 evidence](../Evidence/WO-030/manifest.md) for the current touch candidate, CI, artifact, and device limits. [WO29 evidence](../Evidence/WO-029/manifest.md) remains authoritative for the crash correction, and WO27 remains the accepted data-path baseline.
+The Mach-O UUID was independently recovered from the accepted artifact during orchestrator review because the worker report did not record it.
 
-## Current blockers and unresolved boundary
+## WO33 accepted result
 
-Primary engineering boundary: exterior renderer correctness. The accepted WO29 device session and later screenshots taken with view distance set to maximum show persistent foliage alpha/cutout failure, large white/blank distance regions, disconnected distant silhouettes, and a sharp blue horizon/cutoff band. Maximum view distance improved coverage somewhat but did not resolve the defects, so a low view-distance setting is not a complete explanation.
+The Amendment 2 diagnostic trace proved the exact invalid transition:
 
-WO30 did not localize the earliest invalid renderer boundary. Its bounded OpenMW-side probes recorded intended fog state, but representative foliage state and GL4ES received-state records were not available in the user-shareable log. Foliage/particle alpha handling and distant fog/culling/paging/clipping presentation remain separate hypotheses until runtime evidence establishes convergence.
+1. OSG requested `GL_BLEND=1` while its cache reported `valid=1,last=1`.
+2. OSG suppressed the route call as `issued=0`.
+3. The same-thread GL4ES draw path retained `blend=0` with no active/pending render list.
+4. The representative smoke draw reached `glDrawElementsCommon` with correct alpha factors and depth/shader behavior but blending disabled.
 
-Current unresolved renderer boundary exposed by exterior traversal:
+Correction `93f892dd0cf9834259b4cad2045ddb2ef9c53ed9` reasserts only cache-matching `GL_BLEND` requests through GL4ES on the Apple/manual route, preserves OSG's return semantics, and leaves GL4ES's state comparison authoritative.
 
-- foliage alpha/transparency is incorrect, producing opaque leaf cards;
-- chimney smoke and sampled spell/fire particles render as opaque/blocky cards; the first OSG routing correction did not change GL4ES blend state;
-- distant scenery contains missing/white regions and a horizontal band;
-- water appearance improved after the user enabled OpenMW water shader effects, so the prior water concern is currently configuration-dependent rather than a proven renderer defect;
-- distance fog appears absent at the configured draw boundary, leaving white/empty regions beyond rendered geometry; its relationship to the foliage-alpha defect is unknown;
-- reduced render scale 0.58 still has menu corruption and is not qualified;
-- `ColorMaski` warning activity remains noisy but was not proven to block rendering.
-- a transient blocky red combat effect was captured once and absent in the next screenshot; it remains unclassified.
+The correction trace contains 55 OSG reassertions, 55 GL4ES enable-ingress events, and four representative smoke target records at `blend=1` with none at `blend=0`. Smoke and spell presentation visibly passed. Foliage transparency is accepted as a visible collateral improvement, not as proof that every foliage path shares the same cause.
 
-The original WO31 run stopped after its diagnostic candidate introduced a launch-time crash. The user-supplied IPS exactly matches the candidate Mach-O UUID and records a main-thread `EXC_BAD_ACCESS` in `openmw_ios_renderer_diag_record` while constructing the first later shader record. Direct source inspection proves that the non-ARC bridge persisted autoreleased path/session strings across the startup autorelease-pool boundary. Candidate `50aa047c3010be5380393a81c452bcfae206407d` is rejected; accepted engineering baseline `195f3a4bbcfd17ecd46546f3e28d3ee8558bed27` is unchanged.
+The diagnostic system is inactive unless `OPENMW_IOS_RENDERER_DIAGNOSTICS=1` and caps output at 256 KiB.
 
-WO31 Amendment 1 repaired the ownership defect and its exact artifact reached Seyda Neen without the former crash. The supplied 7,028-byte JSONL is valid and contains 23 records: one iOS startup record and 22 OpenMW R1 records. It contains zero GL4ES records and zero R2 records. Sharing the file was correct and sufficient to prove partial operation plus diagnostic insufficiency, but it cannot localize the renderer defect because it lacks the intended/applied lower-renderer half.
+## Current primary engineering boundary
 
-The user also observed short-tap Menu failing while long-press editor entry still worked. No touch source changed. This remains an unclassified candidate regression and must be rechecked, but it does not authorize touch work or displace the user's renderer priority.
+The remaining primary defect is exterior distance/horizon presentation:
 
-WO31 Amendment 2 proved the app/GL4ES bridge, identified defective assets and GL texture bindings, and established that OpenMW, OSG, and GL4ES agree on exterior fog receipt. Its broad budgets expired before representative exterior draw/program application. R1 is narrowed to the applied draw/program boundary after OSG binding; R2 is narrowed to exterior program consumption or later content/cull/sky/clear/depth presentation after correct GL4ES receipt. No renderer correction was attempted or accepted.
+- large white or blank regions appear beyond nearby rendered geometry;
+- distant silhouettes can appear disconnected or incomplete;
+- a sharp blue horizontal horizon/cutoff band remains visible;
+- maximum view distance improves coverage but does not eliminate the defect; and
+- the relationship among fog consumption, culling/paging, clipping, sky/clear behavior, and distant geometry remains unproven.
 
-The user did not deliberately cast a fire spell during the WO31 device run. Visible blocky chimney smoke is the qualified particle reproduction and is sufficient for targeted R1 work. Cast-fire behavior remains optional.
+WO33 did not investigate or change this boundary. Do not infer it is related to the accepted blend-cache defect without new evidence.
 
-The original WO32 run prepared target-gated late-session sampling but failed during regression validation before compilation. All ordered production patches applied; two test-only patch parsers mishandled whitespace-cleaned blank context lines. No IPA, device evidence, renderer correction, or new accepted runtime state resulted. The redundant evidence-triggered run was cancelled immediately without an artifact.
+## Secondary and deferred boundaries
 
-WO32 Amendment 1 repaired the two test-helper parsers and produced successful diagnostic run `32627872506`, artifact `OpenMW-iOS-fast-47`. The matching 317-record device JSONL captured foliage, chimney smoke, and an opaque control. It proves a split state-owner boundary for smoke/particles: pinned OSG calls native core `glEnable`/`glDisable`/`glBlendFunc` directly while GL4ES owns the converted program and draw, leaving the representative smoke draw with `blend=0` despite correct alpha factors, depth-write state, and shader alpha behavior.
+- Menu/options touch scrolling remains awkward and unqualified.
+- WO30 did not independently verify force-quit/relaunch persistence, the complete action-control matrix, or a post-test crash inventory.
+- Reset preserves current opacity instead of restoring nominal `0.20`, and only the selected fixed control has the explicit resize ring.
+- Reduced render scale `0.58` remains unqualified because of menu corruption.
+- A transient blocky red combat effect was previously captured once and remains unclassified.
+- Foliage is no longer a primary visible failure in the accepted WO33 session, but it lacks a dedicated causal trace across all foliage assets/paths.
+- Full Qualification has not run for the WO33 baseline.
 
-Correction candidate `1625713b949ddb0cde5471feead75f29fedadfaa` routes the patched Apple/manual-init OSG mode/blend calls through GL4ES. Amendment 2 preserved that source byte-for-byte, increased only the Fast timeout to 180 minutes, and produced successful run `32649331052` / artifact `OpenMW-iOS-fast-51` at `c9161e579ff1814cc7fc5c86fb63a9ef177502f3`.
+Water appearance improved after enabling OpenMW water shader effects, so the earlier water concern remains configuration-dependent rather than a proven renderer defect.
 
-The exact device IPA reached Seyda Neen and captured four `tx_smokealpha00a.dds` draws. All four still report `blend=0` with correct factors, disabled depth writes, and fragment discard/alpha output; the matching screenshot remains visibly blocky. The correction is therefore falsified and rejected. It is not part of the accepted baseline.
+## ControlPlane and execution status
 
-Foliage is a distinct unresolved path: the captured `tx_bc_moss.dds` draw is already opaque before raster output. R2 is also unresolved: only one stable maximum-distance generation exists, so the white distance region and blue horizon boundary remain unlocalized. Neither may be inferred fixed by the smoke correction.
+WO33 is ACCEPTED and closed. No work order is ACTIVE or READY. The worker stopped at the review boundary and did not modify canonical CURRENT_STATE, WorkOrders, or Decisions.
 
-WO32 is closed. The remaining smoke boundary is the actual transition sequence between OSG's cached mode decision, GL4ES enable/disable ingress, context/state identity, render-list capture/replay, and `glDrawElementsCommon`.
-
-The original WO33 execution added a bounded target-gated transition tracer, but Fast run `32701930506` failed during GL4ES patch bootstrap before compilation. Patch 0009 contained stale contexts for `enable.c` and `listdraw.c` after the preceding production patch stack. No IPA, device capture, runtime transition proof, or renderer correction resulted. The diagnostic source remains an unaccepted candidate and the accepted runtime baseline is unchanged.
-
-WO33 Amendment 1 successfully repaired the GL4ES patch-order hermeticity. Fast run `32723328194` passed all 146 source tests and the complete GL4ES 0001–0009 stack, then failed during bundled OSG population before compilation. The OSG patch contains empty, unprefixed context lines; Git reports `corrupt patch at line 33`, while production `/usr/bin/patch` reported `No file to patch` and rejected two hunks. Custom Python reconstruction had accepted that malformed representation and therefore did not reproduce the production parser.
-
-No IPA, device capture, runtime transition proof, or renderer correction resulted. The GL4ES diagnostic repair and transition source remain unaccepted candidates; the accepted runtime baseline is unchanged.
-
-WO33 Amendment 2 is READY. It authorizes only valid regeneration of the existing OSG routing/diagnostic patch against pristine pinned OSG, an exact production-parser hermetic test, and one replacement Fast diagnostic run. It continues to prohibit any renderer correction until the first invalid transition is proven on device.
-
-Secondary/deferred boundaries: foliage; R2 distance/horizon; menu/options touch scrolling; WO30 Reset-opacity and all-control-affordance gaps; reduced render scale `0.58`; the transient red effect; and warning-flood cleanup except where narrowly necessary to collect bounded renderer evidence. WO33 prohibits work on those boundaries.
-
-These are observations or unresolved hypotheses, not established root causes. They must not be folded into the completed data-path correction.
-
-## Data-path status
-
-The permanent default-data-path correction is completed in WO27. The stable logical location is `Documents/OpenMW/Morrowind/Data Files`; the current sandbox prefix is obtained at runtime. Existing recognized legacy generated UUID entries are migrated narrowly, while unrelated user and mod paths remain preserved.
-
-The accepted physical test did **not** record the post-install container UUID because the diagnostic transport was unavailable. Therefore it establishes automatic discovery without manual UUID input, but does not independently prove that SideStore changed the UUID in that exact install.
+No new engineering execution is authorized. The next orchestrator action is to design and issue a separate work order for the distance/horizon boundary, then deliver an explicit start directive. READY and ACTIVE must remain separate transitions.
 
 ## Latest important evidence
 
-- [READY WO33 Amendment 2](../WorkOrders/WO-033.md)
-- [WO33 Amendment 1 OSG patch failure review](../Evidence/WO-033/orchestrator-amendment1-osg-patch-review.md)
-- [WO33 pre-build failure orchestrator review](../Evidence/WO-033/orchestrator-prebuild-failure-review.md)
-- [WO33 worker report](../Evidence/WO-033/report.md)
+- [Accepted WO33](../WorkOrders/WO-033.md)
+- [WO33 acceptance decision](../Decisions/DEC-013.md)
+- [WO33 final orchestrator review](../Evidence/WO-033/orchestrator-final-review.md)
+- [WO33 execution report](../Evidence/WO-033/report.md)
 - [WO33 evidence manifest](../Evidence/WO-033/manifest.md)
+- [WO33 compact transition capture](../Evidence/WO-033/blend-transition-capture.md)
+- [WO33 device capture](../Evidence/WO-033/device-capture.md)
+- [WO33 linked-route proof](../Evidence/WO-033/linked-route-proof.md)
 - [Accepted WO32](../WorkOrders/WO-032.md)
-- [WO32 final orchestrator review](../Evidence/WO-032/orchestrator-amendment2-final-review.md)
 - [WO32 falsification decision](../Decisions/DEC-012.md)
-- [WO32 Amendment 2 device capture](../Evidence/WO-032/amendment2-device-capture.md)
-- [WO32 final worker report](../Evidence/WO-032/report.md)
-- [WO32 correction-timeout orchestrator review](../Evidence/WO-032/orchestrator-correction-timeout-review.md)
-- [WO32 R1 partial-acceptance decision](../Decisions/DEC-011.md)
-- [WO32 replacement-diagnostic device capture](../Evidence/WO-032/device-capture-analysis.md)
-- [WO32 evidence manifest](../Evidence/WO-032/manifest.md)
-- [WO32 pre-build failure orchestrator review](../Evidence/WO-032/orchestrator-prebuild-failure-review.md)
-- [Accepted partial WO31](../WorkOrders/WO-031.md)
-- [WO31 execution report](../Evidence/WO-031/report.md)
-- [WO31 Amendment 2 orchestrator review](../Evidence/WO-031/orchestrator-amendment2-review.md)
-- [WO31 Amendment 2 diagnostic](../Evidence/WO-031/device-renderer-diagnostic-amendment2.jsonl)
-- [WO31 user coverage clarification](../Evidence/WO-031/user-amendment2-coverage.md)
-- [WO31 partial-acceptance and WO32 direction decision](../Decisions/DEC-010.md)
-- [WO31 Amendment 1 orchestrator review](../Evidence/WO-031/orchestrator-amendment1-review.md)
-- [WO31 supplied renderer diagnostic](../Evidence/WO-031/device-renderer-diagnostic-amendment1.jsonl)
-- [WO31 diagnostic observability decision](../Decisions/DEC-009.md)
-- [WO31 orchestrator crash review](../Evidence/WO-031/orchestrator-crash-review.md)
-- [WO31 diagnostic-candidate rejection decision](../Decisions/DEC-008.md)
+- [WO32 final orchestrator review](../Evidence/WO-032/orchestrator-amendment2-final-review.md)
 - [Accepted WO30](../WorkOrders/WO-030.md)
-- [WO30 evidence manifest](../Evidence/WO-030/manifest.md)
+- [WO30 touch decision](../Decisions/DEC-007.md)
 - [Accepted WO29](../WorkOrders/WO-029.md)
-- [WO29 evidence manifest](../Evidence/WO-029/manifest.md)
-- [WO29 execution report](../Evidence/WO-029/report.md)
-- [Maximum-view-distance observations](../Evidence/WO-029/max-view-distance-observations.md)
-- [Reviewed WO28](../WorkOrders/WO-028.md)
-- [WO28 evidence manifest](../Evidence/WO-028/manifest.md)
-- [WO28 execution completion record](../Evidence/WO-028/completion.md)
-- [Canonical WO26 state](../WorkOrders/WO-026.md)
-- [Canonical WO27 state](../WorkOrders/WO-027.md)
-- [WO27 evidence manifest](../Evidence/WO-027/manifest.md)
-- [Qualified renderer baseline decision](../Decisions/DEC-001.md)
-- [Touch qualification decision](../Decisions/DEC-002.md)
-- [Runtime data-path decision](../Decisions/DEC-003.md)
-- [WO28 rejection and crash-path separation decision](../Decisions/DEC-004.md)
 - [WO29 crash-correction decision](../Decisions/DEC-005.md)
-- [Maximum view distance does not resolve exterior rendering decision](../Decisions/DEC-006.md)
-- [WO30 qualified touch acceptance and unresolved renderer decision](../Decisions/DEC-007.md)
-- Living historical ledger: [OpenMW iOS — Engineering Handoff Ledger](https://docs.google.com/document/d/1TOyBHA1tSKBIqoU_XFSIaTMbdCBAcNVsaczy29N_b18/edit)
+- [Accepted WO27](../WorkOrders/WO-027.md)
+- [WO27 data-path decision](../Decisions/DEC-003.md)
+- Historical ledger: [OpenMW iOS — Engineering Handoff Ledger](https://docs.google.com/document/d/1TOyBHA1tSKBIqoU_XFSIaTMbdCBAcNVsaczy29N_b18/edit)
 
-## Future orchestrator/worker recovery
+## Recovery path
 
-1. Read `Documentation/CURRENT_STATE.md`.
-2. Read accepted `WorkOrders/WO-032.md`, READY WO33 Amendment 2, DEC-012, and both WO33 pre-build failure reviews.
-3. Read only the `Decisions/` and `Evidence/` records referenced by that work order.
-4. Inspect current Git state and active/recent CI before changing anything.
-5. Use the Google Docs ledger only when deeper historical context is required.
+1. Read this file.
+2. Read accepted [WO-033](../WorkOrders/WO-033.md), [DEC-013](../Decisions/DEC-013.md), and the [final WO33 review](../Evidence/WO-033/orchestrator-final-review.md).
+3. Inspect current Git and CI state before issuing new work.
+4. Use Codebase Memory for structural navigation, then verify implementation facts against checked-out source.
+5. Use the Google ledger only for unresolved historical context.
 
-WO33 Amendment 2 is READY and no work order is ACTIVE. The exact next action is to deliver its explicit start directive to the existing worker. Do not create another worker or start any other work order.
+Current execution state is STOPPED. No work order is ACTIVE or READY.

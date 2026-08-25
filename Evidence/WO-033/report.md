@@ -1,6 +1,6 @@
 # WO-033 execution report
 
-Status: **PARTIAL / BLOCKED - Stop Condition G (replacement build failed before IPA)**
+Status: **COMPLETE — Stop H (qualified success)**
 
 ## Objective
 
@@ -73,5 +73,103 @@ Amendment 1 authorizes exactly one replacement diagnostic run and requires a sto
 > Artifact / CI: run `32723328194`; failure artifact `9520078724`
 >
 > Stop condition: **G - build budget exhausted**
+>
+> Awaiting orchestrator review.
+
+## Amendment 2 diagnostic build and runtime result
+
+Amendment 2 repaired only the malformed bundled-OSG patch representation and its hermetic validation:
+
+- implementation commit: `fd300ba12351252ece9e7b481c0b2d366228f9e8`;
+- pinned OSG: `01cc2b585c8456a4ff843066b7e1a8715558289f`;
+- OSG patch SHA-256: `4D44A36449DDE6B9160BBB0BF97DAF69DC3E8A35A2A36D3A0DD6C2D228292DDA`;
+- pristine fixture SHA-256: `91F3E31C4BD6999162F91C0ED1ACDEBFE889902D7E79D16CECF505392020409E`;
+- focused WO31-WO33 host tests before the runtime correction: 35 total, 31 passed, 4 skipped for unavailable local compilers;
+- Fast run `32742643722`: success;
+- artifact `OpenMW-iOS-fast-54`, ID `9528845874`, digest `sha256:eb8c96d038e8e67a7f22b07b0c58f08e2ef8c4f7898b085c370b4acea153c306`;
+- executable SHA-256 `05C86BB43574092B1D0AF26E7517DCFF1E576ABAC9AAC1D84B59F255FCED17FB`;
+- IPA SHA-256 `9A5CD26DAAE7FF5C4B56B630EB5BAE148A2A80B120D2466B415BA9C89E87ED5B`;
+- Mach-O UUID `98B76201-B444-3844-8AB2-E5DF9B61B953`.
+
+The user installed the exact diagnostic candidate and reached the chimney-smoke view. The smoke remained opaque/blocky, which was expected because the candidate changed diagnostics and patch materialization only.
+
+The supplied 438-record bounded JSONL then proved:
+
+1. OSG's linked manual route repeatedly receives `GL_BLEND=1` for the target State/context.
+2. Its cache reports `valid=1,last=1`, so OSG records `issued=0`.
+3. The subsequent GL4ES intake/capture/intercept/common draw path retains `blend=0` on the same thread, with no active/pending render list.
+4. The target draw has the correct alpha factors, disabled depth writes, and a fragment program that writes alpha and can discard.
+
+The first observable invalid boundary is therefore the OSG mode-cache gate suppressing a GL4ES reconciliation call. The trace does not support a blend-factor, different-context, or replay correction.
+
+## Conditional minimal correction
+
+Commit `93f892dd0cf9834259b4cad2045ddb2ef9c53ed9` implements the one Phase 4 correction authorized by that sequence:
+
+- only under Apple + `OPENMW_GL4ES_MANUAL_INIT`;
+- only for `GL_BLEND`;
+- only when OSG's mode cache is valid and already matches the requested value;
+- reasserts the request through `gl4es_glEnable` / `gl4es_glDisable`;
+- returns `false`, preserving OSG's cache-match return semantics;
+- leaves GL4ES's existing internal comparison responsible for suppressing a redundant native state change;
+- does not force blend at draw time or alter factors, depth, shader, texture, render-list, foliage, horizon, touch, or other renderer behavior.
+
+Validation after the correction:
+
+- focused WO31-WO33 suite: 36 total, 32 passed, 4 skipped because no local C/C++ compiler is available;
+- full Windows discovery: 145 total, 135 passed, 8 skipped, and the same 2 environment-only errors caused by direct execution of a POSIX verifier script on Windows;
+- pristine OSG real-parser/materialization test: passed;
+- output hash for patched `include/osg/State`: `378CB51658BA82278F8889F5E730CE114AC7B2CE30715DC499B0B2CABB17848B`;
+- scope-limited `git diff --check`: passed.
+
+## Amendment 2 correction build
+
+- Fast run: `32771773194` ([Actions](https://github.com/arjunyerevan95-dot/OpenMWiOS/actions/runs/32771773194)); result: success.
+- Candidate: `93f892dd0cf9834259b4cad2045ddb2ef9c53ed9`.
+- Job: `97573507624`.
+- Run interval: 2026-08-24 20:04:11Z to 21:21:22Z (1h17m11s).
+- Configure/dependency preparation: 2,051 seconds (34m11s).
+- Compile/link: 2,276 seconds (37m56s).
+- Artifact: `OpenMW-iOS-fast-55`, ID `9538962155`, size 39,184,614 bytes.
+- Artifact digest: `sha256:1af36e00a09f9056bf1bb63eaf0c4c09a35e6ed14155009425913717f9840be7`.
+- IPA size: 39,151,364 bytes.
+- IPA SHA-256: `34EB8106C60138F30DA8B59083CA026FDA013F68870DDC658C1584B6E939AC4E`.
+- Executable SHA-256: `C759B9D09DF6A2CFFE7657839BD3DB25999A399743E811A7846A406A5826874C`.
+- Mach-O UUID: **NOT RECORDED**.
+- Bundle validation: passed; bundle ID `org.openmw.ios`, executable `openmw`.
+- Source-download cache hit: true. Other build-state cache fields were empty; benchmark mode was `none`.
+- Full Qualification did not run.
+
+## Correction device qualification
+
+The user installed the exact correction candidate and supplied a 445-record bounded JSONL trace plus eight screenshots from the representative Seyda Neen exterior route.
+
+- Trace SHA-256: `6D57F23FEE227608A5285BC52BB0AB386BB4E7ABEE7EB9F9787931E39E8B2C3B`.
+- Trace size: 149,924 bytes.
+- Session: `9504FA5C-CF45-46D9-908E-2F1838B8B0B9`.
+- Runtime target: `textures/tx_smokealpha00a.dds`, target 2, texture 129.
+- OSG cache-match reassertions: 55.
+- GL4ES `proxy_glEnable(GL_BLEND)` ingress records: 55.
+- Targeted smoke records: 4 with `blend=1`, 0 with `blend=0`.
+- Representative draw path: intake, capture, intercept, and `glDrawElementsCommon` all retained `blend=1` on the same thread/GL4ES state with no active or pending render list.
+- Target draw retained factors `770,771,770,771`, depth test enabled, depth writes disabled, fragment discard present, and fragment alpha output present.
+
+The visible prediction passed. The user reported: “Smoke is fixed. But also spell and foliage transparencies are also fixed.” Screenshots confirm alpha-cutout foliage, non-blocky chimney smoke, and a correctly composited spell effect while landscape presentation, HUD, exterior traversal, and gameplay remained intact. No crash was reported.
+
+The remaining distance/horizon presentation defect is real but explicitly outside WO-033. It was recorded as a deferred boundary and was not investigated or modified.
+
+## Final causal conclusion
+
+The opaque-card defect was caused by OSG's cache-match gate suppressing a blend request that GL4ES needed to reconcile its state. Reasserting only cache-matching `GL_BLEND` on the Apple/manual GL4ES route restores `blend=1` at the actual translucent draw without changing blend factors or forcing draw-time state. Runtime state and the physical screen changed in the predicted direction.
+
+> WO-033 execution complete.
+>
+> Execution report: `Evidence/WO-033/report.md`
+>
+> Execution commit: `93f892dd0cf9834259b4cad2045ddb2ef9c53ed9`
+>
+> Artifact / CI: run `32771773194`; artifact `OpenMW-iOS-fast-55` / `9538962155`
+>
+> Stop condition: **H — qualified success**
 >
 > Awaiting orchestrator review.
