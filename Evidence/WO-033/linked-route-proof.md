@@ -26,4 +26,12 @@ Not obtained. Original run `32701930506` stopped during GL4ES patch bootstrap. A
 
 ## Runtime exercise proof
 
-Not obtained. No installable candidate was produced, so source presence is explicitly not treated as proof of runtime exercise.
+Amendment 2 implementation `fd300ba12351252ece9e7b481c0b2d366228f9e8` regenerated the OSG patch as a valid LF unified diff and added real-parser validation against pristine pinned OSG `01cc2b585c8456a4ff843066b7e1a8715558289f`. Fast run `32742643722` passed the production `/usr/bin/patch` contract, compiled and linked the real product, and produced the installed diagnostic IPA.
+
+The device trace directly exercises the linked Apple/manual route: 112 `r1.blend.transition` records came from OSG with `route=manual-gl4es`, while 16 records came from GL4ES draw intake/capture/intercept/common execution on the same thread. This excludes a stale or unlinked OSG diagnostic route.
+
+For the representative smoke draw, OSG records `State::applyMode` with `requested=1,valid=1,last=1,issued=0`, followed by GL4ES draw records with `blend=0`. The runtime evidence therefore proves that the linked route is present but its OSG cache gate suppresses the call needed to reconcile GL4ES state.
+
+Correction commit `93f892dd0cf9834259b4cad2045ddb2ef9c53ed9` adds a manual-route-only cache-match reconciliation for `GL_BLEND`. It preserves OSG's `false` return value for a cache match and leaves GL4ES's existing state-change/no-op logic authoritative.
+
+Fast run `32771773194` compiled, linked, validated, and packaged that exact commit. Correction-session runtime records then proved the linked route was exercised: OSG emitted `route=manual-gl4es,issued=1,reasserted=1`; GL4ES received the corresponding enable ingress; and the same-thread intake/capture/intercept/common target draw retained `blend=1` with no active/pending render list. The physical smoke/spell/foliage result changed in the predicted direction. Linked and device qualification: **passed**.

@@ -28,4 +28,10 @@ Every retained event carries a process-monotonic sequence, thread identity, site
 
 ## Status
 
-Runtime classification is **NOT OBTAINED**. Original run `32701930506` failed during GL4ES patch bootstrap. Amendment 1 repaired that ordered stack, but replacement run `32723328194` stopped during bundled OSG patch application before production compilation. No causal alternative can be selected from source evidence alone.
+Runtime classification is **OSG/GL4ES BLEND-CACHE DESYNCHRONIZATION AT THE OSG CACHE GATE**.
+
+Amendment 2 diagnostic run `32742643722` produced the intended IPA and bounded device trace. For the dynamically discovered chimney-smoke target, OSG repeatedly records `requested=1,valid=1,last=1,issued=0`; the same-thread GL4ES draw path then records `blend=0` at intake, capture, intercept, and `glDrawElementsCommon`, with no active/pending render list. The factors remain the expected `SRC_ALPHA, ONE_MINUS_SRC_ALPHA` pair.
+
+The first observable invalid boundary is therefore OSG declining to route the requested `GL_BLEND=1` because its cache says the state is already enabled even though the GL4ES state used by the draw is disabled. Different-context and render-list-replay explanations are not supported by this capture. Correction commit `93f892dd0cf9834259b4cad2045ddb2ef9c53ed9` reasserts only a cache-matching `GL_BLEND` request through GL4ES; GL4ES retains ownership of deciding whether a native state change is needed.
+
+Correction run `32771773194` and session `9504FA5C-CF45-46D9-908E-2F1838B8B0B9` qualify that model. OSG recorded 55 cache-match reassertions, GL4ES recorded 55 matching enable ingress events, and all four target records used `blend=1` with zero target records at `blend=0`. The physical result matched the prediction: smoke, spell, and foliage alpha presentation visibly corrected. Status: **qualified**.
