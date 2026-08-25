@@ -4,11 +4,11 @@
 - Canonical ControlPlane branch: `codex/wo29-ios-crash-isolation`
 - Accepted engineering baseline commit: `93f892dd0cf9834259b4cad2045ddb2ef9c53ed9`
 - Active work order: none
-- Ready work order: none
+- Ready work order: [WO-034](../WorkOrders/WO-034.md)
 - Last completed work order: [WO-033](../WorkOrders/WO-033.md) — **ACCEPTED / QUALIFIED SUCCESS**
 - Last durable decision: [DEC-013](../Decisions/DEC-013.md)
-- Current objective: localize and correct the remaining exterior distance/horizon rendering defect
-- Engineering execution status: **STOPPED; no work order is ACTIVE or READY**
+- Current objective: prove or falsify aspect-unaware radial terrain undercoverage, then correct only the proven distance/horizon boundary
+- Engineering execution status: **STOPPED; WO-034 is READY and awaits an explicit start directive**
 - Last updated: 2026-08-25
 
 ## Highest qualified runtime milestone
@@ -90,12 +90,13 @@ Water appearance improved after enabling OpenMW water shader effects, so the ear
 
 ## ControlPlane and execution status
 
-WO33 is ACCEPTED and closed. No work order is ACTIVE or READY. The worker stopped at the review boundary and did not modify canonical CURRENT_STATE, WorkOrders, or Decisions.
+WO33 is ACCEPTED and closed. WO34 is READY but not ACTIVE. The worker stopped at the WO33 review boundary and did not modify canonical CURRENT_STATE, WorkOrders, or Decisions.
 
-No new engineering execution is authorized. The next orchestrator action is to design and issue a separate work order for the distance/horizon boundary, then deliver an explicit start directive. READY and ACTIVE must remain separate transitions.
+WO34 starts from accepted engineering baseline `93f892dd0cf9834259b4cad2045ddb2ef9c53ed9` through evidence-only worker checkpoint `49f5f0bd80e83ef87eaebd3f69c07072796738aa`. It targets only the remaining distance/horizon boundary. No execution is authorized until the orchestrator delivers the explicit start directive; READY and ACTIVE remain separate transitions.
 
 ## Latest important evidence
 
+- [READY WO34](../WorkOrders/WO-034.md)
 - [Accepted WO33](../WorkOrders/WO-033.md)
 - [WO33 acceptance decision](../Decisions/DEC-013.md)
 - [WO33 final orchestrator review](../Evidence/WO-033/orchestrator-final-review.md)
@@ -118,9 +119,9 @@ No new engineering execution is authorized. The next orchestrator action is to d
 ## Recovery path
 
 1. Read this file.
-2. Read accepted [WO-033](../WorkOrders/WO-033.md), [DEC-013](../Decisions/DEC-013.md), and the [final WO33 review](../Evidence/WO-033/orchestrator-final-review.md).
+2. Read READY [WO-034](../WorkOrders/WO-034.md), accepted [WO-033](../WorkOrders/WO-033.md), [DEC-013](../Decisions/DEC-013.md), and the [final WO33 review](../Evidence/WO-033/orchestrator-final-review.md).
 3. Inspect current Git and CI state before issuing new work.
 4. Use Codebase Memory for structural navigation, then verify implementation facts against checked-out source.
 5. Use the Google ledger only for unresolved historical context.
 
-Current execution state is STOPPED. No work order is ACTIVE or READY.
+Current execution state is STOPPED. WO34 is READY and awaits an explicit start directive.
