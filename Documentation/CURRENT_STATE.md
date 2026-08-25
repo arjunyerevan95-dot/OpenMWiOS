@@ -4,11 +4,11 @@
 - Canonical ControlPlane branch: `codex/wo29-ios-crash-isolation`
 - Accepted engineering baseline commit: `93f892dd0cf9834259b4cad2045ddb2ef9c53ed9`
 - Active work order: none
-- Ready work order: [WO-034](../WorkOrders/WO-034.md)
-- Last completed work order: [WO-033](../WorkOrders/WO-033.md) — **ACCEPTED / QUALIFIED SUCCESS**
-- Last durable decision: [DEC-013](../Decisions/DEC-013.md)
-- Current objective: prove or falsify aspect-unaware radial terrain undercoverage, then correct only the proven distance/horizon boundary
-- Engineering execution status: **STOPPED; WO-034 is READY and awaits an explicit start directive**
+- Ready work order: [WO-035](../WorkOrders/WO-035.md)
+- Last completed work order: [WO-034](../WorkOrders/WO-034.md) — **ACCEPTED / CONTROLLED FALSIFICATION; CORRECTION REJECTED**
+- Last durable decision: [DEC-014](../Decisions/DEC-014.md)
+- Current objective: A/B test OpenMW sky blending against the exterior blue/white cutoff, then change the iOS default only if device evidence passes
+- Engineering execution status: **STOPPED; WO-035 is READY and awaits an explicit start directive**
 - Last updated: 2026-08-25
 
 ## Highest qualified runtime milestone
@@ -27,6 +27,8 @@ The qualified OpenMWiOS runtime now combines the WO26/WO27 bootstrap and data-pa
 - HUD, overlay, native landscape presentation, exterior traversal, and gameplay remained intact, with no reported crash in the WO33 correction session.
 
 This is a qualified Fast Development runtime baseline, not a Full Qualification result.
+
+WO34 did not advance this milestone. Its wider terrain-radius candidate built and ran but produced no material visual change, so the accepted source/artifact baseline remains WO33 commit `93f892dd0cf9834259b4cad2045ddb2ef9c53ed9`.
 
 ## Accepted candidate
 
@@ -72,9 +74,11 @@ The remaining primary defect is exterior distance/horizon presentation:
 - distant silhouettes can appear disconnected or incomplete;
 - a sharp blue horizontal horizon/cutoff band remains visible;
 - maximum view distance improves coverage but does not eliminate the defect; and
-- the relationship among fog consumption, culling/paging, clipping, sky/clear behavior, and distant geometry remains unproven.
+- the relationship among fog consumption, clipping, sky blending, program presentation, and distant geometry remains unproven.
 
-WO33 did not investigate or change this boundary. Do not infer it is related to the accepted blend-cache defect without new evidence.
+WO34 falsified aspect-unaware terrain radius as the cause: increasing the captured radius from about `8276.89` to `12221.21` left every target symptom materially unchanged. The terrain patch is rejected and absent from the accepted baseline.
+
+The accepted WO33 trace records scene-camera `sky_blending=0`. Pinned OpenMW source and its setting documentation identify sky blending as the existing path for hiding the clipping plane. WO35 will test that setting on the same installed binary before any source build. This is the leading bounded hypothesis for the blue/white cutoff, not an accepted cause. Pure-black distant silhouettes remain potentially distinct.
 
 ## Secondary and deferred boundaries
 
@@ -90,13 +94,20 @@ Water appearance improved after enabling OpenMW water shader effects, so the ear
 
 ## ControlPlane and execution status
 
-WO33 is ACCEPTED and closed. WO34 is READY but not ACTIVE. The worker stopped at the WO33 review boundary and did not modify canonical CURRENT_STATE, WorkOrders, or Decisions.
+WO34 is ACCEPTED and closed for controlled falsification value. Its correction commit `398a91759b1b327b464cf81e41320b8e5f312c9b` and evidence commit `c82542b5daa8f70764818d0058ad47e1f541efa9` are not accepted product baselines. The accepted engineering baseline remains `93f892dd0cf9834259b4cad2045ddb2ef9c53ed9`.
 
-WO34 starts from accepted engineering baseline `93f892dd0cf9834259b4cad2045ddb2ef9c53ed9` through evidence-only worker checkpoint `49f5f0bd80e83ef87eaebd3f69c07072796738aa`. It targets only the remaining distance/horizon boundary. No execution is authorized until the orchestrator delivers the explicit start directive; READY and ACTIVE remain separate transitions.
+WO34's start directive was delivered and acknowledged through the user, but the separate canonical ACTIVE bookkeeping commit was missed after a direct-delivery timeout. The final review records this discrepancy explicitly. Worker execution was authorized and no canonical files were modified by the worker.
+
+WO35 is READY but not ACTIVE. It begins from exact accepted engineering baseline `93f892dd0cf9834259b4cad2045ddb2ef9c53ed9`, not the rejected WO34 branch. No execution is authorized until the orchestrator delivers the explicit start directive; READY and ACTIVE remain separate transitions.
 
 ## Latest important evidence
 
-- [READY WO34](../WorkOrders/WO-034.md)
+- [READY WO35](../WorkOrders/WO-035.md)
+- [WO35 governing decision](../Decisions/DEC-014.md)
+- [Accepted WO34](../WorkOrders/WO-034.md)
+- [WO34 final orchestrator review](../Evidence/WO-034/orchestrator-final-review.md)
+- [WO34 execution report](../Evidence/WO-034/report.md)
+- [WO34 device capture](../Evidence/WO-034/device-capture.md)
 - [Accepted WO33](../WorkOrders/WO-033.md)
 - [WO33 acceptance decision](../Decisions/DEC-013.md)
 - [WO33 final orchestrator review](../Evidence/WO-033/orchestrator-final-review.md)
@@ -119,9 +130,9 @@ WO34 starts from accepted engineering baseline `93f892dd0cf9834259b4cad2045ddb2e
 ## Recovery path
 
 1. Read this file.
-2. Read READY [WO-034](../WorkOrders/WO-034.md), accepted [WO-033](../WorkOrders/WO-033.md), [DEC-013](../Decisions/DEC-013.md), and the [final WO33 review](../Evidence/WO-033/orchestrator-final-review.md).
+2. Read READY [WO-035](../WorkOrders/WO-035.md), [DEC-014](../Decisions/DEC-014.md), accepted [WO-034](../WorkOrders/WO-034.md), and the [final WO34 review](../Evidence/WO-034/orchestrator-final-review.md).
 3. Inspect current Git and CI state before issuing new work.
 4. Use Codebase Memory for structural navigation, then verify implementation facts against checked-out source.
 5. Use the Google ledger only for unresolved historical context.
 
-Current execution state is STOPPED. WO34 is READY and awaits an explicit start directive.
+Current execution state is STOPPED. WO35 is READY and awaits an explicit start directive.
