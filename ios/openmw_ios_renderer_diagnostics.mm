@@ -10,19 +10,34 @@
 #include <cctype>
 #include <cstdio>
 #include <cstdlib>
+#include <deque>
+#include <functional>
 #include <mutex>
 #include <string>
+#include <thread>
 #include <unordered_map>
+#include <utility>
+#include <vector>
 
 namespace
 {
     constexpr unsigned long long MaxFileBytes = 256 * 1024;
+    constexpr size_t BlendRingCapacity = 48;
 
     struct FamilyState
     {
         unsigned int count = 0;
         unsigned int budget = 0;
         bool exhausted = false;
+    };
+
+    struct BlendEvent
+    {
+        uint64_t sequence = 0;
+        unsigned long long thread = 0;
+        std::string source;
+        std::string site;
+        std::string detail;
     };
 
     std::mutex sMutex;
@@ -43,6 +58,8 @@ namespace
     float sExteriorFogEnd = 0.f;
     float sExteriorFogColor[4] = { 0.f, 0.f, 0.f, 0.f };
     float sExteriorViewDistance = 0.f;
+    uint64_t sBlendSequence = 0;
+    std::deque<BlendEvent> sBlendRing;
 
     unsigned int budgetForFamily(const std::string& family)
     {
@@ -64,6 +81,8 @@ namespace
             return 16;
         if (family.rfind("r1.target", 0) == 0)
             return 24;
+        if (family == "r1.blend.transition")
+            return 128;
         if (family.rfind("r2.intent", 0) == 0)
             return 16;
         if (family.rfind("r2.received", 0) == 0)
@@ -320,6 +339,47 @@ extern "C" int openmw_ios_renderer_diag_target_for_gl_name(unsigned int texture)
     beginLocked();
     const auto found = sGLTextureTargets.find(texture);
     return found == sGLTextureTargets.end() ? OPENMW_IOS_RENDERER_TARGET_NONE : found->second;
+}
+
+extern "C" void openmw_ios_renderer_diag_blend_event(
+    const char* source, const char* site, const char* detail)
+{
+    const unsigned long long thread
+        = static_cast<unsigned long long>(std::hash<std::thread::id>{}(std::this_thread::get_id()));
+    const std::string safeSite = site ? site : "unknown";
+    std::vector<BlendEvent> flushEvents;
+    {
+        std::lock_guard<std::mutex> lock(sMutex);
+        beginLocked();
+        if (!sEnabled || !sTargetArmed[OPENMW_IOS_RENDERER_TARGET_CHIMNEY_SMOKE])
+            return;
+        BlendEvent event;
+        event.sequence = ++sBlendSequence;
+        event.thread = thread;
+        event.source = source ? source : "unknown";
+        event.site = safeSite;
+        event.detail = detail ? detail : "";
+        sBlendRing.push_back(std::move(event));
+        while (sBlendRing.size() > BlendRingCapacity)
+            sBlendRing.pop_front();
+        if (safeSite == "glDrawElementsCommon" || safeSite == "draw_renderlist.native-draw")
+        {
+            flushEvents.assign(sBlendRing.begin(), sBlendRing.end());
+            sBlendRing.clear();
+        }
+    }
+    for (const BlendEvent& event : flushEvents)
+    {
+        char correlation[48];
+        char combined[1024];
+        std::snprintf(correlation, sizeof(correlation), "blend-%llu",
+            static_cast<unsigned long long>(event.sequence));
+        std::snprintf(combined, sizeof(combined), "sequence=%llu;thread=%llu;site=%s;%s",
+            static_cast<unsigned long long>(event.sequence), event.thread, event.site.c_str(),
+            event.detail.c_str());
+        openmw_ios_renderer_diag_record(
+            "r1.blend.transition", event.source.c_str(), correlation, combined);
+    }
 }
 
 extern "C" void openmw_ios_renderer_diag_arm_exterior_fog(
