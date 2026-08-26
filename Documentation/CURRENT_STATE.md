@@ -3,12 +3,12 @@
 - Project: OpenMWiOS
 - Canonical ControlPlane branch: `codex/wo29-ios-crash-isolation`
 - Accepted engineering baseline commit: `93f892dd0cf9834259b4cad2045ddb2ef9c53ed9`
-- Active work order: [WO-036](../WorkOrders/WO-036.md)
-- Ready work order: none
-- Last completed work order: [WO-035](../WorkOrders/WO-035.md) — **ACCEPTED / CONTROLLED FALSIFICATION; NO PRODUCT CHANGE**
-- Last durable decision: [DEC-015](../Decisions/DEC-015.md)
-- Current objective: prove whether disabled distant-terrain paging causes the exterior gaps, then test bounded higher view distances only with paging active
-- Engineering execution status: **ACTIVE; WO-036 Phase 1 awaits Arm A device settings, diagnostic, and matching screenshots**
+- Active work order: none
+- Ready work order: [WO-037](../WorkOrders/WO-037.md)
+- Last completed work order: [WO-036](../WorkOrders/WO-036.md) — **ACCEPTED / CONTROLLED FALSIFICATION; NO PRODUCT CHANGE**
+- Last durable decision: [DEC-016](../Decisions/DEC-016.md)
+- Current objective: correlate photographed distant defects to exact OSG draw coverage, GL4ES program/state, target-pixel depth/color, sky RTT sampling, and scene clear behavior before correction
+- Engineering execution status: **STOPPED; WO-037 is READY and awaits an explicit orchestrator start directive**
 - Last updated: 2026-08-26
 
 ## Highest qualified runtime milestone
@@ -28,7 +28,7 @@ The qualified OpenMWiOS runtime now combines the WO26/WO27 bootstrap and data-pa
 
 This is a qualified Fast Development runtime baseline, not a Full Qualification result.
 
-WO34 and WO35 did not advance this milestone. WO34's wider terrain-radius candidate produced no material visual change. WO35 proved sky blending active but left the blue/white cutoff materially present and made no source/build change. The accepted source/artifact baseline remains WO33 commit `93f892dd0cf9834259b4cad2045ddb2ef9c53ed9`.
+WO34, WO35, and WO36 did not advance this milestone. WO34's wider terrain-radius candidate produced no material visual change. WO35 proved sky blending active but left the blue/white cutoff materially present. WO36 proved distant terrain/object paging and `16384` view distance only move the same boundary farther away. None made an accepted product change. The accepted source/artifact baseline remains WO33 commit `93f892dd0cf9834259b4cad2045ddb2ef9c53ed9`.
 
 ## Accepted candidate
 
@@ -80,7 +80,9 @@ WO34 falsified aspect-unaware terrain radius as the cause: increasing the captur
 
 WO35 then proved `sky_blending=1` at view/far distance 7168 on the physical device. Ten verified captures still show the sharp blue band and large white/fog-colored cutoff, so sky blending is rejected as their correction. The user retained it locally because some silhouette fading looks preferable; that is device preference, not a product default or qualified fix.
 
-The preserved effective settings contain `viewing distance = 7168` and no `[Terrain]` section. Pinned OpenMW therefore uses `distant terrain = false`, selects loaded-cell `TerrainGrid`, exposes only the 7168-capped slider, and records `object_paging=0`. Pinned source selects paged `QuadTreeWorld` and the large 81920-cap slider when distant terrain is enabled. WO36 will isolate that terrain-system transition at the same 7168 distance before testing 16384 and, only if stable, 32768. This is the leading bounded configuration hypothesis, not an accepted cause.
+WO36 has now removed the remaining global distance/paging hypothesis. At constant `7168`, enabling distant terrain changed `object_paging` from `0` to `1` without materially changing the target. At `16384`, moderate-distance coverage improved, but the same dark silhouettes, blue band, and pale uncovered region recurred at the farther boundary with a modest observed performance cost. Exact Arm A state was restored; the device remains at `7168`, with no `[Terrain]` override and with the user's retained sky-blending preference.
+
+The next boundary is exact pixel ownership. Existing diagnostics prove camera/fog intent and broad program receipt but cannot tell whether a photographed target pixel was produced by a particular drawable/program or had no world coverage and exposed the clear/sky composition. WO37 will correlate OSG draw bounds and identity through GL4ES program/state to final target-pixel color/depth and sky RTT sampling. Black silhouettes and the blue/white horizon remain distinct until that evidence proves convergence.
 
 ## Secondary and deferred boundaries
 
@@ -101,12 +103,18 @@ WO35 is ACCEPTED and closed for controlled falsification value. Evidence commit 
 
 WO35's start directive was delivered and acknowledged through the user, but the separate canonical ACTIVE bookkeeping commit was missed after direct-delivery timeout. The final review records this discrepancy explicitly. Worker execution was authorized and no canonical files were modified by the worker.
 
-WO36 is ACTIVE. Its explicit start directive was delivered through the user at `2026-08-25T17:53:21Z` and acknowledged at `2026-08-25T18:07:07Z`. The worker branch `codex/wo36-distant-terrain-qualification` is at exact accepted engineering baseline `93f892dd0cf9834259b4cad2045ddb2ef9c53ed9`; Phase 0 passed without source/build changes or CI, and execution is waiting for Arm A device inputs.
+WO36 is ACCEPTED for controlled falsification value. Final evidence commit `4f6cfc62ced645d4465f401520a1dfaca5e65ab7` is evidence-only. Arm A/B/C identities, diagnostic values, and screenshots verify; no build or GitHub Actions run occurred; and exact Arm A configuration was restored. The accepted engineering baseline remains `93f892dd0cf9834259b4cad2045ddb2ef9c53ed9`.
+
+WO37 is READY and not started. It authorizes one diagnostic IPA and, only after exact target attribution, one narrow correction IPA. No worker execution exists until the explicit start directive is sent.
 
 ## Latest important evidence
 
-- [ACTIVE WO36](../WorkOrders/WO-036.md)
-- [WO36 governing decision](../Decisions/DEC-015.md)
+- [READY WO37](../WorkOrders/WO-037.md)
+- [WO37 governing decision](../Decisions/DEC-016.md)
+- [Accepted WO36](../WorkOrders/WO-036.md)
+- [WO36 final orchestrator review](../Evidence/WO-036/orchestrator-final-review.md)
+- [WO36 execution report](../Evidence/WO-036/report.md)
+- [WO36 device capture](../Evidence/WO-036/device-capture.md)
 - [Accepted WO35](../WorkOrders/WO-035.md)
 - [WO35 final orchestrator review](../Evidence/WO-035/orchestrator-final-review.md)
 - [WO35 execution report](../Evidence/WO-035/report.md)
@@ -137,9 +145,9 @@ WO36 is ACTIVE. Its explicit start directive was delivered through the user at `
 ## Recovery path
 
 1. Read this file.
-2. Read READY [WO-036](../WorkOrders/WO-036.md), [DEC-015](../Decisions/DEC-015.md), accepted [WO-035](../WorkOrders/WO-035.md), and the [final WO35 review](../Evidence/WO-035/orchestrator-final-review.md).
+2. Read READY [WO-037](../WorkOrders/WO-037.md), [DEC-016](../Decisions/DEC-016.md), accepted [WO-036](../WorkOrders/WO-036.md), and the [final WO36 review](../Evidence/WO-036/orchestrator-final-review.md).
 3. Inspect current Git and CI state before issuing new work.
 4. Use Codebase Memory for structural navigation, then verify implementation facts against checked-out source.
 5. Use the Google ledger only for unresolved historical context.
 
-Current execution state is ACTIVE. WO36 Phase 1 awaits the current device settings, a fresh 7168 diagnostic after force-quit/relaunch, and matching shoreline/tree-line screenshots.
+Current execution state is STOPPED. WO37 is READY and requires an explicit orchestrator start directive before worker execution.
