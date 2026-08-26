@@ -6,7 +6,7 @@ index 9a258f1..191f68c 100644
      LOAD_GLES_FPE(glEnable);
      LOAD_GLES_FPE(glDisable);
      LOAD_GLES_FPE(glMultiTexCoord4f);
-+    LOAD_GLES_FPE(glReadPixels);
++    LOAD_GLES(glReadPixels);
  #define client_state(A, B, C) \
          if((glstate->vao->vertexattrib[A].enabled != glstate->gleshard->vertexattrib[A].enabled) || (hardext.esversion!=1)) {   \
              C                                               \

@@ -1,8 +1,10 @@
+import hashlib
 import pathlib
 import re
 import subprocess
 import tempfile
 import unittest
+import zipfile
 
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
@@ -16,6 +18,12 @@ GL4ES_PATCH = (ROOT / "patches" / "gl4es" / "0010-ios-target-pixel-attribution.p
 )
 OPENMW_PATCH = (ROOT / "patches" / "openmw" / "0016-ios-renderer-diagnostics-target-pixel-present.patch").read_text(
     encoding="utf-8"
+)
+PINNED_GL4ES_PATCH_INPUTS = (
+    ROOT / "validation" / "fixtures" / "gl4es-c9895df-wo33-patch-inputs.zip"
+)
+PINNED_GL4ES_PATCH_INPUTS_SHA256 = (
+    "1601090e10fda84c4e9b8343219deea1ad5c4398638005f22977e8f7e5c6bda6"
 )
 
 
@@ -75,6 +83,74 @@ class WO37TargetPixelAttributionTests(unittest.TestCase):
         self.assertIn('wo37_diag_draw_sample(wo37_draw, 0', GL4ES_PATCH)
         self.assertIn('wo37_diag_draw_sample(wo37_draw, 1', GL4ES_PATCH)
         self.assertNotIn('glReadPixels(0, 0, wo37_viewport[2]', GL4ES_PATCH)
+
+    def test_gl4es_readback_uses_the_native_loader_contract(self) -> None:
+        self.assertIn('LOAD_GLES(glReadPixels);', GL4ES_PATCH)
+        self.assertNotIn('LOAD_GLES_FPE(glReadPixels)', GL4ES_PATCH)
+        self.assertNotIn('fpe_glReadPixels', GL4ES_PATCH)
+
+    def test_complete_gl4es_patch_stack_applies_to_pristine_pinned_snapshot(self) -> None:
+        self.assertEqual(
+            PINNED_GL4ES_PATCH_INPUTS_SHA256,
+            hashlib.sha256(PINNED_GL4ES_PATCH_INPUTS.read_bytes()).hexdigest(),
+        )
+        patches = sorted((ROOT / "patches" / "gl4es").glob("*.patch"))
+        self.assertEqual(
+            [f"{index:04d}" for index in range(1, 11)],
+            [patch.name.split("-", 1)[0] for patch in patches],
+        )
+        with tempfile.TemporaryDirectory() as directory:
+            snapshot = pathlib.Path(directory)
+            with zipfile.ZipFile(PINNED_GL4ES_PATCH_INPUTS) as archive:
+                archive.extractall(snapshot)
+            for source in snapshot.rglob("*"):
+                if source.is_file():
+                    source.write_bytes(source.read_bytes().replace(b"\r\n", b"\n"))
+            subprocess.run(["git", "init", "-q"], cwd=snapshot, check=True)
+            subprocess.run(["git", "config", "core.autocrlf", "false"], cwd=snapshot, check=True)
+            subprocess.run(["git", "add", "-A"], cwd=snapshot, check=True)
+            subprocess.run(
+                ["git", "-c", "user.name=WO37", "-c", "user.email=wo37@example.invalid",
+                 "commit", "-q", "-m", "pinned-c9895df-patch-inputs"],
+                cwd=snapshot,
+                check=True,
+            )
+            for patch in patches:
+                normalized_patch = snapshot / f".wo37-{patch.name}"
+                normalized_patch.write_text(
+                    patch.read_text(encoding="utf-8"),
+                    encoding="utf-8",
+                    newline="\n",
+                )
+                check = subprocess.run(
+                    ["git", "apply", "--check", str(normalized_patch)],
+                    cwd=snapshot,
+                    capture_output=True,
+                    text=True,
+                )
+                self.assertEqual(
+                    0,
+                    check.returncode,
+                    f"{patch.name} failed clean-tree validation:\n{check.stderr}",
+                )
+                subprocess.run(
+                    ["git", "apply", str(normalized_patch)],
+                    cwd=snapshot,
+                    check=True,
+                    capture_output=True,
+                    text=True,
+                )
+            subprocess.run(
+                ["git", "diff", "--check"],
+                cwd=snapshot,
+                check=True,
+                capture_output=True,
+                text=True,
+            )
+            drawing = (snapshot / "src" / "gl" / "drawing.c").read_text(encoding="utf-8")
+        self.assertIn('LOAD_GLES(glReadPixels);', drawing)
+        self.assertNotIn('LOAD_GLES_FPE(glReadPixels)', drawing)
+        self.assertNotIn('fpe_glReadPixels', drawing)
 
     def test_osg_render_leaf_patch_applies_to_pristine_pinned_source(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
