@@ -4,12 +4,12 @@
 - Canonical ControlPlane branch: `codex/wo29-ios-crash-isolation`
 - Accepted engineering baseline commit: `93f892dd0cf9834259b4cad2045ddb2ef9c53ed9`
 - Active work order: none
-- Ready work order: [WO-037](../WorkOrders/WO-037.md)
+- Ready work order: [WO-037 Amendment 1](../WorkOrders/WO-037.md)
 - Last completed work order: [WO-036](../WorkOrders/WO-036.md) — **ACCEPTED / CONTROLLED FALSIFICATION; NO PRODUCT CHANGE**
 - Last durable decision: [DEC-016](../Decisions/DEC-016.md)
 - Current objective: correlate photographed distant defects to exact OSG draw coverage, GL4ES program/state, target-pixel depth/color, sky RTT sampling, and scene clear behavior before correction
-- Engineering execution status: **STOPPED; WO-037 is READY and awaits an explicit orchestrator start directive**
-- Last updated: 2026-08-26
+- Engineering execution status: **STOPPED; WO-037 Amendment 1 is READY and awaits an explicit orchestrator start directive**
+- Last updated: 2026-08-27
 
 ## Highest qualified runtime milestone
 
@@ -105,11 +105,14 @@ WO35's start directive was delivered and acknowledged through the user, but the 
 
 WO36 is ACCEPTED for controlled falsification value. Final evidence commit `4f6cfc62ced645d4465f401520a1dfaca5e65ab7` is evidence-only. Arm A/B/C identities, diagnostic values, and screenshots verify; no build or GitHub Actions run occurred; and exact Arm A configuration was restored. The accepted engineering baseline remains `93f892dd0cf9834259b4cad2045ddb2ef9c53ed9`.
 
-WO37 is READY and not started. It authorizes one diagnostic IPA and, only after exact target attribution, one narrow correction IPA. No worker execution exists until the explicit start directive is sent.
+The original WO37 execution was explicitly started through the user on 2026-08-26, although the separate canonical READY → ACTIVE bookkeeping update was missed. Worker branch `codex/wo37-distant-pixel-attribution` stopped cleanly at `e6a6a5b5f9b63b985d93068fb16feaacbb5f4737` after Fast run `33002709474` failed compiling changed GL4ES source. No IPA or target attribution exists, so this is not a renderer result and the accepted engineering baseline remains unchanged.
+
+The failure is exact: `LOAD_GLES_FPE(glReadPixels)` requires nonexistent `fpe_glReadPixels`, while pinned GL4ES's own readback path uses `LOAD_GLES(glReadPixels)`. WO37 Amendment 1 is READY for only that loader repair, deterministic validation, and one replacement diagnostic Fast run. The original device-attribution requirements and single conditional correction-IPA budget remain unchanged.
 
 ## Latest important evidence
 
-- [READY WO37](../WorkOrders/WO-037.md)
+- [READY WO37 Amendment 1](../WorkOrders/WO-037.md)
+- [WO37 original diagnostic compile-failure review](../Evidence/WO-037/orchestrator-compile-failure-review.md)
 - [WO37 governing decision](../Decisions/DEC-016.md)
 - [Accepted WO36](../WorkOrders/WO-036.md)
 - [WO36 final orchestrator review](../Evidence/WO-036/orchestrator-final-review.md)
@@ -145,9 +148,9 @@ WO37 is READY and not started. It authorizes one diagnostic IPA and, only after 
 ## Recovery path
 
 1. Read this file.
-2. Read READY [WO-037](../WorkOrders/WO-037.md), [DEC-016](../Decisions/DEC-016.md), accepted [WO-036](../WorkOrders/WO-036.md), and the [final WO36 review](../Evidence/WO-036/orchestrator-final-review.md).
+2. Read READY [WO-037 Amendment 1](../WorkOrders/WO-037.md), its [compile-failure review](../Evidence/WO-037/orchestrator-compile-failure-review.md), [DEC-016](../Decisions/DEC-016.md), accepted [WO-036](../WorkOrders/WO-036.md), and the [final WO36 review](../Evidence/WO-036/orchestrator-final-review.md).
 3. Inspect current Git and CI state before issuing new work.
 4. Use Codebase Memory for structural navigation, then verify implementation facts against checked-out source.
 5. Use the Google ledger only for unresolved historical context.
 
-Current execution state is STOPPED. WO37 is READY and requires an explicit orchestrator start directive before worker execution.
+Current execution state is STOPPED. WO37 Amendment 1 is READY and requires an explicit orchestrator start directive before worker continuation.
