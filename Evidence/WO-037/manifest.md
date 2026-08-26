@@ -1,6 +1,6 @@
 # WO-037 Evidence Manifest
 
-Status: diagnostic candidate prepared; physical target captures pending.
+Status: blocked at changed-source compilation; no diagnostic IPA produced.
 
 ## Authority and identity
 
@@ -16,16 +16,18 @@ Status: diagnostic candidate prepared; physical target captures pending.
 - [Execution report](report.md)
 - [Source and attribution model](source-and-attribution-model.md)
 - [Diagnostic design and tests](diagnostic-design-and-tests.md)
+- [Fast build failure](build-failure.md)
 - [Target-pixel captures](target-pixel-captures.md)
 
 ## Build and artifact evidence
 
-- Diagnostic source commit: pending
-- Fast Development run: pending
-- Artifact ID/digest: pending
-- Executable SHA-256 / Mach-O UUID: pending
-- IPA SHA-256: pending
+- Diagnostic source commit: `7dc76a962fb5cd54494a41296b138badee15038a`
+- Fast Development run: `33002709474` (failure)
+- Failed boundary: changed GL4ES `drawing.c` compilation
+- Artifact ID/digest: NOT PRODUCED
+- Executable SHA-256 / Mach-O UUID: NOT PRODUCED
+- IPA SHA-256: NOT PRODUCED
 
 ## External evidence
 
-No raw IPA, screenshot, framebuffer, or shader dump is committed here. Device screenshots and bounded JSONL captures will be referenced by SHA-256 after collection. The completion report will also be published as an unlisted GitHub Gist, per tester preference.
+No raw IPA, screenshot, framebuffer, shader dump, or device capture was produced. The completion report is published as an unlisted GitHub Gist, per tester preference.
