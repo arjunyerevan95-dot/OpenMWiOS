@@ -42,3 +42,5 @@ Run `33002709474` is not eligible for the replacement clause. The failure occurr
 **F - patch/build/infrastructure replacement budget exhausted.**
 
 The precise continuation boundary is to replace the invalid GL4ES loader macro with a source-verified native GLES readback acquisition that compiles in pinned GL4ES, re-run the deterministic suite, and obtain explicit orchestrator authority for another diagnostic dispatch. This report does not authorize that continuation.
+
+Unlisted report Gist: `https://gist.github.com/arjunyerevan95-dot/d8e93d65c0df86ae40a863d188e8e122`

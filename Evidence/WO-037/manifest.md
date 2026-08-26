@@ -31,3 +31,5 @@ Status: blocked at changed-source compilation; no diagnostic IPA produced.
 ## External evidence
 
 No raw IPA, screenshot, framebuffer, shader dump, or device capture was produced. The completion report is published as an unlisted GitHub Gist, per tester preference.
+
+- Unlisted report Gist: `https://gist.github.com/arjunyerevan95-dot/d8e93d65c0df86ae40a863d188e8e122`
