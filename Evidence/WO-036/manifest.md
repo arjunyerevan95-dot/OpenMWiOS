@@ -38,10 +38,34 @@ Arm A proves view distance 7168 and `object_paging=0`. Arm B applies only the au
 - Session: `0ED5F557-168A-4264-8D66-0B533DB76017`
 - Proof: `selected=7168`, `camera_far=7168`, `object_paging=1`
 - Eight physical screenshots: identities recorded in `device-capture.md`
-- Result: blue band, white gap, and distant silhouettes remain; Route B / Stop Condition C selected.
+- Result: blue band, white gap, and distant silhouettes remain at constant 7168.
+
+## Arm C identities
+
+- Settings: 811 bytes; SHA-256 `E3EEE648AD561F3EC5B950AB63645442256DB62FDEBFD863DF8316AE762A3829`
+- Delivery URL: `https://files.catbox.moe/2gi5xw.cfg`
+- Diagnostic: 163,291 bytes; SHA-256 `360A209BD9D751493E5C6215E5F369730CE13E09CF16A4A00D9037B92DF8A92C`
+- Session: `644CF060-AAD4-42AC-9026-9C8713EE78F8`
+- Proof: `selected=16384`, `camera_far=16384`, fog/view end `16384`, `terrain_cull=27934.2`, `object_paging=1`
+- Six physical screenshots: identities recorded in `device-capture.md`
+- Result: moderate-distance coverage improved, but the blue/white cutoff and dark fade silhouettes recur at the farther boundary; user observed a modest long-vista performance dip
+- Route: B — paging/higher distance only moves the boundary
+- Stop condition: C — distant-terrain and higher-distance hypothesis falsified
+- Arm D: not run; optional and unnecessary after the decisive Arm C result
 
 ## Restoration
 
 - Exact Arm A restore file: 776 bytes; SHA-256 `744A7C89510C5E9BFD649CBD93739721905589F5C815D8F6430D99BA08A9EC10`
 - Verified URL: `https://files.catbox.moe/uizp88.cfg`
-- Confirmation: COMPLETE; exact Arm A settings restored and user reported `Launched normal`
+- Post-Arm-B confirmation: COMPLETE; exact Arm A settings restored and user reported `Launched normal`
+- Final restoration after Arm C: COMPLETE; user confirmed `Done`
+
+## Interim orchestrator review
+
+- Arm A/B evidence and restoration: provisionally accepted
+- Stop Condition C after Arm B alone: rejected as premature
+- Mandatory continuation: Arm C at 16384; Arm D remains optional
+- Arm C settings: 811 bytes; SHA-256 `E3EEE648AD561F3EC5B950AB63645442256DB62FDEBFD863DF8316AE762A3829`
+- Arm C verified delivery: `https://files.catbox.moe/2gi5xw.cfg`
+- Arm C semantic delta from exact Arm A: change view distance 7168→16384; add `distant terrain = true`; retain Fog keys
+- Arm C complete and trustworthy; exact post-test Arm A restoration is confirmed

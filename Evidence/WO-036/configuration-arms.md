@@ -40,14 +40,28 @@
 
 ## Arm C — 16384, paging active
 
-- Status: NOT RUN — ROUTE B SELECTED AFTER CONSTANT-DISTANCE FALSIFICATION
+- Status: COMPLETE / TRUSTWORTHY / BOUNDARY DISPLACED, NOT FIXED
+- Exact settings bytes: 811
+- Exact settings SHA-256: `E3EEE648AD561F3EC5B950AB63645442256DB62FDEBFD863DF8316AE762A3829`
+- Verified delivery URL: `https://files.catbox.moe/2gi5xw.cfg`
+- Relative to exact Arm A, only `viewing distance = 7168` becomes `viewing distance = 16384` and `[Terrain] distant terrain = true` is added.
+- Retained Fog keys: `sky blending = true`, `sky blending start = 0.8`
+- Diagnostic bytes: 163,291
+- Diagnostic SHA-256: `360A209BD9D751493E5C6215E5F369730CE13E09CF16A4A00D9037B92DF8A92C`
+- Session: `644CF060-AAD4-42AC-9026-9C8713EE78F8`
+- Projection: `selected=16384`, `camera_far=16384`, `terrain_cull=27934.2`, resolution `2868x1320`
+- Content: `object_paging=1`
+- Fog/view receipt: `start=4587.52`, `end=16384`, `view_distance=16384`
+- Device result: moderate-distance terrain/objects meaningfully improved; blue/white cutoff and dark silhouettes persist at the farther fade boundary
+- Performance observation: modest dip while looking across long vistas; no crash/jetsam reported
 
 ## Arm D — 32768, paging active
 
-- Status: NOT RUN — ROUTE B SELECTED AFTER CONSTANT-DISTANCE FALSIFICATION
+- Status: NOT RUN; optional and unnecessary after Arm C decisively showed boundary displacement with added performance cost
 
 ## Restoration
 
 - Exact pre-WO36 Arm A file: 776 bytes; SHA-256 `744A7C89510C5E9BFD649CBD93739721905589F5C815D8F6430D99BA08A9EC10`
 - Verified download: `https://files.catbox.moe/uizp88.cfg`
-- Device restoration: COMPLETE; user reported `Launched normal`
+- Post-Arm-B restoration: COMPLETE; user reported `Launched normal`
+- Final post-Arm-C restoration: COMPLETE; user confirmed `Done`

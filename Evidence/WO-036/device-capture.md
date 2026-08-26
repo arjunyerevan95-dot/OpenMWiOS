@@ -1,6 +1,6 @@
 # WO-036 Device Capture
 
-Status: COMPLETE; ROUTE B / STOP CONDITION C; ORIGINAL SETTINGS RESTORED
+Status: COMPLETE; ROUTE B / STOP CONDITION C; EXACT ARM A RESTORED
 
 ## Required matching views
 
@@ -61,8 +61,46 @@ Status: COMPLETE; ROUTE B / STOP CONDITION C; ORIGINAL SETTINGS RESTORED
 
 No benchmark claim is made. The supplied captures and diagnostic show a live, traversed exterior session without a reported crash or severe runtime regression. The large-slider UI was not separately captured, and the effects not visible in this Arm B set are not requalified.
 
+## Arm C
+
+- Settings identity: 811 bytes; SHA-256 `E3EEE648AD561F3EC5B950AB63645442256DB62FDEBFD863DF8316AE762A3829`
+- Diagnostic identity: 163,291 bytes; SHA-256 `360A209BD9D751493E5C6215E5F369730CE13E09CF16A4A00D9037B92DF8A92C`
+- Session: `644CF060-AAD4-42AC-9026-9C8713EE78F8`
+- `view_distance=16384`: PROVEN (`selected=16384`, `camera_far=16384`, fog/view end `16384`)
+- `object_paging=1`: PROVEN
+- Blue band: PRESENT at the farther boundary
+- White/fog-colored gap: PRESENT at the farther boundary
+- Dark/black fade silhouettes: PRESENT at farther distances where draw distance fades out
+- Moderate-distance coverage: MEANINGFULLY IMPROVED
+- User observation: "the weird dark silhouette effect still persists now at FURTHER distances, wherever the draw distance is fading out - it didn't solve the problem but just pushed it further out"
+- Performance: user observed a modest dip when looking at long vistas; no benchmark claim
+- Crash/jetsam: not reported
+- Arm D: not run; optional and unnecessary because Arm C already distinguishes displacement from correction
+
+### Screenshot identities
+
+- Photo 1: 186,556 bytes; SHA-256 `D69429A1C94E73C8F193B68BCAD727225EEB58471161830F24A026FDD6265748`
+- Photo 2: 217,542 bytes; SHA-256 `626189285939A240786551C66E02FA3EBE3FE7C652D42A4712B92BEC2DE6A68D`
+- Photo 3: 176,378 bytes; SHA-256 `7577AA55846D62634BF5B2278EAF0A8F9A7F33410BBBB36BCE6886BDAF7F73E0`
+- Photo 4: 180,916 bytes; SHA-256 `7036516B5B9ECFF31F4D4CCD873F63CE883319D084E5A5796BBC42CE5E1549F6`
+- Photo 5: 217,906 bytes; SHA-256 `AF7C699259AC248E7F631907D960D21D3D9F88CB5BF810F27C48DDA19040826A`
+- Photo 6: 194,207 bytes; SHA-256 `C568ED83E7ADDAFFB2F58F775AC37CD5367540896924E84C73679ABD19925E3C`
+
 ## Restoration result
 
-- Exact Arm A settings restored: 776 bytes; SHA-256 `744A7C89510C5E9BFD649CBD93739721905589F5C815D8F6430D99BA08A9EC10`
-- Relaunch result: user reported `Launched normal`
-- No manual product/source change or build was required.
+- Post-Arm-B restoration was completed and user reported `Launched normal`.
+- Final post-Arm-C restoration to exact Arm A (776 bytes; SHA-256 `744A7C89510C5E9BFD649CBD93739721905589F5C815D8F6430D99BA08A9EC10`) is COMPLETE.
+- User confirmation: `Done`
+
+## Interim orchestrator review
+
+- Arm A/B trustworthiness: PROVISIONALLY ACCEPTED
+- Constant-distance result: accepted (`object_paging 0 → 1`; blue band, white gap, and silhouettes remained)
+- Stop Condition C after Arm B alone: NOT ACCEPTED
+- Required continuation: Arm C at 16384 with paging active, matching views, then restore Arm A
+
+## Final classification after Arm C
+
+- Route: B — paging/higher distance only moves the boundary
+- Stop condition: C — distant-terrain and higher-distance hypothesis falsified
+- Strongest conclusion: the configured camera/fog radius controls where the visible failure begins, but is not its root correction
