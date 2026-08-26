@@ -1,0 +1,158 @@
+diff --git a/src/gl/drawing.c b/src/gl/drawing.c
+index 9a258f1..191f68c 100644
+--- a/src/gl/drawing.c
++++ b/src/gl/drawing.c
+@@ -294,6 +294,7 @@ static void glDrawElementsCommon(GLenum mode, GLint first, GLsizei count, GLuint
+     LOAD_GLES_FPE(glEnable);
+     LOAD_GLES_FPE(glDisable);
+     LOAD_GLES_FPE(glMultiTexCoord4f);
++    LOAD_GLES_FPE(glReadPixels);
+ #define client_state(A, B, C) \
+         if((glstate->vao->vertexattrib[A].enabled != glstate->gleshard->vertexattrib[A].enabled) || (hardext.esversion!=1)) {   \
+             C                                               \
+@@ -423,6 +424,55 @@ if(count>500000) return;
+                 ToBuffer(glstate->vao->first, glstate->vao->count);
+         }
+
++        const uint64_t wo37_draw = wo37_diag_current_draw();
++        GLubyte wo37_before[4] = {0, 0, 0, 0};
++        GLint wo37_viewport[4] = { glstate->raster.viewport.x, glstate->raster.viewport.y,
++            glstate->raster.viewport.width, glstate->raster.viewport.height };
++        program_t* wo37_program = glstate->glsl ? glstate->glsl->glprogram : NULL;
++        const GLuint wo37_framebuffer = glstate->fbo.current_fb && glstate->fbo.current_fb->id
++            ? glstate->fbo.current_fb->id : glstate->fbo.default_fbo;
++        char wo37_state[1536];
++        wo37_state[0] = '\0';
++        if (wo37_draw && wo37_diag_target_active() && gles_glReadPixels
++            && wo37_viewport[2] > 0 && wo37_viewport[3] > 0)
++        {
++            const char* fragment = wo37_program && wo37_program->last_frag
++                ? wo37_program->last_frag->source : NULL;
++            unsigned int textures[4] = {0, 0, 0, 0};
++            for (int unit = 0; unit < 4 && unit < hardext.maxtex; ++unit)
++            {
++                gltexture_t* texture = glstate->texture.bound[unit][ENABLED_TEX2D];
++                textures[unit] = texture ? texture->texture : 0;
++            }
++            snprintf(wo37_state, sizeof(wo37_state),
++                "mode=%u;count=%d;native_program=%u;textures=%u,%u,%u,%u;"
++                "blend=%d;blend_func=%u,%u,%u,%u;alpha_test=%d;alpha_func=%u;alpha_ref=%.9g;"
++                "depth_test=%d;depth_write=%d;depth_func=%u;cull=%d;fog=%d;"
++                "fog_start=%.9g;fog_end=%.9g;fog_color=%.9g,%.9g,%.9g,%.9g;"
++                "builtin_fog=%d;fog_locations=%d,%d,%d,%d;has_applyFog=%d;"
++                "has_sampleSkyColor=%d;has_skyBlending=%d;observer_only=1",
++                mode, count, wo37_program ? wo37_program->id : 0,
++                textures[0], textures[1], textures[2], textures[3], glstate->enable.blend,
++                glstate->blendsfactorrgb, glstate->blenddfactorrgb,
++                glstate->blendsfactoralpha, glstate->blenddfactoralpha,
++                glstate->enable.alpha_test, glstate->alphafunc, glstate->alpharef,
++                glstate->enable.depth_test, glstate->depth.mask, glstate->depth.func,
++                glstate->enable.cull_face, glstate->enable.fog, glstate->fog.start,
++                glstate->fog.end, glstate->fog.color[0], glstate->fog.color[1],
++                glstate->fog.color[2], glstate->fog.color[3],
++                wo37_program ? wo37_program->builtin_fog.has : 0,
++                wo37_program ? wo37_program->builtin_fog.start : -1,
++                wo37_program ? wo37_program->builtin_fog.end : -1,
++                wo37_program ? wo37_program->builtin_fog.scale : -1,
++                wo37_program ? wo37_program->builtin_fog.color : -1,
++                fragment && strstr(fragment, "applyFog"), fragment && strstr(fragment, "sampleSkyColor"),
++                fragment && strstr(fragment, "skyBlending"));
++            gles_glReadPixels(wo37_viewport[0] + wo37_viewport[2] / 2,
++                wo37_viewport[1] + wo37_viewport[3] / 2, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, wo37_before);
++            wo37_diag_draw_sample(wo37_draw, 0, wo37_program ? wo37_program->id : 0,
++                wo37_framebuffer, wo37_viewport, wo37_before, wo37_state);
++        }
++
+         program_t* wo31_program = glstate->glsl ? glstate->glsl->glprogram : NULL;
+         for (int wo31_unit = 0; wo31_unit < hardext.maxtex; ++wo31_unit)
+         {
+@@ -463,6 +502,15 @@ if(count>500000) return;
+                 fpe_glDrawElementsInstanced(mode, count, t, tmp, instancecount);
+             }
+         }
++        if (wo37_draw && wo37_diag_target_active() && gles_glReadPixels
++            && wo37_viewport[2] > 0 && wo37_viewport[3] > 0)
++        {
++            GLubyte wo37_after[4] = {0, 0, 0, 0};
++            gles_glReadPixels(wo37_viewport[0] + wo37_viewport[2] / 2,
++                wo37_viewport[1] + wo37_viewport[3] / 2, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, wo37_after);
++            wo37_diag_draw_sample(wo37_draw, 1, wo37_program ? wo37_program->id : 0,
++                wo37_framebuffer, wo37_viewport, wo37_after, wo37_state);
++        }
+
+         for (int aa=0; aa<hardext.maxtex; aa++) {
+             if (!IS_TEX2D(glstate->enable.texture[aa]) && (IS_ANYTEX(glstate->enable.texture[aa]))) {
+diff --git a/src/gl/ios_renderer_diag.c b/src/gl/ios_renderer_diag.c
+index 2a183fe..c18a8cf 100644
+--- a/src/gl/ios_renderer_diag.c
++++ b/src/gl/ios_renderer_diag.c
+@@ -21,6 +21,10 @@ extern unsigned int openmw_ios_renderer_diag_matching_exterior_fog_generation(
+     float, float, const float*) WO31_WEAK_IMPORT;
+ extern void openmw_ios_renderer_diag_blend_event(
+     const char*, const char*, const char*) WO31_WEAK_IMPORT;
++extern uint64_t openmw_ios_renderer_diag_current_osg_draw(void) WO31_WEAK_IMPORT;
++extern int openmw_ios_renderer_diag_target_capture_active(void) WO31_WEAK_IMPORT;
++extern void openmw_ios_renderer_diag_gl_draw_sample(uint64_t, int, unsigned int, unsigned int,
++    const int*, const unsigned char*, const char*) WO31_WEAK_IMPORT;
+ extern uint64_t openmw_ios_renderer_diag_hash(const void*, size_t) WO31_WEAK_IMPORT;
+ #undef WO31_WEAK_IMPORT
+ #endif
+@@ -147,4 +151,42 @@ void wo33_diag_blend_event(const char* site, const char* detail)
+ #endif
+ }
+
++uint64_t wo37_diag_current_draw(void)
++{
++#if defined(__APPLE__) || defined(WO31_DIAGNOSTIC_TEST_BRIDGE)
++    if (available_core() && openmw_ios_renderer_diag_current_osg_draw)
++        return openmw_ios_renderer_diag_current_osg_draw();
++#endif
++    return 0;
++}
++
++int wo37_diag_target_active(void)
++{
++#if defined(__APPLE__) || defined(WO31_DIAGNOSTIC_TEST_BRIDGE)
++    return available_core() && openmw_ios_renderer_diag_target_capture_active
++        && openmw_ios_renderer_diag_target_capture_active();
++#else
++    return 0;
++#endif
++}
++
++void wo37_diag_draw_sample(uint64_t draw, int phase, unsigned int program,
++    unsigned int framebuffer, const int* viewport, const unsigned char* rgba,
++    const char* state_detail)
++{
++#if defined(__APPLE__) || defined(WO31_DIAGNOSTIC_TEST_BRIDGE)
++    if (available_core() && openmw_ios_renderer_diag_gl_draw_sample)
++        openmw_ios_renderer_diag_gl_draw_sample(draw, phase, program, framebuffer,
++            viewport, rgba, state_detail);
++#else
++    (void)draw;
++    (void)phase;
++    (void)program;
++    (void)framebuffer;
++    (void)viewport;
++    (void)rgba;
++    (void)state_detail;
++#endif
++}
++
+
+diff --git a/src/gl/ios_renderer_diag.h b/src/gl/ios_renderer_diag.h
+index 5bc1310..ddce308 100644
+--- a/src/gl/ios_renderer_diag.h
++++ b/src/gl/ios_renderer_diag.h
+@@ -10,6 +10,11 @@ void wo31_diag_texture_upload(unsigned int texture, const void* data, size_t siz
+ int wo31_diag_texture_category_for_name(unsigned int texture);
+ void wo33_diag_blend_event(const char* site, const char* detail);
+ int wo32_diag_texture_target_for_name(unsigned int texture);
++uint64_t wo37_diag_current_draw(void);
++int wo37_diag_target_active(void);
++void wo37_diag_draw_sample(uint64_t draw, int phase, unsigned int program,
++    unsigned int framebuffer, const int* viewport, const unsigned char* rgba,
++    const char* state_detail);
+ void wo31_diag_draw(unsigned int program, unsigned int texture, int category, int target, int blend, unsigned int src_rgb,
+     unsigned int dst_rgb, unsigned int src_alpha, unsigned int dst_alpha, int alpha_test, unsigned int alpha_func,
+     float alpha_ref, int depth_test, int depth_write, unsigned int depth_func, int fog, float fog_start,

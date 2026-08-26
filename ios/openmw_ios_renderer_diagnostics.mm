@@ -23,6 +23,7 @@ namespace
 {
     constexpr unsigned long long MaxFileBytes = 256 * 1024;
     constexpr size_t BlendRingCapacity = 48;
+    constexpr unsigned int TargetDrawBudget = 96;
 
     struct FamilyState
     {
@@ -38,6 +39,18 @@ namespace
         std::string source;
         std::string site;
         std::string detail;
+    };
+
+    struct TargetDraw
+    {
+        uint64_t id = 0;
+        unsigned int program = 0;
+        unsigned int framebuffer = 0;
+        unsigned char before[4] = { 0, 0, 0, 0 };
+        unsigned char after[4] = { 0, 0, 0, 0 };
+        bool hasBefore = false;
+        bool hasAfter = false;
+        bool changed = false;
     };
 
     std::mutex sMutex;
@@ -60,6 +73,16 @@ namespace
     float sExteriorViewDistance = 0.f;
     uint64_t sBlendSequence = 0;
     std::deque<BlendEvent> sBlendRing;
+    std::string sTargetRequest;
+    bool sTargetCaptureArmed = false;
+    bool sTargetCaptureActive = false;
+    bool sTargetCaptureComplete = false;
+    uint64_t sNextTargetDraw = 1;
+    unsigned int sTargetCandidateCount = 0;
+    unsigned int sTargetChangedCount = 0;
+    uint64_t sTargetLastChangedDraw = 0;
+    std::unordered_map<uint64_t, TargetDraw> sTargetDraws;
+    thread_local uint64_t sCurrentTargetDraw = 0;
 
     unsigned int budgetForFamily(const std::string& family)
     {
@@ -99,6 +122,8 @@ namespace
             return 8;
         if (family == "summary")
             return 24;
+        if (family.rfind("r3.", 0) == 0)
+            return 112;
         return 8;
     }
 
@@ -179,6 +204,17 @@ namespace
         sPath = [[directory stringByAppendingPathComponent:@"renderer-diagnostic.jsonl"] copy];
         [[NSFileManager defaultManager] createFileAtPath:sPath contents:[NSData data] attributes:nil];
         sSession = [NSUUID.UUID.UUIDString copy];
+        NSString* requestPath = [directory stringByAppendingPathComponent:@"renderer-target-request.txt"];
+        NSError* requestError = nil;
+        NSString* request = [NSString stringWithContentsOfFile:requestPath
+                                                      encoding:NSUTF8StringEncoding
+                                                         error:&requestError];
+        if (request && !requestError)
+        {
+            request = [request stringByTrimmingCharactersInSet:NSCharacterSet.whitespaceAndNewlineCharacterSet];
+            if (request.length > 0 && request.length <= 80)
+                sTargetRequest = request.UTF8String;
+        }
         appendRecord(@{
             @"schema" : @"openmw-ios-renderer-diagnostic-v1",
             @"session" : sSession,
@@ -186,7 +222,9 @@ namespace
             @"family" : @"session",
             @"source" : @"ios",
             @"correlation" : @"startup",
-            @"detail" : @"enabled=1;path=Documents/OpenMW/renderer-diagnostic.jsonl;max_bytes=262144"
+            @"detail" : [NSString stringWithFormat:
+                @"enabled=1;path=Documents/OpenMW/renderer-diagnostic.jsonl;max_bytes=262144;target_request=%@",
+                sTargetRequest.empty() ? @"none" : safeString(sTargetRequest.c_str())]
         });
     }
 }
@@ -388,6 +426,7 @@ extern "C" void openmw_ios_renderer_diag_arm_exterior_fog(
     if (!color)
         return;
     unsigned int generation = 0;
+    bool armTargetCapture = false;
     {
         std::lock_guard<std::mutex> lock(sMutex);
         beginLocked();
@@ -405,6 +444,11 @@ extern "C" void openmw_ios_renderer_diag_arm_exterior_fog(
         sExteriorViewDistance = view_distance;
         for (int index = 0; index < 4; ++index)
             sExteriorFogColor[index] = color[index];
+        if (!sTargetRequest.empty() && !sTargetCaptureComplete && !sTargetCaptureArmed)
+        {
+            sTargetCaptureArmed = true;
+            armTargetCapture = true;
+        }
     }
     char correlation[48];
     char detail[320];
@@ -413,6 +457,13 @@ extern "C" void openmw_ios_renderer_diag_arm_exterior_fog(
         "generation=%u;start=%.6g;end=%.6g;view_distance=%.6g;color=%.6g,%.6g,%.6g,%.6g",
         generation, start, end, view_distance, color[0], color[1], color[2], color[3]);
     openmw_ios_renderer_diag_record("r2.arm", "openmw", correlation, detail);
+    if (armTargetCapture)
+    {
+        std::snprintf(detail, sizeof(detail),
+            "request=%s;generation=%u;target_ndc=0,0;draw_budget=%u;depth_sample=unsupported-gles2",
+            sTargetRequest.c_str(), generation, TargetDrawBudget);
+        openmw_ios_renderer_diag_record("r3.arm", "openmw", correlation, detail);
+    }
 }
 
 extern "C" unsigned int openmw_ios_renderer_diag_matching_exterior_fog_generation(
@@ -429,6 +480,172 @@ extern "C" unsigned int openmw_ios_renderer_diag_matching_exterior_fog_generatio
         if (!nearlyEqual(color[index], sExteriorFogColor[index]))
             return 0;
     return sExteriorFogGeneration;
+}
+
+extern "C" uint64_t openmw_ios_renderer_diag_osg_draw_begin(const void* drawable,
+    const char* drawable_name, const char* parent_name, const char* camera_name,
+    int camera_order, int render_bin, float render_depth, float eye_depth,
+    const float* object_bounds, const float* ndc_bounds, int near_clipped)
+{
+    uint64_t draw = 0;
+    {
+        std::lock_guard<std::mutex> lock(sMutex);
+        beginLocked();
+        if (!sEnabled || !sTargetCaptureArmed || sTargetCaptureComplete
+            || sTargetCandidateCount >= TargetDrawBudget)
+            return 0;
+        sTargetCaptureActive = true;
+        draw = sNextTargetDraw++;
+        TargetDraw target;
+        target.id = draw;
+        sTargetDraws.emplace(draw, target);
+        ++sTargetCandidateCount;
+        sCurrentTargetDraw = draw;
+    }
+
+    char correlation[48];
+    char detail[1536];
+    std::snprintf(correlation, sizeof(correlation), "draw-%llu",
+        static_cast<unsigned long long>(draw));
+    std::snprintf(detail, sizeof(detail),
+        "drawable_ptr=%p;drawable=%s;parent=%s;camera=%s;camera_order=%d;render_bin=%d;"
+        "render_depth=%.9g;eye_depth=%.9g;near_clipped=%d;"
+        "object_bounds=%.9g,%.9g,%.9g,%.9g,%.9g,%.9g;"
+        "ndc_bounds=%.9g,%.9g,%.9g,%.9g,%.9g,%.9g;target_ndc=0,0",
+        drawable, drawable_name ? drawable_name : "", parent_name ? parent_name : "",
+        camera_name ? camera_name : "", camera_order, render_bin, render_depth, eye_depth,
+        near_clipped, object_bounds ? object_bounds[0] : 0.f, object_bounds ? object_bounds[1] : 0.f,
+        object_bounds ? object_bounds[2] : 0.f, object_bounds ? object_bounds[3] : 0.f,
+        object_bounds ? object_bounds[4] : 0.f, object_bounds ? object_bounds[5] : 0.f,
+        ndc_bounds ? ndc_bounds[0] : 0.f, ndc_bounds ? ndc_bounds[1] : 0.f,
+        ndc_bounds ? ndc_bounds[2] : 0.f, ndc_bounds ? ndc_bounds[3] : 0.f,
+        ndc_bounds ? ndc_bounds[4] : 0.f, ndc_bounds ? ndc_bounds[5] : 0.f);
+    openmw_ios_renderer_diag_record("r3.osg.candidate", "osg", correlation, detail);
+    return draw;
+}
+
+extern "C" void openmw_ios_renderer_diag_osg_draw_end(uint64_t draw)
+{
+    if (draw != 0 && sCurrentTargetDraw == draw)
+        sCurrentTargetDraw = 0;
+}
+
+extern "C" uint64_t openmw_ios_renderer_diag_current_osg_draw(void)
+{
+    return sCurrentTargetDraw;
+}
+
+extern "C" int openmw_ios_renderer_diag_target_capture_active(void)
+{
+    std::lock_guard<std::mutex> lock(sMutex);
+    beginLocked();
+    // The present-side sample must still run when no OSG drawable covers the
+    // target.  Requiring a candidate here would erase the exact
+    // coverage/composition observation WO37 is designed to make.
+    return sEnabled && sTargetCaptureArmed && !sTargetCaptureComplete ? 1 : 0;
+}
+
+extern "C" void openmw_ios_renderer_diag_gl_draw_sample(uint64_t draw, int phase,
+    unsigned int program, unsigned int framebuffer, const int* viewport,
+    const unsigned char* rgba, const char* state_detail)
+{
+    if (draw == 0 || !rgba)
+        return;
+    bool emit = false;
+    bool changed = false;
+    unsigned char before[4] = { 0, 0, 0, 0 };
+    {
+        std::lock_guard<std::mutex> lock(sMutex);
+        beginLocked();
+        if (!sEnabled || !sTargetCaptureArmed || sTargetCaptureComplete)
+            return;
+        const auto found = sTargetDraws.find(draw);
+        if (found == sTargetDraws.end())
+            return;
+        TargetDraw& target = found->second;
+        target.program = program;
+        target.framebuffer = framebuffer;
+        if (phase == 0)
+        {
+            std::copy(rgba, rgba + 4, target.before);
+            target.hasBefore = true;
+        }
+        else
+        {
+            std::copy(rgba, rgba + 4, target.after);
+            target.hasAfter = true;
+            target.changed = target.hasBefore && !std::equal(target.before, target.before + 4, target.after);
+            changed = target.changed;
+            std::copy(target.before, target.before + 4, before);
+            if (target.changed)
+            {
+                ++sTargetChangedCount;
+                sTargetLastChangedDraw = draw;
+            }
+            emit = true;
+        }
+    }
+    if (!emit)
+        return;
+
+    char correlation[48];
+    char detail[2048];
+    std::snprintf(correlation, sizeof(correlation), "draw-%llu",
+        static_cast<unsigned long long>(draw));
+    std::snprintf(detail, sizeof(detail),
+        "program=%u;framebuffer=%u;viewport=%d,%d,%d,%d;before=%u,%u,%u,%u;"
+        "after=%u,%u,%u,%u;color_changed=%d;%s",
+        program, framebuffer, viewport ? viewport[0] : 0, viewport ? viewport[1] : 0,
+        viewport ? viewport[2] : 0, viewport ? viewport[3] : 0,
+        static_cast<unsigned int>(before[0]), static_cast<unsigned int>(before[1]),
+        static_cast<unsigned int>(before[2]), static_cast<unsigned int>(before[3]),
+        static_cast<unsigned int>(rgba[0]), static_cast<unsigned int>(rgba[1]),
+        static_cast<unsigned int>(rgba[2]), static_cast<unsigned int>(rgba[3]),
+        changed ? 1 : 0, state_detail ? state_detail : "");
+    openmw_ios_renderer_diag_record("r3.gl.draw", "gl4es", correlation, detail);
+}
+
+extern "C" void openmw_ios_renderer_diag_present_sample(unsigned int framebuffer,
+    const int* viewport, const unsigned char* rgba)
+{
+    if (!rgba)
+        return;
+    unsigned int candidates = 0;
+    unsigned int changed = 0;
+    uint64_t lastChanged = 0;
+    float fog[4] = { 0.f, 0.f, 0.f, 0.f };
+    {
+        std::lock_guard<std::mutex> lock(sMutex);
+        beginLocked();
+        if (!sEnabled || !sTargetCaptureArmed || sTargetCaptureComplete)
+            return;
+        candidates = sTargetCandidateCount;
+        changed = sTargetChangedCount;
+        lastChanged = sTargetLastChangedDraw;
+        std::copy(sExteriorFogColor, sExteriorFogColor + 4, fog);
+        sTargetCaptureComplete = true;
+        sTargetCaptureArmed = false;
+        sTargetCaptureActive = false;
+        sCurrentTargetDraw = 0;
+    }
+
+    char detail[1024];
+    std::snprintf(detail, sizeof(detail),
+        "framebuffer=%u;viewport=%d,%d,%d,%d;presented_center=%u,%u,%u,%u;"
+        "candidates=%u;color_changing_draws=%u;last_changed_draw=%llu;"
+        "fog_color=%.9g,%.9g,%.9g,%.9g;depth_sample=unsupported-gles2;"
+        "sky_rtt_sample=not-observed-observer-only;"
+        "classification=%s",
+        framebuffer, viewport ? viewport[0] : 0, viewport ? viewport[1] : 0,
+        viewport ? viewport[2] : 0, viewport ? viewport[3] : 0,
+        static_cast<unsigned int>(rgba[0]), static_cast<unsigned int>(rgba[1]),
+        static_cast<unsigned int>(rgba[2]), static_cast<unsigned int>(rgba[3]), candidates, changed,
+        static_cast<unsigned long long>(lastChanged), fog[0], fog[1], fog[2], fog[3],
+        candidates == 0 ? "coverage-composition-candidate-no-osg-center-coverage"
+            : (changed > 0 ? "drawn-pixel-candidate"
+                           : "ambiguous-candidates-no-color-change"));
+    openmw_ios_renderer_diag_record("r3.present", "ios", "target-center", detail);
+    openmw_ios_renderer_diag_record("summary", "ios", "r3-target-pixel", detail);
 }
 
 extern "C" uint64_t openmw_ios_renderer_diag_hash(const void* data, size_t size)

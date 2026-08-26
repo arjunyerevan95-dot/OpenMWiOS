@@ -219,3 +219,126 @@ index 452b97f09..614359702 100644
          // unref image data?
          if (isSafeToUnrefImageData(state) && image->getDataVariance()==STATIC)
          {
+diff --git a/src/osgUtil/RenderLeaf.cpp b/src/osgUtil/RenderLeaf.cpp
+index a2bd6aa7c..7de9f120c 100644
+--- a/src/osgUtil/RenderLeaf.cpp
++++ b/src/osgUtil/RenderLeaf.cpp
+@@ -13,10 +13,98 @@
+ #include <osgUtil/RenderLeaf>
+ #include <osgUtil/StateGraph>
++#include <osgUtil/RenderBin>
++#include <osg/Camera>
+ #include <osg/Notify>
++#include <algorithm>
++#include <cstdint>
++#include <limits>
+
+ using namespace osg;
+ using namespace osgUtil;
+
++#if defined(__APPLE__) && defined(OPENMW_GL4ES_MANUAL_INIT)
++extern "C" std::uint64_t openmw_ios_renderer_diag_osg_draw_begin(const void*, const char*,
++    const char*, const char*, int, int, float, float, const float*, const float*, int)
++    __attribute__((weak_import));
++extern "C" void openmw_ios_renderer_diag_osg_draw_end(std::uint64_t)
++    __attribute__((weak_import));
++#endif
++
++namespace
++{
++    std::uint64_t beginTargetPixelDraw(RenderLeaf& leaf, osg::RenderInfo& renderInfo)
++    {
++#if defined(__APPLE__) && defined(OPENMW_GL4ES_MANUAL_INIT)
++        const osg::Drawable* drawable = leaf.getDrawable();
++        if (!openmw_ios_renderer_diag_osg_draw_begin || !drawable
++            || !leaf._modelview.valid() || !leaf._projection.valid())
++            return 0;
++        const osg::BoundingBox& box = drawable->getBoundingBox();
++        if (!box.valid())
++            return 0;
++
++        double minX = std::numeric_limits<double>::max();
++        double minY = std::numeric_limits<double>::max();
++        double minZ = std::numeric_limits<double>::max();
++        double maxX = -std::numeric_limits<double>::max();
++        double maxY = -std::numeric_limits<double>::max();
++        double maxZ = -std::numeric_limits<double>::max();
++        bool projected = false;
++        bool nearClipped = false;
++        for (unsigned int corner = 0; corner < 8; ++corner)
++        {
++            const osg::Vec3d point((corner & 1) ? box.xMax() : box.xMin(),
++                (corner & 2) ? box.yMax() : box.yMin(), (corner & 4) ? box.zMax() : box.zMin());
++            const osg::Vec4d clip = osg::Vec4d(point, 1.0) * (*leaf._modelview) * (*leaf._projection);
++            if (clip.w() <= 0.000001)
++            {
++                nearClipped = true;
++                continue;
++            }
++            const double x = clip.x() / clip.w();
++            const double y = clip.y() / clip.w();
++            const double z = clip.z() / clip.w();
++            minX = std::min(minX, x); maxX = std::max(maxX, x);
++            minY = std::min(minY, y); maxY = std::max(maxY, y);
++            minZ = std::min(minZ, z); maxZ = std::max(maxZ, z);
++            projected = true;
++        }
++        if (!projected || minX > 0.0 || maxX < 0.0 || minY > 0.0 || maxY < 0.0)
++            return 0;
++
++        const osg::Vec4d eye = osg::Vec4d(box.center(), 1.0) * (*leaf._modelview);
++        const osg::Camera* camera = renderInfo.getCurrentCamera();
++        const osg::RenderInfo::RenderBinStack& bins = renderInfo.getRenderBinStack();
++        const int bin = bins.empty() || !bins.back() ? 0 : bins.back()->getBinNum();
++        const osg::Node* parent = drawable->getNumParents() > 0 ? drawable->getParent(0) : 0;
++        const float objectBounds[6] = { box.xMin(), box.yMin(), box.zMin(),
++            box.xMax(), box.yMax(), box.zMax() };
++        const float ndcBounds[6] = { static_cast<float>(minX), static_cast<float>(minY),
++            static_cast<float>(minZ), static_cast<float>(maxX), static_cast<float>(maxY),
++            static_cast<float>(maxZ) };
++        return openmw_ios_renderer_diag_osg_draw_begin(drawable, drawable->getName().c_str(),
++            parent ? parent->getName().c_str() : "",
++            camera ? camera->getName().c_str() : "", camera ? camera->getRenderOrderNum() : 0,
++            bin, leaf._depth, static_cast<float>(-eye.z()), objectBounds, ndcBounds,
++            nearClipped ? 1 : 0);
++#else
++        (void)leaf;
++        (void)renderInfo;
++        return 0;
++#endif
++    }
++
++    void endTargetPixelDraw(std::uint64_t draw)
++    {
++#if defined(__APPLE__) && defined(OPENMW_GL4ES_MANUAL_INIT)
++        if (draw && openmw_ios_renderer_diag_osg_draw_end)
++            openmw_ios_renderer_diag_osg_draw_end(draw);
++#else
++        (void)draw;
++#endif
++    }
++}
++
+ void RenderLeaf::render(osg::RenderInfo& renderInfo,RenderLeaf* previous)
+ {
+     osg::State& state = *renderInfo.getState();
+@@ -60,7 +148,9 @@ void RenderLeaf::render(osg::RenderInfo& renderInfo,RenderLeaf* previous)
+         if (state.getUseModelViewAndProjectionUniforms()) state.applyModelViewAndProjectionUniformsIfRequired();
+
+         // draw the drawable
++        const std::uint64_t targetPixelDraw = beginTargetPixelDraw(*this, renderInfo);
+         _drawable->draw(renderInfo);
++        endTargetPixelDraw(targetPixelDraw);
+     }
+     else
+     {
+@@ -78,7 +168,9 @@ void RenderLeaf::render(osg::RenderInfo& renderInfo,RenderLeaf* previous)
+         if (state.getUseModelViewAndProjectionUniforms()) state.applyModelViewAndProjectionUniformsIfRequired();
+
+         // draw the drawable
++        const std::uint64_t targetPixelDraw = beginTargetPixelDraw(*this, renderInfo);
+         _drawable->draw(renderInfo);
++        endTargetPixelDraw(targetPixelDraw);
+     }
+
+     if (_dynamic)

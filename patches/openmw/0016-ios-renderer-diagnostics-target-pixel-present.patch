@@ -1,0 +1,52 @@
+diff --git a/components/sdlutil/gl4esinit.cpp b/components/sdlutil/gl4esinit.cpp
+index 1aa6409..17d44e7 100644
+--- a/components/sdlutil/gl4esinit.cpp
++++ b/components/sdlutil/gl4esinit.cpp
+@@ -7,6 +7,7 @@
+
+ #ifdef OPENMW_IOS
+ #include <ios/openmw_ios_logging.h>
++#include <ios/openmw_ios_renderer_diagnostics.h>
+ #endif
+
+ // For glHint
+@@ -21,9 +22,11 @@ extern "C"
+ #ifdef OPENMW_IOS
+     using NativeGetIntegerv = void (*)(unsigned int, int*);
+     using NativeCheckFramebufferStatus = unsigned int (*)(unsigned int);
++    using NativeReadPixels = void (*)(int, int, int, int, unsigned int, unsigned int, void*);
+
+     static NativeGetIntegerv gNativeGetIntegerv;
+     static NativeCheckFramebufferStatus gNativeCheckFramebufferStatus;
++    static NativeReadPixels gNativeReadPixels;
+     static unsigned int gDefaultFramebuffer;
+     static unsigned int gDefaultRenderbuffer;
+
+@@ -76,5 +79,6 @@ extern "C"
+         gNativeCheckFramebufferStatus = reinterpret_cast<NativeCheckFramebufferStatus>(
+             SDL_GL_GetProcAddress("glCheckFramebufferStatus"));
++        gNativeReadPixels = reinterpret_cast<NativeReadPixels>(SDL_GL_GetProcAddress("glReadPixels"));
+         int framebuffer = 0;
+         int renderbuffer = 0;
+         if (gNativeGetIntegerv)
+@@ -105,5 +109,20 @@ extern "C"
+     {
+         gl4es_pre_swap();
++        if (openmw_ios_renderer_diag_target_capture_active() && gNativeGetIntegerv && gNativeReadPixels)
++        {
++            int framebuffer = 0;
++            int viewport[4] = { 0, 0, 0, 0 };
++            gNativeGetIntegerv(GL_FRAMEBUFFER_BINDING, &framebuffer);
++            gNativeGetIntegerv(GL_VIEWPORT, viewport);
++            if (viewport[2] > 0 && viewport[3] > 0)
++            {
++                unsigned char center[4] = { 0, 0, 0, 0 };
++                gNativeReadPixels(viewport[0] + viewport[2] / 2, viewport[1] + viewport[3] / 2,
++                    1, 1, GL_RGBA, GL_UNSIGNED_BYTE, center);
++                openmw_ios_renderer_diag_present_sample(
++                    static_cast<unsigned int>(framebuffer), viewport, center);
++            }
++        }
+         static unsigned int swaps = 0;
+         if (swaps < 3 || swaps == 120 || swaps == 600)
+         {

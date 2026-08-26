@@ -205,7 +205,9 @@ class WorkOrder33BlendTransitionDiagnosticTests(unittest.TestCase):
             PINNED_PATCH_INPUTS_SHA256,
             hashlib.sha256(PINNED_PATCH_INPUTS.read_bytes()).hexdigest(),
         )
-        patches = sorted((ROOT / "patches" / "gl4es").glob("*.patch"))
+        # This is the historical WO33 fixture. Later work orders own and test
+        # later patches against their own pinned inputs.
+        patches = sorted((ROOT / "patches" / "gl4es").glob("000[1-9]-*.patch"))
         self.assertEqual(
             [f"{index:04d}" for index in range(1, 10)],
             [patch.name.split("-", 1)[0] for patch in patches],
@@ -286,8 +288,17 @@ class WorkOrder33BlendTransitionDiagnosticTests(unittest.TestCase):
                 check=True,
             )
 
+            route_text = OSG_ROUTE.read_text(encoding="utf-8")
+            historical_route = route_text.split(
+                "diff --git a/src/osgUtil/RenderLeaf.cpp", 1
+            )[0]
+            historical_route_path = snapshot / ".wo33-osg-route.patch"
+            historical_route_path.write_text(
+                historical_route, encoding="utf-8", newline="\n"
+            )
+
             parse_result = subprocess.run(
-                ["git", "apply", "--check", str(OSG_ROUTE)],
+                ["git", "apply", "--check", str(historical_route_path)],
                 cwd=snapshot,
                 capture_output=True,
                 text=True,
@@ -297,13 +308,13 @@ class WorkOrder33BlendTransitionDiagnosticTests(unittest.TestCase):
             production_patch = pathlib.Path("/usr/bin/patch")
             if production_patch.is_file():
                 materialize_command = [
-                    str(production_patch), "-N", "-f", "-p1", "-i", str(OSG_ROUTE)
+                    str(production_patch), "-N", "-f", "-p1", "-i", str(historical_route_path)
                 ]
             else:
                 # Windows developer hosts lack /usr/bin/patch. Git applies the already-checked
                 # blob locally; macOS CI must and does exercise the exact production command.
                 self.assertNotEqual("macOS", os.environ.get("RUNNER_OS"))
-                materialize_command = ["git", "apply", str(OSG_ROUTE)]
+                materialize_command = ["git", "apply", str(historical_route_path)]
             materialize_result = subprocess.run(
                 materialize_command,
                 cwd=snapshot,
@@ -311,6 +322,7 @@ class WorkOrder33BlendTransitionDiagnosticTests(unittest.TestCase):
                 text=True,
             )
             self.assertEqual(0, materialize_result.returncode, materialize_result.stderr)
+            historical_route_path.unlink()
 
             actual_hashes = {
                 path: hashlib.sha256((snapshot / path).read_bytes()).hexdigest()
