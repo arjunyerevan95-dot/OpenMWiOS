@@ -34,13 +34,15 @@ Focused command:
 
 `python -m unittest validation.test_wo37_target_pixel_attribution validation.test_wo33_blend_transition_diagnostics`
 
-Result: 22 run, 20 passed, 2 compiler-dependent skips.
+Original result: 22 run, 20 passed, 2 compiler-dependent skips.
+
+Amendment 1 result after the native loader repair: 24 run, 22 passed, 2 compiler-dependent skips. The strengthened fixture rejects `LOAD_GLES_FPE(glReadPixels)` and `fpe_glReadPixels`, requires `LOAD_GLES(glReadPixels)`, and applies the complete ordered GL4ES patch stack to pristine pinned revision `c9895df34cd466c23bc60c2bd3db3d87e98fcbe7`.
 
 Aggregate command:
 
 `python -m unittest discover -s validation -p "test_*.py"`
 
-Result on Windows host: 153 run, 143 passed, 8 skipped, 2 errors. Both errors are the existing `test_verify_linked_product` cases attempting to execute a Unix script directly on Windows (`WinError 193`). With pinned dependency checkouts available, no product validation assertion failed.
+Original result on Windows host: 153 run, 143 passed, 8 skipped, 2 errors. Amendment 1 result with pinned dependency checkouts available: 155 run, 145 passed, 8 skipped, 2 errors. Both errors are the existing `test_verify_linked_product` cases attempting to execute a Unix script directly on Windows (`WinError 193`). No product validation assertion failed.
 
 Covered constraints include request gating, file/draw budgets, zero-candidate presentation classification, multiple candidate classification, behind/near-plane flagging, missing names/bounds fallback, camera identity, OSG→GL4ES TLS correlation, direct-draw one-pixel reads, post-swap one-pixel read, no GL state mutation, render-list ambiguity, and real-parser application of the RenderLeaf patch to pristine pinned source.
 
