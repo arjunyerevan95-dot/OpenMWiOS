@@ -3,12 +3,12 @@
 - Project: OpenMWiOS
 - Canonical ControlPlane branch: `codex/wo29-ios-crash-isolation`
 - Accepted engineering baseline commit: `93f892dd0cf9834259b4cad2045ddb2ef9c53ed9`
-- Active work order: none
-- Ready work order: [WO-037 Amendment 2](../WorkOrders/WO-037.md)
+- Active work order: [WO-037 Amendment 2](../WorkOrders/WO-037.md)
+- Ready work order: none
 - Last completed work order: [WO-036](../WorkOrders/WO-036.md) — **ACCEPTED / CONTROLLED FALSIFICATION; NO PRODUCT CHANGE**
 - Last durable decision: [DEC-016](../Decisions/DEC-016.md)
 - Current objective: correlate photographed distant defects to exact OSG draw coverage, GL4ES program/state, target-pixel depth/color, sky RTT sampling, and scene clear behavior before correction
-- Engineering execution status: **STOPPED; WO-037 Amendment 2 is READY and awaits an explicit orchestrator start directive**
+- Engineering execution status: **ACTIVE; WO-037 Amendment 2 start directive delivered directly to the existing worker**
 - Last updated: 2026-08-29
 
 ## Highest qualified runtime milestone
@@ -109,11 +109,11 @@ The original WO37 execution was explicitly started through the user on 2026-08-2
 
 Amendment 1 repaired the exact `LOAD_GLES_FPE(glReadPixels)` compile defect. Fast run `33019021667` passed and produced the qualified diagnostic artifact, but two physical-device sessions recorded `target_request=none` and zero `r3.*` records despite independently verified correct request-file placement. The request is read once at startup, its Foundation error is discarded, and it is the only prerequisite preventing the existing first-exterior arm point. This is a diagnostic-trigger failure, not a renderer result.
 
-WO37 Amendment 2 is READY to preserve valid explicit requests while auto-arming the same bounded capture on the first eligible exterior fog generation when the request cannot be read. It may use the third and final original Fast slot. This reallocates WO37's unused correction slot: any renderer correction proven by the capture requires a separate later work order.
+WO37 Amendment 2 is ACTIVE to preserve valid explicit requests while auto-arming the same bounded capture on the first eligible exterior fog generation when the request cannot be read. Its explicit start directive was delivered directly to the existing worker on 2026-08-29; do not resend it or duplicate execution. It may use the third and final original Fast slot. This reallocates WO37's unused correction slot: any renderer correction proven by the capture requires a separate later work order.
 
 ## Latest important evidence
 
-- [READY WO37 Amendment 2](../WorkOrders/WO-037.md)
+- [ACTIVE WO37 Amendment 2](../WorkOrders/WO-037.md)
 - [WO37 Amendment 1 runtime review](../Evidence/WO-037/orchestrator-amendment1-runtime-review.md)
 - [WO37 original diagnostic compile-failure review](../Evidence/WO-037/orchestrator-compile-failure-review.md)
 - [WO37 governing decision](../Decisions/DEC-016.md)
@@ -151,9 +151,9 @@ WO37 Amendment 2 is READY to preserve valid explicit requests while auto-arming 
 ## Recovery path
 
 1. Read this file.
-2. Read READY [WO-037 Amendment 2](../WorkOrders/WO-037.md), its [Amendment 1 runtime review](../Evidence/WO-037/orchestrator-amendment1-runtime-review.md), [DEC-016](../Decisions/DEC-016.md), accepted [WO-036](../WorkOrders/WO-036.md), and the [final WO36 review](../Evidence/WO-036/orchestrator-final-review.md).
+2. Read ACTIVE [WO-037 Amendment 2](../WorkOrders/WO-037.md), its [Amendment 1 runtime review](../Evidence/WO-037/orchestrator-amendment1-runtime-review.md), [DEC-016](../Decisions/DEC-016.md), accepted [WO-036](../WorkOrders/WO-036.md), and the [final WO36 review](../Evidence/WO-036/orchestrator-final-review.md).
 3. Inspect current Git and CI state before issuing new work.
 4. Use Codebase Memory for structural navigation, then verify implementation facts against checked-out source.
 5. Use the Google ledger only for unresolved historical context.
 
-Current execution state is STOPPED. WO37 Amendment 2 is READY and requires an explicit orchestrator start directive before worker continuation.
+Current execution state is ACTIVE. WO37 Amendment 2 is executing on the existing worker; do not resend its start directive or duplicate its CI.
