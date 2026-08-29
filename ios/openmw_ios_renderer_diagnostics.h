@@ -43,8 +43,8 @@ void openmw_ios_renderer_diag_arm_exterior_fog(
 unsigned int openmw_ios_renderer_diag_matching_exterior_fog_generation(
     float start, float end, const float* color);
 
-// WO37 target-pixel capture is armed only when the bounded request file
-// Documents/OpenMW/renderer-target-request.txt exists at process start.
+// WO37 target-pixel capture preserves a valid bounded request-file label and
+// otherwise auto-arms once at the first eligible exterior fog generation.
 uint64_t openmw_ios_renderer_diag_osg_draw_begin(const void* drawable, const char* drawable_name,
     const char* parent_name, const char* camera_name, int camera_order, int render_bin,
     float render_depth, float eye_depth, const float* object_bounds, const float* ndc_bounds,

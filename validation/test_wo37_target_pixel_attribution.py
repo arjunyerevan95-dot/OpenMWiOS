@@ -39,13 +39,53 @@ OSG_RENDER_LEAF_FIXTURE = ROOT / "validation" / "fixtures" / "osg-01cc2b5-Render
 
 
 class WO37TargetPixelAttributionTests(unittest.TestCase):
-    def test_capture_is_request_gated_and_bounded(self) -> None:
+    def test_capture_is_first_exterior_gated_and_bounded(self) -> None:
         self.assertIn('renderer-target-request.txt', BRIDGE)
         self.assertIn('request.length <= 80', BRIDGE)
         self.assertIn('MaxFileBytes = 256 * 1024', BRIDGE)
         self.assertIn('TargetDrawBudget = 96', BRIDGE)
-        self.assertIn('!sTargetRequest.empty()', BRIDGE)
+        self.assertIn('AutoFirstExteriorRequest = "wo37-auto-first-exterior"', BRIDGE)
         self.assertIn('sTargetCaptureArmed && !sTargetCaptureComplete', BRIDGE)
+
+    def test_valid_explicit_request_remains_authoritative(self) -> None:
+        explicit = BRIDGE.index('sTargetRequest = request.UTF8String;')
+        explicit_source = BRIDGE.index('sTargetActivation = "explicit-request";', explicit)
+        fallback_guard = BRIDGE.index('if (sTargetRequest.empty())', explicit_source)
+        fallback_value = BRIDGE.index('sTargetRequest = AutoFirstExteriorRequest;', fallback_guard)
+        self.assertLess(explicit, explicit_source)
+        self.assertLess(explicit_source, fallback_guard)
+        self.assertLess(fallback_guard, fallback_value)
+
+    def test_missing_unreadable_empty_or_invalid_request_uses_fixed_fallback(self) -> None:
+        self.assertIn('if (request && !requestError)', BRIDGE)
+        self.assertIn('request.length > 0 && request.length <= 80', BRIDGE)
+        self.assertRegex(
+            BRIDGE,
+            r'if \(sTargetRequest\.empty\(\)\)\s*\{\s*'
+            r'sTargetRequest = AutoFirstExteriorRequest;\s*'
+            r'sTargetActivation = "auto-first-exterior";',
+        )
+        self.assertIn('target_activation=%@', BRIDGE)
+        self.assertIn('activation=%s;generation=%u;target_ndc=0,0', BRIDGE)
+
+    def test_fallback_arms_only_first_eligible_exterior_and_completes_once(self) -> None:
+        arm_function = re.search(
+            r'openmw_ios_renderer_diag_arm_exterior_fog\(.*?\n\}',
+            BRIDGE,
+            flags=re.DOTALL,
+        )
+        self.assertIsNotNone(arm_function)
+        arm_source = arm_function.group(0)
+        self.assertIn('if (!changed)', arm_source)
+        self.assertIn('return;', arm_source)
+        self.assertIn('!sTargetCaptureComplete && !sTargetCaptureArmed', arm_source)
+        self.assertEqual(1, arm_source.count('sTargetCaptureArmed = true;'))
+        self.assertIsNotNone(re.search(
+            r'openmw_ios_renderer_diag_present_sample\(.*?'
+            r'sTargetCaptureComplete = true;.*?sTargetCaptureArmed = false;',
+            BRIDGE,
+            flags=re.DOTALL,
+        ))
 
     def test_no_coverage_still_reaches_present_classification(self) -> None:
         self.assertIn('coverage-composition-candidate-no-osg-center-coverage', BRIDGE)

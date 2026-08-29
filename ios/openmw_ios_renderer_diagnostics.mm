@@ -24,6 +24,7 @@ namespace
     constexpr unsigned long long MaxFileBytes = 256 * 1024;
     constexpr size_t BlendRingCapacity = 48;
     constexpr unsigned int TargetDrawBudget = 96;
+    constexpr const char* AutoFirstExteriorRequest = "wo37-auto-first-exterior";
 
     struct FamilyState
     {
@@ -74,6 +75,7 @@ namespace
     uint64_t sBlendSequence = 0;
     std::deque<BlendEvent> sBlendRing;
     std::string sTargetRequest;
+    std::string sTargetActivation;
     bool sTargetCaptureArmed = false;
     bool sTargetCaptureActive = false;
     bool sTargetCaptureComplete = false;
@@ -213,7 +215,15 @@ namespace
         {
             request = [request stringByTrimmingCharactersInSet:NSCharacterSet.whitespaceAndNewlineCharacterSet];
             if (request.length > 0 && request.length <= 80)
+            {
                 sTargetRequest = request.UTF8String;
+                sTargetActivation = "explicit-request";
+            }
+        }
+        if (sTargetRequest.empty())
+        {
+            sTargetRequest = AutoFirstExteriorRequest;
+            sTargetActivation = "auto-first-exterior";
         }
         appendRecord(@{
             @"schema" : @"openmw-ios-renderer-diagnostic-v1",
@@ -223,8 +233,9 @@ namespace
             @"source" : @"ios",
             @"correlation" : @"startup",
             @"detail" : [NSString stringWithFormat:
-                @"enabled=1;path=Documents/OpenMW/renderer-diagnostic.jsonl;max_bytes=262144;target_request=%@",
-                sTargetRequest.empty() ? @"none" : safeString(sTargetRequest.c_str())]
+                @"enabled=1;path=Documents/OpenMW/renderer-diagnostic.jsonl;max_bytes=262144;"
+                 @"target_request=%@;target_activation=%@",
+                safeString(sTargetRequest.c_str()), safeString(sTargetActivation.c_str())]
         });
     }
 }
@@ -460,8 +471,9 @@ extern "C" void openmw_ios_renderer_diag_arm_exterior_fog(
     if (armTargetCapture)
     {
         std::snprintf(detail, sizeof(detail),
-            "request=%s;generation=%u;target_ndc=0,0;draw_budget=%u;depth_sample=unsupported-gles2",
-            sTargetRequest.c_str(), generation, TargetDrawBudget);
+            "request=%s;activation=%s;generation=%u;target_ndc=0,0;draw_budget=%u;"
+            "depth_sample=unsupported-gles2",
+            sTargetRequest.c_str(), sTargetActivation.c_str(), generation, TargetDrawBudget);
         openmw_ios_renderer_diag_record("r3.arm", "openmw", correlation, detail);
     }
 }
