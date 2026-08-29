@@ -3,12 +3,12 @@
 - Project: OpenMWiOS
 - Canonical ControlPlane branch: `codex/wo29-ios-crash-isolation`
 - Accepted engineering baseline commit: `93f892dd0cf9834259b4cad2045ddb2ef9c53ed9`
-- Active work order: [WO-037 Amendment 2](../WorkOrders/WO-037.md)
-- Ready work order: none
-- Last completed work order: [WO-036](../WorkOrders/WO-036.md) — **ACCEPTED / CONTROLLED FALSIFICATION; NO PRODUCT CHANGE**
+- Active work order: none
+- Ready work order: [WO-038](../WorkOrders/WO-038.md)
+- Last completed work order: [WO-037](../WorkOrders/WO-037.md) — **SUPERSEDED / EXECUTION EVIDENCE ACCEPTED; NO PRODUCT OR RENDERER RESULT**
 - Last durable decision: [DEC-016](../Decisions/DEC-016.md)
-- Current objective: correlate photographed distant defects to exact OSG draw coverage, GL4ES program/state, target-pixel depth/color, sky RTT sampling, and scene clear behavior before correction
-- Engineering execution status: **ACTIVE; WO-037 Amendment 2 start directive delivered directly to the existing worker**
+- Current objective: recover the cold iOS OSG configure path without optional host GLib, then complete the existing bounded target-pixel attribution before any renderer correction
+- Engineering execution status: **STOPPED AT READY; WO-038 has been issued but has not started**
 - Last updated: 2026-08-29
 
 ## Highest qualified runtime milestone
@@ -82,7 +82,11 @@ WO35 then proved `sky_blending=1` at view/far distance 7168 on the physical devi
 
 WO36 has now removed the remaining global distance/paging hypothesis. At constant `7168`, enabling distant terrain changed `object_paging` from `0` to `1` without materially changing the target. At `16384`, moderate-distance coverage improved, but the same dark silhouettes, blue band, and pale uncovered region recurred at the farther boundary with a modest observed performance cost. Exact Arm A state was restored; the device remains at `7168`, with no `[Terrain]` override and with the user's retained sky-blending preference.
 
-The next boundary is exact pixel ownership. Existing diagnostics prove camera/fog intent and broad program receipt but cannot tell whether a photographed target pixel was produced by a particular drawable/program or had no world coverage and exposed the clear/sky composition. WO37 will correlate OSG draw bounds and identity through GL4ES program/state to final target-pixel color/depth and sky RTT sampling. Black silhouettes and the blue/white horizon remain distinct until that evidence proves convergence.
+The next renderer boundary is exact pixel ownership. Existing diagnostics prove camera/fog intent and broad program receipt but cannot tell whether a photographed target pixel was produced by a particular drawable/program or had no world coverage and exposed the clear/sky composition. Black silhouettes and the blue/white horizon remain distinct until correlated evidence proves convergence.
+
+WO37 did not reach that attribution. Its original diagnostic failed compiling the native readback loader; Amendment 1 repaired the loader and produced an IPA, but two device sessions recorded `target_request=none` and no target records. Amendment 2 then preserved explicit requests while adding a bounded auto-first-exterior fallback. Local patch reconstruction and validation passed, but Fast run `33265712820` missed the incremental build-state cache and exposed a cold OSG configuration defect: optional host GLib discovery resolved a Homebrew prefix whose `glibconfig.h` was absent. Configuration stopped before OpenMW compilation, so no IPA or renderer evidence exists from the final run.
+
+WO37 is superseded at its exhausted three-run boundary. Its diagnostic commits remain unaccepted candidates and the accepted engineering baseline remains WO33. WO38 is READY to disable only optional GLib discovery for the iOS OSG configure, qualify the existing bounded diagnostic, and complete pixel attribution. It does not authorize a renderer correction.
 
 ## Secondary and deferred boundaries
 
@@ -105,15 +109,15 @@ WO35's start directive was delivered and acknowledged through the user, but the 
 
 WO36 is ACCEPTED for controlled falsification value. Final evidence commit `4f6cfc62ced645d4465f401520a1dfaca5e65ab7` is evidence-only. Arm A/B/C identities, diagnostic values, and screenshots verify; no build or GitHub Actions run occurred; and exact Arm A configuration was restored. The accepted engineering baseline remains `93f892dd0cf9834259b4cad2045ddb2ef9c53ed9`.
 
-The original WO37 execution was explicitly started through the user on 2026-08-26, although the separate canonical READY → ACTIVE bookkeeping update was missed. Worker branch `codex/wo37-distant-pixel-attribution` stopped cleanly at `e6a6a5b5f9b63b985d93068fb16feaacbb5f4737` after Fast run `33002709474` failed compiling changed GL4ES source. No IPA or target attribution exists, so this is not a renderer result and the accepted engineering baseline remains unchanged.
+WO37 is SUPERSEDED with execution evidence accepted and no product/renderer result. The original run failed compiling changed GL4ES source. Amendment 1 repaired the native `glReadPixels` loader and produced a diagnostic IPA, but two device sessions recorded `target_request=none` and zero target records. Amendment 2's bounded auto-first-exterior fallback passed local validation, but Fast run `33265712820` failed during cold OSG CMake configuration before OpenMW compilation because optional host GLib discovery attempted to read an absent Homebrew `glibconfig.h`. No final IPA, attribution, or correction exists. Its three authorized Fast dispatches are exhausted, and the accepted baseline is unchanged.
 
-Amendment 1 repaired the exact `LOAD_GLES_FPE(glReadPixels)` compile defect. Fast run `33019021667` passed and produced the qualified diagnostic artifact, but two physical-device sessions recorded `target_request=none` and zero `r3.*` records despite independently verified correct request-file placement. The request is read once at startup, its Foundation error is discarded, and it is the only prerequisite preventing the existing first-exterior arm point. This is a diagnostic-trigger failure, not a renderer result.
-
-WO37 Amendment 2 is ACTIVE to preserve valid explicit requests while auto-arming the same bounded capture on the first eligible exterior fog generation when the request cannot be read. Its explicit start directive was delivered directly to the existing worker on 2026-08-29; do not resend it or duplicate execution. It may use the third and final original Fast slot. This reallocates WO37's unused correction slot: any renderer correction proven by the capture requires a separate later work order.
+WO38 is READY and unstarted. It separately authorizes the source-proven iOS-only `CMAKE_DISABLE_FIND_PACKAGE_GLIB=ON` recovery, at most one primary Fast build plus one narrowly conditional pre-product infrastructure replacement, and physical-device attribution. It prohibits renderer correction. The exact next action is to send the existing worker the WO38 start directive; until then engineering remains stopped.
 
 ## Latest important evidence
 
-- [ACTIVE WO37 Amendment 2](../WorkOrders/WO-037.md)
+- [READY WO38](../WorkOrders/WO-038.md)
+- [WO37 final orchestrator review](../Evidence/WO-037/orchestrator-final-review.md)
+- [Superseded WO37](../WorkOrders/WO-037.md)
 - [WO37 Amendment 1 runtime review](../Evidence/WO-037/orchestrator-amendment1-runtime-review.md)
 - [WO37 original diagnostic compile-failure review](../Evidence/WO-037/orchestrator-compile-failure-review.md)
 - [WO37 governing decision](../Decisions/DEC-016.md)
@@ -151,9 +155,9 @@ WO37 Amendment 2 is ACTIVE to preserve valid explicit requests while auto-arming
 ## Recovery path
 
 1. Read this file.
-2. Read ACTIVE [WO-037 Amendment 2](../WorkOrders/WO-037.md), its [Amendment 1 runtime review](../Evidence/WO-037/orchestrator-amendment1-runtime-review.md), [DEC-016](../Decisions/DEC-016.md), accepted [WO-036](../WorkOrders/WO-036.md), and the [final WO36 review](../Evidence/WO-036/orchestrator-final-review.md).
+2. Read READY [WO-038](../WorkOrders/WO-038.md), the [WO37 final review](../Evidence/WO-037/orchestrator-final-review.md), [DEC-016](../Decisions/DEC-016.md), and accepted [WO-036](../WorkOrders/WO-036.md) only as needed.
 3. Inspect current Git and CI state before issuing new work.
 4. Use Codebase Memory for structural navigation, then verify implementation facts against checked-out source.
 5. Use the Google ledger only for unresolved historical context.
 
-Current execution state is ACTIVE. WO37 Amendment 2 is executing on the existing worker; do not resend its start directive or duplicate its CI.
+Current execution state is STOPPED AT READY. WO38 has not begun. Its exact next action is the explicit orchestrator start directive to the existing worker; do not infer ACTIVE from repository access alone.
