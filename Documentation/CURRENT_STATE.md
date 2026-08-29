@@ -3,12 +3,12 @@
 - Project: OpenMWiOS
 - Canonical ControlPlane branch: `codex/wo29-ios-crash-isolation`
 - Accepted engineering baseline commit: `93f892dd0cf9834259b4cad2045ddb2ef9c53ed9`
-- Active work order: none
-- Ready work order: [WO-038](../WorkOrders/WO-038.md)
+- Active work order: [WO-038](../WorkOrders/WO-038.md)
+- Ready work order: none
 - Last completed work order: [WO-037](../WorkOrders/WO-037.md) — **SUPERSEDED / EXECUTION EVIDENCE ACCEPTED; NO PRODUCT OR RENDERER RESULT**
 - Last durable decision: [DEC-016](../Decisions/DEC-016.md)
 - Current objective: recover the cold iOS OSG configure path without optional host GLib, then complete the existing bounded target-pixel attribution before any renderer correction
-- Engineering execution status: **STOPPED AT READY; WO-038 has been issued but has not started**
+- Engineering execution status: **ACTIVE; WO-038 start directive delivered directly to the existing worker**
 - Last updated: 2026-08-29
 
 ## Highest qualified runtime milestone
@@ -111,11 +111,11 @@ WO36 is ACCEPTED for controlled falsification value. Final evidence commit `4f6c
 
 WO37 is SUPERSEDED with execution evidence accepted and no product/renderer result. The original run failed compiling changed GL4ES source. Amendment 1 repaired the native `glReadPixels` loader and produced a diagnostic IPA, but two device sessions recorded `target_request=none` and zero target records. Amendment 2's bounded auto-first-exterior fallback passed local validation, but Fast run `33265712820` failed during cold OSG CMake configuration before OpenMW compilation because optional host GLib discovery attempted to read an absent Homebrew `glibconfig.h`. No final IPA, attribution, or correction exists. Its three authorized Fast dispatches are exhausted, and the accepted baseline is unchanged.
 
-WO38 is READY and unstarted. It separately authorizes the source-proven iOS-only `CMAKE_DISABLE_FIND_PACKAGE_GLIB=ON` recovery, at most one primary Fast build plus one narrowly conditional pre-product infrastructure replacement, and physical-device attribution. It prohibits renderer correction. The exact next action is to send the existing worker the WO38 start directive; until then engineering remains stopped.
+WO38 is ACTIVE. Its explicit start directive was delivered directly to the existing worker on 2026-08-29. It separately authorizes the source-proven iOS-only `CMAKE_DISABLE_FIND_PACKAGE_GLIB=ON` recovery, at most one primary Fast build plus one narrowly conditional pre-product infrastructure replacement, and physical-device attribution. It prohibits renderer correction. Do not resend the directive or duplicate execution.
 
 ## Latest important evidence
 
-- [READY WO38](../WorkOrders/WO-038.md)
+- [ACTIVE WO38](../WorkOrders/WO-038.md)
 - [WO37 final orchestrator review](../Evidence/WO-037/orchestrator-final-review.md)
 - [Superseded WO37](../WorkOrders/WO-037.md)
 - [WO37 Amendment 1 runtime review](../Evidence/WO-037/orchestrator-amendment1-runtime-review.md)
@@ -155,9 +155,9 @@ WO38 is READY and unstarted. It separately authorizes the source-proven iOS-only
 ## Recovery path
 
 1. Read this file.
-2. Read READY [WO-038](../WorkOrders/WO-038.md), the [WO37 final review](../Evidence/WO-037/orchestrator-final-review.md), [DEC-016](../Decisions/DEC-016.md), and accepted [WO-036](../WorkOrders/WO-036.md) only as needed.
+2. Read ACTIVE [WO-038](../WorkOrders/WO-038.md), the [WO37 final review](../Evidence/WO-037/orchestrator-final-review.md), [DEC-016](../Decisions/DEC-016.md), and accepted [WO-036](../WorkOrders/WO-036.md) only as needed.
 3. Inspect current Git and CI state before issuing new work.
 4. Use Codebase Memory for structural navigation, then verify implementation facts against checked-out source.
 5. Use the Google ledger only for unresolved historical context.
 
-Current execution state is STOPPED AT READY. WO38 has not begun. Its exact next action is the explicit orchestrator start directive to the existing worker; do not infer ACTIVE from repository access alone.
+Current execution state is ACTIVE. WO38 is executing on the existing worker; do not resend its start directive, duplicate its Fast workflow, or issue another order.
