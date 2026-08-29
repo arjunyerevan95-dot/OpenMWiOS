@@ -24,8 +24,13 @@ The two errors are the pre-existing Windows `WinError 193` attempts to execute a
 
 - `python -m py_compile validation/test_wo38_cold_osg_configuration.py`: passed.
 - `git diff --check`: passed.
-- Local shell syntax check: unavailable because this Windows host has no Bash executable; deferred to Linux/macOS CI.
-- Linux ordered patch reconstruction: pending CI.
-- Product compile/link/package validation: pending CI.
+- Local shell syntax check: unavailable because this Windows host has no Bash executable; covered by successful macOS CI execution of the edited script.
+- CI patch bootstrap/source validation: passed.
+- Cold OSG configure/dependency preparation: passed in 1,958 seconds.
+- Product compile/link: passed in 2,355 seconds.
+- Bundle validation/package/upload: passed.
+- Full Qualification: not run.
+
+All three Fast cache restores missed. This was therefore a cold-path validation rather than evidence hidden by a restored qualified build tree.
 
 No inherited diagnostic source or renderer patch was edited to accommodate Windows-only test behavior.

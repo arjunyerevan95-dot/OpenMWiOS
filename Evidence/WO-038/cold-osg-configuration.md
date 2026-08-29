@@ -35,4 +35,10 @@ This uses CMake's supported package-disable mechanism. It does not install GLib,
 5. platform, architecture, GL4ES, OSG, and deployment settings remain unchanged; and
 6. all dependency pins remain exact.
 
-Cold macOS CI result: pending.
+## Cold macOS CI result
+
+Fast Development run `33269657425` restored none of the source-download, vcpkg-binary, or qualified incremental-state caches. The cold `Incremental configure and dependency preparation` step nevertheless completed successfully in 1,958 seconds. Production OpenMW compile/link then completed successfully in 2,355 seconds, followed by qualified bundle validation and packaging.
+
+The prior fatal attempt to open `/usr/local/Cellar/glib/2.88.2/lib/glib-2.0/include/glibconfig.h` did not recur. OSG still reported optional Poppler-glib discovery warnings, but `poppler-glib` remained not found and non-fatal; this is not the prior GLib hard failure and did not prevent product generation.
+
+Conclusion: the narrow `CMAKE_DISABLE_FIND_PACKAGE_GLIB` correction recovered the cold OSG configuration path without changing dependency pins or runtime renderer behavior.

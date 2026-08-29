@@ -1,13 +1,13 @@
 # WO-038 Target-Pixel Captures
 
-Status: **PENDING QUALIFIED IPA**
+Status: **PENDING DEVICE CAPTURES**
 
 Targets remain independent:
 
 1. abrupt near-black distant silhouette;
 2. sharp blue band / pale-white uncovered horizon.
 
-The reviewed WO37 trigger is preserved without reinterpretation. A valid explicit target request remains authoritative; otherwise the bounded one-shot first-eligible-exterior fallback is used. No capture result or causal classification is claimed before a qualified build and physical-device run.
+The reviewed WO37 trigger is preserved without reinterpretation. A valid explicit target request remains authoritative; otherwise the bounded one-shot first-eligible-exterior fallback is used. Qualified IPA identity: `d66f5c31a50a48a8a35c8b5e9bc74e558d224c2da9d0debf8072f8b61df194ee`. No capture result or causal classification is claimed before the physical-device run.
 
 ## Black silhouette
 

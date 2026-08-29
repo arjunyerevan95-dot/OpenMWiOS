@@ -1,6 +1,6 @@
 # WO-038 Execution Report
 
-Status: **IN PROGRESS — PRE-CI VALIDATION COMPLETE**
+Status: **IN PROGRESS — QUALIFIED DIAGNOSTIC IPA READY; DEVICE ATTRIBUTION PENDING**
 
 ## Scope
 
@@ -27,20 +27,26 @@ WO38 continues the reviewed WO37 diagnostic source and applies only the authoriz
 - Aggregate: 163 run, 8 skipped, with two pre-existing Windows executable-format errors and two CRLF checkout failures in inherited OSG patch tests.
 - Python syntax: passed.
 - Diff check: passed.
-- macOS shell/configure/compile/link/package: pending Fast Development.
+- macOS patch bootstrap/source validation: passed.
+- Cold OSG configure/dependency preparation: passed in 1,958 seconds.
+- Real production OpenMW compile/link: passed in 2,355 seconds.
+- Bundle validation/package/artifact upload: passed.
+- Fast cache restores: source downloads miss; vcpkg binary miss; qualified incremental state miss.
+- Full Qualification: not run.
 
 ## CI and artifact
 
-- Fast run: pending
-- Artifact: pending
-- IPA SHA-256: pending
-- Executable SHA-256: pending
-- Mach-O UUID: pending
+- Fast run: `33269657425` (success)
+- Artifact: `OpenMW-iOS-fast-66`, ID `9720624645`
+- Artifact digest: `sha256:17b27b5a0b4a957dafefb9792f545b0fed8826955b7ebdbb9c5f878148f9d8ed`
+- IPA SHA-256: `d66f5c31a50a48a8a35c8b5e9bc74e558d224c2da9d0debf8072f8b61df194ee`
+- Executable SHA-256: `3d0308bb45d1823b441c4bb627846eb92c239c24e57aa4238a6ac1105c949d54`
+- Mach-O UUID: `0FBDA93C-0871-39E6-A80D-C16B14606AC3`
 
 ## Physical attribution
 
-Pending qualified artifact. No target classification is claimed yet.
+The qualified artifact is ready. Black-silhouette and blue/white-horizon target captures remain pending. No target classification is claimed yet.
 
 ## Current stop boundary
 
-Not reached. The next authorized step is the single primary Fast Development dispatch. No duplicate or Full Qualification run is authorized.
+Not reached. The next authorized step is physical-device target-pixel attribution using the qualified diagnostic IPA. No duplicate build or Full Qualification run was dispatched.

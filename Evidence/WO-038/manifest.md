@@ -1,6 +1,6 @@
 # WO-038 Evidence Manifest
 
-Status: **IN PROGRESS**
+Status: **DEVICE ATTRIBUTION PENDING**
 
 ## Baselines
 
@@ -24,6 +24,14 @@ The accepted engineering baseline is an ancestor of the execution branch. The re
 - Prior failed Fast run establishing the cold-config boundary: `33265712820`
 - Prior failure artifact: `OpenMW-iOS-fast-failure-63`, ID `9718681291`
 - Prior failure digest: `sha256:c7cc2fea29cf86ae6e8c16d78ee237c18487ef4e56409ffc6547c49a4966676e`
-- WO38 Fast run/artifact/device identities: pending
+- WO38 correction/evidence commit: `f3ccd53e1fa823e583057afd15e8a5ce94d0ab97`
+- Fast Development run: `33269657425` (success)
+- Run URL: <https://github.com/arjunyerevan95-dot/OpenMWiOS/actions/runs/33269657425>
+- Product artifact: `OpenMW-iOS-fast-66`, ID `9720624645`
+- Artifact digest: `sha256:17b27b5a0b4a957dafefb9792f545b0fed8826955b7ebdbb9c5f878148f9d8ed`
+- IPA SHA-256: `d66f5c31a50a48a8a35c8b5e9bc74e558d224c2da9d0debf8072f8b61df194ee`
+- Executable SHA-256: `3d0308bb45d1823b441c4bb627846eb92c239c24e57aa4238a6ac1105c949d54`
+- Mach-O UUID: `0FBDA93C-0871-39E6-A80D-C16B14606AC3`
+- Device target-pixel identities: pending
 
 No IPA, screenshot, framebuffer dump, full shader dump, or raw JSONL is committed here.
