@@ -33,6 +33,7 @@ The accepted engineering baseline is an ancestor of the execution branch. The re
 - Executable SHA-256: `3d0308bb45d1823b441c4bb627846eb92c239c24e57aa4238a6ac1105c949d54`
 - Mach-O UUID: `0FBDA93C-0871-39E6-A80D-C16B14606AC3`
 - Device target-pixel identities: pending
+- Mirrored unlisted report Gist: <https://gist.github.com/arjunyerevan95-dot/f440c84042db917388a74cc2186fcc38>
 
 ## Device-workflow blocker
 
