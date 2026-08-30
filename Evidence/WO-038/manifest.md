@@ -1,6 +1,6 @@
 # WO-038 Evidence Manifest
 
-Status: **AMENDMENT 1 IN PROGRESS — LOCAL PAUSE CORRECTION VALIDATED**
+Status: **AMENDMENT 1 IN PROGRESS — FAST BUILD PASSED; DEVICE CHECK PENDING**
 
 ## Baselines
 
@@ -42,6 +42,15 @@ The accepted engineering baseline is an ancestor of the execution branch. The re
 - Source cause revalidated: virtual START true/false collapsed before SDL's later virtual-joystick update.
 - Local correction: preserve the pressed state through one explicit SDL joystick update, then store one release.
 - Executable fixture result: passed; cancellation and long-press suppression passed.
-- Exactly one Amendment 1 Fast dispatch remains authorized; not yet consumed in this record.
+- Amendment 1 correction commit: `457ab881442302a9bd59435c1878ed4e72f6e52b`.
+- The single authorized Amendment 1 Fast dispatch was consumed by run `33306995685`; it completed successfully. No replacement build was dispatched.
+- Run URL: <https://github.com/arjunyerevan95-dot/OpenMWiOS/actions/runs/33306995685>
+- Product artifact: `OpenMW-iOS-fast-67`, ID `9730898326`.
+- GitHub artifact URL: <https://github.com/arjunyerevan95-dot/OpenMWiOS/actions/runs/33306995685/artifacts/9730898326>
+- Artifact digest: `sha256:41709748e6cad3d8e48b1244ae42ee96a35ea7eb2607b751f8d6f834b69c315b`.
+- IPA SHA-256: `9312ea3b1ad757e9cee8a22785907f93ad9c68a33e02d845210ff5f733660593`.
+- Executable SHA-256: `26a73e55775a15bfdb60cc6c05861e1f790f60dfc920a5ef7b4087f7822ed912`.
+- Cache result: source-download and vcpkg exact hits; qualified incremental state restored by fallback key.
+- Device Pause/editor identities: pending.
 
 No IPA, screenshot, framebuffer dump, full shader dump, or raw JSONL is committed here.

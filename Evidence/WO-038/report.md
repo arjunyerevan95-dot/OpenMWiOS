@@ -1,6 +1,6 @@
 # WO-038 Execution Report
 
-Status: **AMENDMENT 1 IN PROGRESS — PAUSE CORRECTION LOCALLY VALIDATED; BUILD PENDING**
+Status: **AMENDMENT 1 IN PROGRESS — FAST BUILD PASSED; DEVICE PAUSE CHECK PENDING**
 
 ## Scope
 
@@ -57,4 +57,22 @@ The original authorization conflict was superseded by Amendment 1 at ControlPlan
 
 Direct inspection revalidated that the same-callback START true/false pair could collapse in SDL's stored virtual-button state. The bounded correction now preserves START pressed through one `SDL_JoystickUpdate()` opportunity and then stores exactly one release. Its executable C++ fixture proves ordering, cancellation suppression, long-press non-leakage, and clean repeated pulses. See `pause-short-tap-correction.md`.
 
-The single Amendment 1 Fast build, device Pause/editor checks, prepared save, and target attribution remain pending. No build had been dispatched at the time of this interim update.
+The single authorized Amendment 1 Fast build was dispatched exactly once and completed successfully:
+
+- Runtime correction commit: `457ab881442302a9bd59435c1878ed4e72f6e52b`
+- Fast run: `33306995685` (success)
+- Run URL: <https://github.com/arjunyerevan95-dot/OpenMWiOS/actions/runs/33306995685>
+- Product artifact: `OpenMW-iOS-fast-67`, artifact ID `9730898326`
+- Artifact digest: `sha256:41709748e6cad3d8e48b1244ae42ee96a35ea7eb2607b751f8d6f834b69c315b`
+- IPA SHA-256: `9312ea3b1ad757e9cee8a22785907f93ad9c68a33e02d845210ff5f733660593`
+- Executable SHA-256: `26a73e55775a15bfdb60cc6c05861e1f790f60dfc920a5ef7b4087f7822ed912`
+- Job duration: 731 seconds; end-to-end run duration: 758 seconds
+- Cache result: exact source-download and vcpkg hits; qualified incremental state restored by fallback key rather than exact source-key match.
+- Production OpenMW compile/link: passed
+- Bundle validation/package/artifact upload: passed
+- Full Qualification: not run
+- Replacement build: not run and not authorized
+
+The Litterbox API rejected the binary upload from the worker's current network with HTTP 403. The verified GitHub Actions artifact remains the authoritative installation source; this transport failure did not alter the artifact or trigger another build.
+
+Device Pause/editor checks, prepared save creation, and the existing target attribution remain pending. No target classification is claimed yet.

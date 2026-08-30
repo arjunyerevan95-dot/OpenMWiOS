@@ -1,6 +1,6 @@
 # WO-038 Amendment 1 — Pause Short-Tap Correction
 
-Status: **LOCAL CORRECTION VALIDATED; AMENDMENT FAST BUILD PENDING**
+Status: **LOCAL CORRECTION VALIDATED; AMENDMENT FAST BUILD PASSED; DEVICE CHECK PENDING**
 
 ## Exact cause
 
@@ -31,6 +31,19 @@ The fixture passed under MSVC 19.44. The adapter integration assertion also prov
 
 Focused iOS touch / WO37 / WO38 validation ran 43 tests with 42 passing, one inherited CRLF-sensitive pristine-OSG patch-application failure, and two skips. Aggregate validation ran 165 tests with the same two inherited CRLF-sensitive OSG patch failures, two inherited Windows executable-format errors, and nine skips. No new Amendment 1 test failed. Python syntax and `git diff --check` passed.
 
+## Production build
+
+The single authorized Amendment 1 Fast build completed successfully. Production compilation/linking, bundle validation, packaging, and artifact upload all passed. No replacement build was dispatched.
+
+- Runtime correction commit: `457ab881442302a9bd59435c1878ed4e72f6e52b`
+- Fast run: `33306995685`
+- Product artifact: `OpenMW-iOS-fast-67`, artifact ID `9730898326`
+- Artifact digest: `sha256:41709748e6cad3d8e48b1244ae42ee96a35ea7eb2607b751f8d6f834b69c315b`
+- IPA SHA-256: `9312ea3b1ad757e9cee8a22785907f93ad9c68a33e02d845210ff5f733660593`
+- Executable SHA-256: `26a73e55775a15bfdb60cc6c05861e1f790f60dfc920a5ef7b4087f7822ed912`
+- Job duration: 731 seconds; run duration: 758 seconds
+- Cache result: source-download and vcpkg caches were exact hits; qualified incremental state restored through the authorized fallback key (`build_state_cache_hit=false` for an exact-key match).
+
 ## Pending physical contract
 
-The single authorized Amendment 1 Fast build and device checks remain pending. Required device checks are short-tap Pause, long-press editor without Pause leakage, moved/cancelled touch suppression, and nearby movement/look/action regression.
+Device checks remain pending. Required checks are short-tap Pause, long-press editor without Pause leakage, moved/cancelled touch suppression, and nearby movement/look/action regression. A successful Pause check then permits prepared-save creation and continuation of the existing target attribution with this same IPA.
