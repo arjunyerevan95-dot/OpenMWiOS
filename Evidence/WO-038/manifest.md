@@ -1,6 +1,6 @@
 # WO-038 Evidence Manifest
 
-Status: **DEVICE ATTRIBUTION PENDING**
+Status: **BLOCKED AT ORCHESTRATOR-REVIEW GATE**
 
 ## Baselines
 
@@ -33,5 +33,13 @@ The accepted engineering baseline is an ancestor of the execution branch. The re
 - Executable SHA-256: `3d0308bb45d1823b441c4bb627846eb92c239c24e57aa4238a6ac1105c949d54`
 - Mach-O UUID: `0FBDA93C-0871-39E6-A80D-C16B14606AC3`
 - Device target-pixel identities: pending
+
+## Device-workflow blocker
+
+- Observed: Pause/Menu short-tap does not open Pause; long-press enters control customization.
+- Effect: tester cannot create the reproducible prepared-view save required to align the first-eligible-exterior one-shot readback with the photographed distant target.
+- User request: one-time authorization to fix Pause behavior.
+- Scope disposition: recorded only; canonical WO38 prohibits touch changes and user feedback cannot amend it.
+- Required review: orchestrator must amend WO38 or provide a different canonical capture method.
 
 No IPA, screenshot, framebuffer dump, full shader dump, or raw JSONL is committed here.

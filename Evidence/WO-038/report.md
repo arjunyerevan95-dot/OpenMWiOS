@@ -1,6 +1,6 @@
 # WO-038 Execution Report
 
-Status: **IN PROGRESS — QUALIFIED DIAGNOSTIC IPA READY; DEVICE ATTRIBUTION PENDING**
+Status: **BLOCKED — QUALIFIED DIAGNOSTIC IPA READY; REPRODUCIBLE TARGET PREPARATION REQUIRES OUT-OF-SCOPE TOUCH CHANGE**
 
 ## Scope
 
@@ -47,6 +47,10 @@ WO38 continues the reviewed WO37 diagnostic source and applies only the authoriz
 
 The qualified artifact is ready. Black-silhouette and blue/white-horizon target captures remain pending. No target classification is claimed yet.
 
+The user reported that the current touch overlay cannot short-tap Pause/Menu: a long press enters control customization, while the short press does not open the pause menu. Consequently, the user cannot create a save at a prepared distant-silhouette viewpoint. The current one-shot diagnostic fires at the first eligible exterior frame, so installing the IPA and later moving to a target does not produce a trustworthy screenshot/target-record correlation.
+
+On 2026-08-30 the user explicitly offered a one-time exception to fix Pause behavior because it is the simplest way to prepare a reproducible target. This is recorded as user evidence and requested scope change only. Canonical WO38 explicitly prohibits touch changes and states that user observations do not authorize amendment. No touch source, renderer source, build, or canonical ControlPlane file was changed in response.
+
 ## Current stop boundary
 
-Not reached. The next authorized step is physical-device target-pixel attribution using the qualified diagnostic IPA. No duplicate build or Full Qualification run was dispatched.
+**Stop Condition A / D: authorization conflict and unusable capture preparation.** The exact next step requires orchestrator review: either amend WO38 to authorize the narrow Pause short-tap correction (and any build budget needed to deliver it), or provide another canonical capture method. Until then, device attribution cannot be made reproducible enough to satisfy WO38. No duplicate build or Full Qualification run was dispatched.
