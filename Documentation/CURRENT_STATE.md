@@ -3,12 +3,12 @@
 - Project: OpenMWiOS
 - Canonical ControlPlane branch: `codex/wo29-ios-crash-isolation`
 - Accepted engineering baseline commit: `93f892dd0cf9834259b4cad2045ddb2ef9c53ed9`
-- Active work order: none
-- Ready work order: [WO-038 Amendment 1](../WorkOrders/WO-038.md)
+- Active work order: [WO-038 Amendment 1](../WorkOrders/WO-038.md)
+- Ready work order: none
 - Last completed work order: [WO-037](../WorkOrders/WO-037.md) — **SUPERSEDED / EXECUTION EVIDENCE ACCEPTED; NO PRODUCT OR RENDERER RESULT**
 - Last durable decision: [DEC-016](../Decisions/DEC-016.md)
 - Current objective: restore the exact Pause short-tap input lifetime needed to prepare a target save, then complete bounded distant-pixel attribution before any renderer correction
-- Engineering execution status: **STOPPED; WO-038 Amendment 1 is READY and awaits an explicit orchestrator continuation directive**
+- Engineering execution status: **ACTIVE; WO-038 Amendment 1 continuation directive delivered directly to the existing worker**
 - Last updated: 2026-08-30
 
 ## Highest qualified runtime milestone
@@ -90,7 +90,7 @@ WO37 is superseded at its exhausted three-run boundary. Its diagnostic commits r
 
 WO38 has now recovered the cold build path. Commit `f3ccd53e1fa823e583057afd15e8a5ce94d0ab97` disables only optional GLib discovery for the iOS OSG configure. With all relevant caches missed, Fast run `33269657425` passed cold OSG configuration, real OpenMW compile/link, packaging, and artifact upload. This is accepted build-recovery evidence only; no source/artifact has advanced the qualified engineering baseline.
 
-Physical attribution remains blocked before capture. The one-shot first-exterior diagnostic requires a save already positioned on the exact target, but Pause short-tap does not open the pause menu while its long press still enters the touch editor. Direct source proves the short-tap path writes virtual START pressed and released in one callback; pinned SDL stores only the final virtual-button value until a later joystick update, so the pressed edge can disappear before OpenMW receives it. WO38 Amendment 1 is READY for only a bounded Pause press-lifetime correction, one prerequisite Fast build, device short/long-press checks, save preparation, and the original attribution. Renderer correction remains prohibited.
+Physical attribution remains blocked before capture. The one-shot first-exterior diagnostic requires a save already positioned on the exact target, but Pause short-tap does not open the pause menu while its long press still enters the touch editor. Direct source proves the short-tap path writes virtual START pressed and released in one callback; pinned SDL stores only the final virtual-button value until a later joystick update, so the pressed edge can disappear before OpenMW receives it. WO38 Amendment 1 is ACTIVE for only a bounded Pause press-lifetime correction, one prerequisite Fast build, device short/long-press checks, save preparation, and the original attribution. Renderer correction remains prohibited.
 
 ## Secondary and deferred boundaries
 
@@ -117,11 +117,11 @@ WO37 is SUPERSEDED with execution evidence accepted and no product/renderer resu
 
 The original WO38 execution stopped correctly at evidence commit `6f3eb24ae9be73950c3813964755169497bcc26e` under Conditions A/D. Fast run `33269657425` and artifact `OpenMW-iOS-fast-66` qualify cold-build recovery but did not reach device attribution. The worker did not apply the user-requested Pause change because canonical WO38 prohibited touch changes, and no additional CI ran.
 
-WO38 Amendment 1 is READY and unstarted. It authorizes only the source-proven Pause short-tap lifetime correction, deterministic transition coverage, exactly one additional Fast build with no replacement, device validation, prepared-save creation, and resumption of the existing attribution. The exact next action is its explicit orchestrator continuation directive.
+WO38 Amendment 1 is ACTIVE. Its explicit continuation directive was delivered directly to the existing worker on 2026-08-30. It authorizes only the source-proven Pause short-tap lifetime correction, deterministic transition coverage, exactly one additional Fast build with no replacement, device validation, prepared-save creation, and resumption of the existing attribution. Do not resend the directive or duplicate execution.
 
 ## Latest important evidence
 
-- [READY WO38 Amendment 1](../WorkOrders/WO-038.md)
+- [ACTIVE WO38 Amendment 1](../WorkOrders/WO-038.md)
 - [WO38 Amendment 1 orchestrator review](../Evidence/WO-038/orchestrator-amendment1-review.md)
 - [WO37 final orchestrator review](../Evidence/WO-037/orchestrator-final-review.md)
 - [Superseded WO37](../WorkOrders/WO-037.md)
@@ -162,9 +162,9 @@ WO38 Amendment 1 is READY and unstarted. It authorizes only the source-proven Pa
 ## Recovery path
 
 1. Read this file.
-2. Read READY [WO-038 Amendment 1](../WorkOrders/WO-038.md), its [orchestrator review](../Evidence/WO-038/orchestrator-amendment1-review.md), [DEC-016](../Decisions/DEC-016.md), and the [WO37 final review](../Evidence/WO-037/orchestrator-final-review.md) only as needed.
+2. Read ACTIVE [WO-038 Amendment 1](../WorkOrders/WO-038.md), its [orchestrator review](../Evidence/WO-038/orchestrator-amendment1-review.md), [DEC-016](../Decisions/DEC-016.md), and the [WO37 final review](../Evidence/WO-037/orchestrator-final-review.md) only as needed.
 3. Inspect current Git and CI state before issuing new work.
 4. Use Codebase Memory for structural navigation, then verify implementation facts against checked-out source.
 5. Use the Google ledger only for unresolved historical context.
 
-Current execution state is STOPPED. WO38 Amendment 1 is READY and requires an explicit orchestrator continuation directive before worker execution.
+Current execution state is ACTIVE. WO38 Amendment 1 is executing on the existing worker; do not resend its continuation directive, duplicate its Fast workflow, or issue another order.
