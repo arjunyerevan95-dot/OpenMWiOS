@@ -1,6 +1,6 @@
 # WO-038 Execution Report
 
-Status: **BLOCKED — QUALIFIED DIAGNOSTIC IPA READY; REPRODUCIBLE TARGET PREPARATION REQUIRES OUT-OF-SCOPE TOUCH CHANGE**
+Status: **AMENDMENT 1 IN PROGRESS — PAUSE CORRECTION LOCALLY VALIDATED; BUILD PENDING**
 
 ## Scope
 
@@ -53,4 +53,8 @@ On 2026-08-30 the user explicitly offered a one-time exception to fix Pause beha
 
 ## Current stop boundary
 
-**Stop Condition A / D: authorization conflict and unusable capture preparation.** The exact next step requires orchestrator review: either amend WO38 to authorize the narrow Pause short-tap correction (and any build budget needed to deliver it), or provide another canonical capture method. Until then, device attribution cannot be made reproducible enough to satisfy WO38. No duplicate build or Full Qualification run was dispatched.
+The original authorization conflict was superseded by Amendment 1 at ControlPlane commit `ae3fa28`. Continuation began from exact commit `6f3eb24ae9be73950c3813964755169497bcc26e`.
+
+Direct inspection revalidated that the same-callback START true/false pair could collapse in SDL's stored virtual-button state. The bounded correction now preserves START pressed through one `SDL_JoystickUpdate()` opportunity and then stores exactly one release. Its executable C++ fixture proves ordering, cancellation suppression, long-press non-leakage, and clean repeated pulses. See `pause-short-tap-correction.md`.
+
+The single Amendment 1 Fast build, device Pause/editor checks, prepared save, and target attribution remain pending. No build had been dispatched at the time of this interim update.

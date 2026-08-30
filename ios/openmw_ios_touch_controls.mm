@@ -891,11 +891,14 @@ namespace
         if (identifier == _pendingMenuTouchId)
         {
             _pendingMenuTouchId = 0;
-            if (!cancelled)
+            const bool dispatched = OpenMWIOS::Touch::dispatchPauseShortTap(
+                cancelled == YES, false,
+                [&](bool pressed) { [self setAction:Action::Pause pressed:pressed]; },
+                [] { SDL_JoystickUpdate(); });
+            if (dispatched)
             {
-                [self setAction:Action::Pause pressed:true];
-                [self setAction:Action::Pause pressed:false];
-                [self diagnose:"touch_menu_arbitration" detail:@"state=short-tap;pause_event=dispatched"];
+                [self diagnose:"touch_menu_arbitration"
+                         detail:@"state=short-tap;pause_event=dispatched;observation=joystick-update"];
             }
             continue;
         }

@@ -243,6 +243,23 @@ namespace OpenMWIOS::Touch
         return action == Action::Inventory || action == Action::Pause || action == Action::Journal;
     }
 
+    // A virtual SDL controller stores only the latest button value until its
+    // next update. Keep a short Pause tap observable by placing one input
+    // update between the press and release writes. Cancellation and a
+    // long-press consumed by the editor must not leak a Pause pulse.
+    template <class SetPressed, class ObserveInput>
+    bool dispatchPauseShortTap(
+        bool cancelled, bool consumedByLongPress, SetPressed setPressed, ObserveInput observeInput)
+    {
+        if (cancelled || consumedByLongPress)
+            return false;
+
+        setPressed(true);
+        observeInput();
+        setPressed(false);
+        return true;
+    }
+
     struct StickVector
     {
         float x = 0.f;

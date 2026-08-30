@@ -1,6 +1,6 @@
 # WO-038 Evidence Manifest
 
-Status: **BLOCKED AT ORCHESTRATOR-REVIEW GATE**
+Status: **AMENDMENT 1 IN PROGRESS — LOCAL PAUSE CORRECTION VALIDATED**
 
 ## Baselines
 
@@ -16,6 +16,7 @@ The accepted engineering baseline is an ancestor of the execution branch. The re
 
 - [Cold OSG configuration](cold-osg-configuration.md)
 - [Diagnostic validation](diagnostic-validation.md)
+- [Pause short-tap correction](pause-short-tap-correction.md)
 - [Target-pixel captures](target-pixel-captures.md)
 - [Execution report](report.md)
 
@@ -35,12 +36,12 @@ The accepted engineering baseline is an ancestor of the execution branch. The re
 - Device target-pixel identities: pending
 - Mirrored unlisted report Gist: <https://gist.github.com/arjunyerevan95-dot/f440c84042db917388a74cc2186fcc38>
 
-## Device-workflow blocker
+## Amendment 1 continuation
 
-- Observed: Pause/Menu short-tap does not open Pause; long-press enters control customization.
-- Effect: tester cannot create the reproducible prepared-view save required to align the first-eligible-exterior one-shot readback with the photographed distant target.
-- User request: one-time authorization to fix Pause behavior.
-- Scope disposition: recorded only; canonical WO38 prohibits touch changes and user feedback cannot amend it.
-- Required review: orchestrator must amend WO38 or provide a different canonical capture method.
+- Amendment authority: published ControlPlane `ae3fa28`; exact continuation `6f3eb24ae9be73950c3813964755169497bcc26e`.
+- Source cause revalidated: virtual START true/false collapsed before SDL's later virtual-joystick update.
+- Local correction: preserve the pressed state through one explicit SDL joystick update, then store one release.
+- Executable fixture result: passed; cancellation and long-press suppression passed.
+- Exactly one Amendment 1 Fast dispatch remains authorized; not yet consumed in this record.
 
 No IPA, screenshot, framebuffer dump, full shader dump, or raw JSONL is committed here.
