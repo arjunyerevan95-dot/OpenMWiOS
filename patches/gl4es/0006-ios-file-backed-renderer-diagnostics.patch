@@ -1,0 +1,235 @@
+diff --git a/src/CMakeLists.txt b/src/CMakeLists.txt
+--- a/src/CMakeLists.txt
++++ b/src/CMakeLists.txt
+@@ -37,3 +37,4 @@ SET(GL_SRC
+     ${CMAKE_CURRENT_SOURCE_DIR}/gl/hint.c
+     ${CMAKE_CURRENT_SOURCE_DIR}/gl/init.c
++    ${CMAKE_CURRENT_SOURCE_DIR}/gl/ios_renderer_diag.c
+     ${CMAKE_CURRENT_SOURCE_DIR}/gl/light.c
+diff --git a/src/gl/ios_renderer_diag.h b/src/gl/ios_renderer_diag.h
+new file mode 100644
+--- /dev/null
++++ b/src/gl/ios_renderer_diag.h
+@@ -0,0 +1,16 @@
++#ifndef _GL4ES_IOS_RENDERER_DIAG_H_
++#define _GL4ES_IOS_RENDERER_DIAG_H_
++
++#include <stddef.h>
++#include <stdint.h>
++
++void wo31_diag_texture_upload(unsigned int texture, const void* data, size_t size, unsigned int format,
++    int width, int height, int alpha, int simple_alpha, int complex_alpha);
++int wo31_diag_texture_category_for_name(unsigned int texture);
++void wo31_diag_draw(unsigned int program, unsigned int texture, int category, int blend, unsigned int src_rgb,
++    unsigned int dst_rgb, unsigned int src_alpha, unsigned int dst_alpha, int alpha_test, unsigned int alpha_func,
++    float alpha_ref, int fog, float fog_start, float fog_end, const float* fog_color, int count);
++void wo31_diag_fog_received(unsigned int pname, const float* params);
++void wo31_diag_fog_applied(unsigned int program, int has_fog, float start, float end, const float* color);
++
++#endif
+diff --git a/src/gl/ios_renderer_diag.c b/src/gl/ios_renderer_diag.c
+new file mode 100644
+--- /dev/null
++++ b/src/gl/ios_renderer_diag.c
+@@ -0,0 +1,115 @@
++#include "ios_renderer_diag.h"
++
++#include <stdio.h>
++#include <string.h>
++
++#if defined(__APPLE__)
++extern int openmw_ios_renderer_diag_enabled(void) __attribute__((weak_import));
++extern unsigned int openmw_ios_renderer_diag_record(
++    const char*, const char*, const char*, const char*) __attribute__((weak_import));
++extern int openmw_ios_renderer_diag_texture_category(uint64_t) __attribute__((weak_import));
++extern uint64_t openmw_ios_renderer_diag_hash(const void*, size_t) __attribute__((weak_import));
++#endif
++
++typedef struct
++{
++    unsigned int texture;
++    uint64_t hash;
++    int category;
++} wo31_texture_entry;
++
++static wo31_texture_entry wo31_textures[192];
++static unsigned int wo31_texture_count;
++
++static int available(void)
++{
++#if defined(__APPLE__)
++    return openmw_ios_renderer_diag_enabled && openmw_ios_renderer_diag_record
++        && openmw_ios_renderer_diag_texture_category && openmw_ios_renderer_diag_hash
++        && openmw_ios_renderer_diag_enabled();
++#else
++    return 0;
++#endif
++}
++
++static void hash_string(uint64_t hash, char* output, size_t size)
++{
++    snprintf(output, size, "%016llx", (unsigned long long)hash);
++}
++
++void wo31_diag_texture_upload(unsigned int texture, const void* data, size_t size, unsigned int format,
++    int width, int height, int alpha, int simple_alpha, int complex_alpha)
++{
++    if (!available() || !data || !size || !texture)
++        return;
++    const uint64_t hash = openmw_ios_renderer_diag_hash(data, size);
++    const int category = openmw_ios_renderer_diag_texture_category(hash);
++    if (!category)
++        return;
++    unsigned int slot = wo31_texture_count < 192 ? wo31_texture_count++ : 191;
++    for (unsigned int i = 0; i < wo31_texture_count; ++i)
++        if (wo31_textures[i].texture == texture)
++        {
++            slot = i;
++            break;
++        }
++    wo31_textures[slot].texture = texture;
++    wo31_textures[slot].hash = hash;
++    wo31_textures[slot].category = category;
++    char correlation[32];
++    char detail[320];
++    hash_string(hash, correlation, sizeof(correlation));
++    snprintf(detail, sizeof(detail),
++        "texture=%u;category=%d;format=%u;width=%d;height=%d;bytes=%zu;alpha=%d;simple_alpha=%d;complex_alpha=%d",
++        texture, category, format, width, height, size, alpha, simple_alpha, complex_alpha);
++    openmw_ios_renderer_diag_record("r1.upload", "gl4es", correlation, detail);
++}
++
++int wo31_diag_texture_category_for_name(unsigned int texture)
++{
++    for (unsigned int i = 0; i < wo31_texture_count; ++i)
++        if (wo31_textures[i].texture == texture)
++            return wo31_textures[i].category;
++    return 0;
++}
++
++void wo31_diag_draw(unsigned int program, unsigned int texture, int category, int blend, unsigned int src_rgb,
++    unsigned int dst_rgb, unsigned int src_alpha, unsigned int dst_alpha, int alpha_test, unsigned int alpha_func,
++    float alpha_ref, int fog, float fog_start, float fog_end, const float* fog_color, int count)
++{
++    if (!available() || !category)
++        return;
++    char correlation[48];
++    char detail[448];
++    snprintf(correlation, sizeof(correlation), "texture-%u", texture);
++    snprintf(detail, sizeof(detail),
++        "program=%u;texture=%u;category=%d;count=%d;blend=%d;blend_func=%u,%u,%u,%u;alpha_test=%d;alpha_func=%u;alpha_ref=%.6g;fog=%d;fog_start=%.6g;fog_end=%.6g;fog_color=%.6g,%.6g,%.6g,%.6g",
++        program, texture, category, count, blend, src_rgb, dst_rgb, src_alpha, dst_alpha, alpha_test,
++        alpha_func, alpha_ref, fog, fog_start, fog_end, fog_color[0], fog_color[1], fog_color[2], fog_color[3]);
++    openmw_ios_renderer_diag_record("r1.draw", "gl4es", correlation, detail);
++}
++
++void wo31_diag_fog_received(unsigned int pname, const float* params)
++{
++    if (!available() || !params)
++        return;
++    char detail[256];
++    snprintf(detail, sizeof(detail), "pname=%u;value=%.6g,%.6g,%.6g,%.6g", pname, params[0],
++        pname == 0x0B66 ? params[1] : 0.f, pname == 0x0B66 ? params[2] : 0.f,
++        pname == 0x0B66 ? params[3] : 0.f);
++    openmw_ios_renderer_diag_record("r2.received", "gl4es", "fog-state", detail);
++}
++
++void wo31_diag_fog_applied(unsigned int program, int has_fog, float start, float end, const float* color)
++{
++    if (!available() || !color || !has_fog)
++        return;
++    char correlation[48];
++    char detail[320];
++    snprintf(correlation, sizeof(correlation), "program-%u", program);
++    snprintf(detail, sizeof(detail),
++        "program=%u;has_builtin_fog=%d;start=%.6g;end=%.6g;scale=%.9g;color=%.6g,%.6g,%.6g,%.6g",
++        program, has_fog, start, end, end != start ? 1.f / (end - start) : 0.f,
++        color[0], color[1], color[2], color[3]);
++    openmw_ios_renderer_diag_record("r2.applied", "gl4es", correlation, detail);
++}
+diff --git a/src/gl/texture_compressed.c b/src/gl/texture_compressed.c
+--- a/src/gl/texture_compressed.c
++++ b/src/gl/texture_compressed.c
+@@ -10,3 +10,4 @@
+ #include "fpe.h"
+ #include "framebuffers.h"
++#include "ios_renderer_diag.h"
+ #include "gles.h"
+@@ -249,3 +250,6 @@ void APIENTRY_GL4ES gl4es_glCompressedTexImage2D(GLenum target, GLint level, GLe
+                 pixels = uncompressDXTc(width, height, internalformat, imageSize, transparent0, &simpleAlpha, &complexAlpha, datab);
+             }
++            if(level==0)
++                wo31_diag_texture_upload(bound->texture, datab, imageSize, internalformat, width, height,
++                    bound->alpha, simpleAlpha, complexAlpha);
+             if(srgb)
+diff --git a/src/gl/texture.c b/src/gl/texture.c
+--- a/src/gl/texture.c
++++ b/src/gl/texture.c
+@@ -10,3 +10,4 @@
+ #include "fpe.h"
+ #include "framebuffers.h"
++#include "ios_renderer_diag.h"
+ #include "gles.h"
+@@ -953,2 +954,8 @@ void APIENTRY_GL4ES gl4es_glTexImage2D(GLenum target, GLint level, GLint internalformat,
+     gltexture_t *bound = glstate->texture.bound[glstate->texture.active][itarget];
++    if(level==0 && datab && pixel_sizeof(format, type)>0)
++    {
++        const size_t diagnostic_size = (size_t)width * (size_t)height * (size_t)pixel_sizeof(format, type);
++        wo31_diag_texture_upload(bound->texture, datab, diagnostic_size, format, width, height,
++            format==GL_RGBA, -1, -1);
++    }
+ 
+diff --git a/src/gl/fog.c b/src/gl/fog.c
+--- a/src/gl/fog.c
++++ b/src/gl/fog.c
+@@ -5,3 +5,4 @@
+ #include "gl4es.h"
+ #include "glstate.h"
++#include "ios_renderer_diag.h"
+ #include "loader.h"
+@@ -11,1 +12,4 @@ void APIENTRY_GL4ES gl4es_glFogfv(GLenum pname, const GLfloat* params) {
++    if(pname==GL_FOG_START || pname==GL_FOG_END || pname==GL_FOG_COLOR || pname==GL_FOG_MODE)
++        wo31_diag_fog_received((unsigned int)pname, params);
++
+     if (glstate->list.active)
+diff --git a/src/gl/fpe.c b/src/gl/fpe.c
+--- a/src/gl/fpe.c
++++ b/src/gl/fpe.c
+@@ -7,2 +7,3 @@
+ #include "init.h"
++#include "ios_renderer_diag.h"
+ #include "loader.h"
+@@ -1313,3 +1314,5 @@ void realize_glenv(int ispoint, int first, int count, GLenum type, const void* i
+     if(glprogram->builtin_fog.has)
+     {
++        wo31_diag_fog_applied(glprogram->id, glprogram->builtin_fog.has, glstate->fog.start,
++            glstate->fog.end, glstate->fog.color);
+         GoUniformfv(glprogram, glprogram->builtin_fog.color, 4, 1, glstate->fog.color);
+diff --git a/src/gl/drawing.c b/src/gl/drawing.c
+--- a/src/gl/drawing.c
++++ b/src/gl/drawing.c
+@@ -5,4 +5,5 @@
+ #include "gl4es.h"
+ #include "gles.h"
+ #include "glstate.h"
++#include "ios_renderer_diag.h"
+ #include "init.h"
+@@ -423,3 +424,18 @@ void glDrawElementsCommon(GLenum mode, GLint first, GLsizei count, GLsizei len,
+         }
+ 
++        for (int wo31_unit = 0; wo31_unit < hardext.maxtex; ++wo31_unit)
++        {
++            gltexture_t* wo31_texture = glstate->texture.bound[wo31_unit][ENABLED_TEX2D];
++            const int wo31_category
++                = wo31_texture ? wo31_diag_texture_category_for_name(wo31_texture->texture) : 0;
++            if (wo31_category)
++            {
++                wo31_diag_draw(glstate->glsl ? glstate->glsl->program : 0, wo31_texture->texture, wo31_category,
++                    glstate->enable.blend, glstate->blendsfactorrgb, glstate->blenddfactorrgb,
++                    glstate->blendsfactoralpha, glstate->blenddfactoralpha, glstate->enable.alpha_test,
++                    glstate->alphafunc, glstate->alpharef, glstate->enable.fog, glstate->fog.start,
++                    glstate->fog.end, glstate->fog.color, count);
++                break;
++            }
++        }
+         // POLYGON mode as LINE is "intercepted" and drawn using list
