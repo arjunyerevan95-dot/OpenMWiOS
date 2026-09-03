@@ -1,0 +1,6 @@
+Extract the iosjump folder to your OpenMW/Data Files folder
+
+Add these lines to your OpenMW.cfg
+
+data="Morrowind/Data Files/iosjump"
+content=ios_jump_unstick.omwscripts
