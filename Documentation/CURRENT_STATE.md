@@ -3,13 +3,13 @@
 - Project: OpenMWiOS
 - Canonical ControlPlane branch: `codex/wo29-ios-crash-isolation`
 - Accepted engineering baseline commit: `93f892dd0cf9834259b4cad2045ddb2ef9c53ed9`
-- Active work order: [WO-038 Amendment 1](../WorkOrders/WO-038.md)
-- Ready work order: none
-- Last completed work order: [WO-037](../WorkOrders/WO-037.md) — **SUPERSEDED / EXECUTION EVIDENCE ACCEPTED; NO PRODUCT OR RENDERER RESULT**
-- Last durable decision: [DEC-016](../Decisions/DEC-016.md)
-- Current objective: restore the exact Pause short-tap input lifetime needed to prepare a target save, then complete bounded distant-pixel attribution before any renderer correction
-- Engineering execution status: **ACTIVE; WO-038 Amendment 1 continuation directive delivered directly to the existing worker**
-- Last updated: 2026-08-30
+- Active work order: none
+- Ready work order: [WO-039](../WorkOrders/WO-039.md) — repeatable renderer capture contract; not started
+- Last completed/closed work order: [WO-038](../WorkOrders/WO-038.md) — **SUPERSEDED / PARTIAL EXECUTION EVIDENCE ACCEPTED; NO NEW RUNTIME OR RENDERER QUALIFICATION**
+- Last durable decision: [DEC-017](../Decisions/DEC-017.md)
+- Current objective: prove a repeatable, source-backed renderer observation contract before production diagnostic integration or another iPhone build
+- Engineering execution status: **STOPPED; WO-039 READY; explicit start directive not sent**
+- Last updated: 2026-09-19
 
 ## Highest qualified runtime milestone
 
@@ -82,7 +82,7 @@ WO35 then proved `sky_blending=1` at view/far distance 7168 on the physical devi
 
 WO36 has now removed the remaining global distance/paging hypothesis. At constant `7168`, enabling distant terrain changed `object_paging` from `0` to `1` without materially changing the target. At `16384`, moderate-distance coverage improved, but the same dark silhouettes, blue band, and pale uncovered region recurred at the farther boundary with a modest observed performance cost. Exact Arm A state was restored; the device remains at `7168`, with no `[Terrain]` override and with the user's retained sky-blending preference.
 
-The next renderer boundary is exact pixel ownership. Existing diagnostics prove camera/fog intent and broad program receipt but cannot tell whether a photographed target pixel was produced by a particular drawable/program or had no world coverage and exposed the clear/sky composition. Black silhouettes and the blue/white horizon remain distinct until correlated evidence proves convergence.
+The next renderer boundary is end-to-end coverage, fog and sky composition. Existing diagnostics prove camera/fog intent and broad program receipt but cannot fully establish photographed pixel ownership or distinguish all coverage/depth/sky failures. Black silhouettes and the blue/white horizon remain distinct until correlated evidence proves convergence. DEC-017 replaces the one-shot attribution prescription with a repeatable capture-contract gate; it does not declare a root cause or authorize a renderer migration.
 
 WO37 did not reach that attribution. Its original diagnostic failed compiling the native readback loader; Amendment 1 repaired the loader and produced an IPA, but two device sessions recorded `target_request=none` and no target records. Amendment 2 then preserved explicit requests while adding a bounded auto-first-exterior fallback. Local patch reconstruction and validation passed, but Fast run `33265712820` missed the incremental build-state cache and exposed a cold OSG configuration defect: optional host GLib discovery resolved a Homebrew prefix whose `glibconfig.h` was absent. Configuration stopped before OpenMW compilation, so no IPA or renderer evidence exists from the final run.
 
@@ -90,7 +90,11 @@ WO37 is superseded at its exhausted three-run boundary. Its diagnostic commits r
 
 WO38 has now recovered the cold build path. Commit `f3ccd53e1fa823e583057afd15e8a5ce94d0ab97` disables only optional GLib discovery for the iOS OSG configure. With all relevant caches missed, Fast run `33269657425` passed cold OSG configuration, real OpenMW compile/link, packaging, and artifact upload. This is accepted build-recovery evidence only; no source/artifact has advanced the qualified engineering baseline.
 
-Physical attribution remains blocked before capture. The one-shot first-exterior diagnostic requires a save already positioned on the exact target, but Pause short-tap does not open the pause menu while its long press still enters the touch editor. Direct source proves the short-tap path writes virtual START pressed and released in one callback; pinned SDL stores only the final virtual-button value until a later joystick update, so the pressed edge can disappear before OpenMW receives it. WO38 Amendment 1 is ACTIVE for only a bounded Pause press-lifetime correction, one prerequisite Fast build, device short/long-press checks, save preparation, and the original attribution. Renderer correction remains prohibited.
+WO38 Amendment 1 produced Pause candidate `457ab881442302a9bd59435c1878ed4e72f6e52b`, preserving virtual START pressed through an SDL joystick-update opportunity before release. Fast run `33306995685` passed; evidence HEAD is `7dbedda156b9ab2de1b23f7119f58a6f6a0d6667`. Device Pause/editor checks and target attribution remain pending, so no runtime baseline advances.
+
+The September 19 review found a measurement/acceptance mismatch: the observer explicitly reports unsupported depth and unobserved sky RTT, projects bounding boxes rather than exact coverage, and samples a bounded one-shot center-pixel sequence. Better startup placement cannot guarantee the missing proof. WO38 is now SUPERSEDED with execution/build evidence partially accepted. Its preserved IPA may supply later observations, but old capture/build authority is closed.
+
+WO39 is READY for a bounded source/state model, isolated executable capture-controller tests and a feasible repeatable observation/reference plan. It authorizes no production changes or CI; the orchestrator must review the plan's ability to distinguish failure classes before granting integration/build authority. Diagnostic depth/fog/sky visualizations may be designed, clearly separated from ordinary presentation. Explicit-uniform modernization and native GLES3 remain candidates, not accepted solutions.
 
 ## Secondary and deferred boundaries
 
@@ -117,11 +121,18 @@ WO37 is SUPERSEDED with execution evidence accepted and no product/renderer resu
 
 The original WO38 execution stopped correctly at evidence commit `6f3eb24ae9be73950c3813964755169497bcc26e` under Conditions A/D. Fast run `33269657425` and artifact `OpenMW-iOS-fast-66` qualify cold-build recovery but did not reach device attribution. The worker did not apply the user-requested Pause change because canonical WO38 prohibited touch changes, and no additional CI ran.
 
-WO38 Amendment 1 is ACTIVE. Its explicit continuation directive was delivered directly to the existing worker on 2026-08-30. It authorizes only the source-proven Pause short-tap lifetime correction, deterministic transition coverage, exactly one additional Fast build with no replacement, device validation, prepared-save creation, and resumption of the existing attribution. Do not resend the directive or duplicate execution.
+WO38 is SUPERSEDED under DEC-017. Its two authorized builds completed; the Amendment 1 IPA is `OpenMW-iOS-fast-67` (ID `9730898326`), SHA-256 `9312EA3B1AD757E9CEE8A22785907F93AD9C68A33E02D845210FF5F733660593`. The remote artifact has expired, but the original local IPA was independently hash-verified and preserved; see the final review for its path. No rebuild is needed merely to recover that binary. No worker-authored canonical changes were found. Historical worker capture-preparation notes are not current execution authority.
+
+WO39 is READY with no explicit start directive sent. The existing OpenMW Instrumentor is not running; its last recorded action delivered the WO38 IPA. Latest repository CI is the completed successful August 30 run `33306995685`, with no newer build found at issuance. Do not create a replacement worker, resume WO38 or dispatch CI under this order.
+
+Codebase Memory's connected query reported no indexed projects during the September 19 review. Historical index loss is not established. Direct source was used; no reindex or configuration migration occurred. Graph unavailability does not block WO39.
 
 ## Latest important evidence
 
-- [ACTIVE WO38 Amendment 1](../WorkOrders/WO-038.md)
+- [READY WO39](../WorkOrders/WO-039.md)
+- [DEC-017: repeatable capture contract](../Decisions/DEC-017.md)
+- [WO38 final orchestrator review](../Evidence/WO-038/orchestrator-final-review.md)
+- [Superseded WO38](../WorkOrders/WO-038.md)
 - [WO38 Amendment 1 orchestrator review](../Evidence/WO-038/orchestrator-amendment1-review.md)
 - [WO37 final orchestrator review](../Evidence/WO-037/orchestrator-final-review.md)
 - [Superseded WO37](../WorkOrders/WO-037.md)
@@ -162,9 +173,9 @@ WO38 Amendment 1 is ACTIVE. Its explicit continuation directive was delivered di
 ## Recovery path
 
 1. Read this file.
-2. Read ACTIVE [WO-038 Amendment 1](../WorkOrders/WO-038.md), its [orchestrator review](../Evidence/WO-038/orchestrator-amendment1-review.md), [DEC-016](../Decisions/DEC-016.md), and the [WO37 final review](../Evidence/WO-037/orchestrator-final-review.md) only as needed.
+2. Read READY [WO-039](../WorkOrders/WO-039.md), [DEC-017](../Decisions/DEC-017.md), and the [WO38 final review](../Evidence/WO-038/orchestrator-final-review.md). Follow only references needed for the current question.
 3. Inspect current Git and CI state before issuing new work.
 4. Use Codebase Memory for structural navigation, then verify implementation facts against checked-out source.
 5. Use the Google ledger only for unresolved historical context.
 
-Current execution state is ACTIVE. WO38 Amendment 1 is executing on the existing worker; do not resend its continuation directive, duplicate its Fast workflow, or issue another order.
+Current execution state is STOPPED. WO39 is READY, not started. Exact next orchestrator action: send the existing worker the explicit WO39 start directive and record READY -> ACTIVE as a separate activation event. Until then, no engineering execution is authorized.
