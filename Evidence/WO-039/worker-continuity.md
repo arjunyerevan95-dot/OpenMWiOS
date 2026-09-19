@@ -35,3 +35,9 @@ No files, branches, tests, builds, CI runs, device settings or indexes were chan
 ## Next authority event
 
 This assignment is published while WO39 remains READY. Only a subsequent explicit start directive from the orchestrator activates execution. The start and READY -> ACTIVE transition must be recorded separately; this acknowledgment itself is not a start.
+
+## Subsequent activation — 2026-09-19
+
+The READY assignment was committed and pushed as `4cd82f9aac0f2561bca8ac5470851287b1c8ee6c`. After that publication, the orchestrator delivered the explicit `Start WO-039 now` directive directly to replacement thread `01a0b99a-8578-7503-bc57-a9665b14950f`. Delivery returned that thread ID without error. The directive names the published canonical order and exact continuation baseline, repeats the explicit-workdir guard and zero-production/CI scope, and requests a brief start receipt followed by execution to the review gate.
+
+WO39 is now ACTIVE, recorded in a separate canonical activation commit. The adoption disposition at the top describes the preceding READY checkpoint, not the current work-order state. No start directive was sent to the failed original worker. The worker's receipt/execution result remains separate evidence; this delivery record does not accept any technical result.
