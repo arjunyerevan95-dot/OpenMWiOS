@@ -123,13 +123,14 @@ The original WO38 execution stopped correctly at evidence commit `6f3eb24ae9be73
 
 WO38 is SUPERSEDED under DEC-017. Its two authorized builds completed; the Amendment 1 IPA is `OpenMW-iOS-fast-67` (ID `9730898326`), SHA-256 `9312EA3B1AD757E9CEE8A22785907F93AD9C68A33E02D845210FF5F733660593`. The remote artifact has expired, but the original local IPA was independently hash-verified and preserved; see the final review for its path. No rebuild is needed merely to recover that binary. No worker-authored canonical changes were found. Historical worker capture-preparation notes are not current execution authority.
 
-WO39 is READY with no explicit start directive sent. The existing OpenMW Instrumentor is not running; its last recorded action delivered the WO38 IPA. Latest repository CI is the completed successful August 30 run `33306995685`, with no newer build found at issuance. Do not create a replacement worker, resume WO38 or dispatch CI under this order.
+WO39 is READY with no explicit start directive sent. The previous OpenMW Instrumentor failed remote context compaction while receiving the status-only notice; it did not acknowledge that notice or begin WO39. The user authorized and bootstrapped replacement **OpenMWiOS Astra Worker**, thread `01a0b99a-8578-7503-bc57-a9665b14950f`. Its read-only adoption is accepted and assignment recorded in the [worker continuity record](../Evidence/WO-039/worker-continuity.md). This replaces the prior worker, not the repository or engineering baseline. The new thread is idle, awaiting a separate start directive; scope and budgets are unchanged. Its default cwd is unrelated, so execution must use explicit OpenMW paths. Do not resume WO38 or dispatch CI under WO39. Latest CI verified at issuance remains the completed successful August 30 run `33306995685`.
 
 Codebase Memory's connected query reported no indexed projects during the September 19 review. Historical index loss is not established. Direct source was used; no reindex or configuration migration occurred. Graph unavailability does not block WO39.
 
 ## Latest important evidence
 
 - [READY WO39](../WorkOrders/WO-039.md)
+- [WO39 replacement-worker adoption](../Evidence/WO-039/worker-continuity.md)
 - [DEC-017: repeatable capture contract](../Decisions/DEC-017.md)
 - [WO38 final orchestrator review](../Evidence/WO-038/orchestrator-final-review.md)
 - [Superseded WO38](../WorkOrders/WO-038.md)
@@ -178,4 +179,4 @@ Codebase Memory's connected query reported no indexed projects during the Septem
 4. Use Codebase Memory for structural navigation, then verify implementation facts against checked-out source.
 5. Use the Google ledger only for unresolved historical context.
 
-Current execution state is STOPPED. WO39 is READY, not started. Exact next orchestrator action: send the existing worker the explicit WO39 start directive and record READY -> ACTIVE as a separate activation event. Until then, no engineering execution is authorized.
+Current execution state is STOPPED. WO39 is READY, not started. Exact next orchestrator action: send the adopted replacement worker the explicit WO39 start directive and record READY -> ACTIVE as a separate activation event. Until then, no engineering execution is authorized.
