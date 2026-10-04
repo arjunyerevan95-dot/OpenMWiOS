@@ -24,3 +24,53 @@ index 5ecf63a..bffbc7f 100644
              std::string temp( "_" );
              temp += funcName;    // Mac OS X prepends an underscore on function names
              if ( NSIsSymbolNameDefined( temp.c_str() ) )
+diff --git a/src/osg/Texture2D.cpp b/src/osg/Texture2D.cpp
+--- a/src/osg/Texture2D.cpp
++++ b/src/osg/Texture2D.cpp
+@@ -17,2 +17,13 @@
+ #include <osg/ContextData>
++#include <cstddef>
++#include <cstdio>
++#include <cstdint>
++
++#if defined(__APPLE__) && defined(OPENMW_GL4ES_MANUAL_INIT)
++extern "C" std::uint64_t openmw_ios_renderer_diag_hash(const void*, std::size_t) __attribute__((weak_import));
++extern "C" int openmw_ios_renderer_diag_texture_category(std::uint64_t) __attribute__((weak_import));
++extern "C" void openmw_ios_renderer_diag_register_gl_texture(
++    unsigned int, std::uint64_t, int, const char*, const char*) __attribute__((weak_import));
++#endif
++
+ #include <osg/Notify>
+@@ -22,2 +33,27 @@
++namespace
++{
++    void registerRendererDiagnosticTexture(Texture::TextureObject* textureObject, Image* image)
++    {
++#if defined(__APPLE__) && defined(OPENMW_GL4ES_MANUAL_INIT)
++        if (!textureObject || !image || !image->data() || !openmw_ios_renderer_diag_hash
++            || !openmw_ios_renderer_diag_texture_category || !openmw_ios_renderer_diag_register_gl_texture)
++            return;
++        const std::uint64_t hash
++            = openmw_ios_renderer_diag_hash(image->data(), image->getImageSizeInBytes());
++        const int category = openmw_ios_renderer_diag_texture_category(hash);
++        if (!category)
++            return;
++        char detail[192];
++        std::snprintf(detail, sizeof(detail), "width=%d;height=%d;bytes=%u;texture=%u",
++            image->s(), image->t(), image->getImageSizeInBytes(), textureObject->id());
++        openmw_ios_renderer_diag_register_gl_texture(
++            textureObject->id(), hash, category, image->getFileName().c_str(), detail);
++#else
++        (void)textureObject;
++        (void)image;
++#endif
++    }
++}
++
+ Texture2D::Texture2D():
+             _textureWidth(0),
+@@ -284,2 +320,4 @@ void Texture2D::apply(State& state) const
++        registerRendererDiagnosticTexture(textureObject, image.get());
++
+         // unref image data?
+         if (isSafeToUnrefImageData(state) && image->getDataVariance()==STATIC)

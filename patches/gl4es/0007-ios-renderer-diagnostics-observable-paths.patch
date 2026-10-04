@@ -1,0 +1,180 @@
+diff --git a/src/gl/drawing.c b/src/gl/drawing.c
+--- a/src/gl/drawing.c
++++ b/src/gl/drawing.c
+@@ -438,6 +438,10 @@ if(count>500000) return;
+                 break;
+             }
+         }
++        program_t* wo31_program = glstate->glsl ? glstate->glsl->glprogram : NULL;
++        wo31_diag_fog_applied(wo31_program ? wo31_program->id : 0,
++            wo31_program ? wo31_program->builtin_fog.has : 0, glstate->fog.start,
++            glstate->fog.end, glstate->fog.color);
+         // POLYGON mode as LINE is "intercepted" and drawn using list
+         if(instancecount==1 || hardext.esversion==1) {
+             if(!iindices && !sindices)
+diff --git a/src/gl/gl_lookup.c b/src/gl/gl_lookup.c
+--- a/src/gl/gl_lookup.c
++++ b/src/gl/gl_lookup.c
+@@ -12,6 +12,7 @@
+ #include "oldprogram.h"
+ #include "samplers.h"
+ #include "matrix.h"
++#include "ios_renderer_diag.h"
+ 
+ #include "../glx/hardext.h"
+ 
+@@ -35,6 +36,7 @@ void APIENTRY_GL4ES gl4es_Stub(void *x) {}
+ #endif
+ 
+ void* APIENTRY_GL4ES gl4es_GetProcAddress(const char *name) {
++    wo31_diag_handshake("gl4es_GetProcAddress");
+     DBG(printf("glGetProcAddress(\"%s\")", name);)
+     // generated gles wrappers
+     #include "glesfuncs.inc"
+diff --git a/src/gl/ios_renderer_diag.c b/src/gl/ios_renderer_diag.c
+--- a/src/gl/ios_renderer_diag.c
++++ b/src/gl/ios_renderer_diag.c
+@@ -3,12 +3,19 @@
+ #include <stdio.h>
+ #include <string.h>
+ 
++#if defined(__APPLE__) || defined(WO31_DIAGNOSTIC_TEST_BRIDGE)
+ #if defined(__APPLE__)
+-extern int openmw_ios_renderer_diag_enabled(void) __attribute__((weak_import));
++#define WO31_WEAK_IMPORT __attribute__((weak_import))
++#else
++#define WO31_WEAK_IMPORT
++#endif
++extern int openmw_ios_renderer_diag_enabled(void) WO31_WEAK_IMPORT;
+ extern unsigned int openmw_ios_renderer_diag_record(
+-    const char*, const char*, const char*, const char*) __attribute__((weak_import));
+-extern int openmw_ios_renderer_diag_texture_category(uint64_t) __attribute__((weak_import));
+-extern uint64_t openmw_ios_renderer_diag_hash(const void*, size_t) __attribute__((weak_import));
++    const char*, const char*, const char*, const char*) WO31_WEAK_IMPORT;
++extern int openmw_ios_renderer_diag_texture_category(uint64_t) WO31_WEAK_IMPORT;
++extern int openmw_ios_renderer_diag_texture_category_for_gl_name(unsigned int) WO31_WEAK_IMPORT;
++extern uint64_t openmw_ios_renderer_diag_hash(const void*, size_t) WO31_WEAK_IMPORT;
++#undef WO31_WEAK_IMPORT
+ #endif
+ 
+ typedef struct
+@@ -20,18 +27,37 @@ typedef struct
+ 
+ static wo31_texture_entry wo31_textures[192];
+ static unsigned int wo31_texture_count;
++static unsigned int wo31_fog_received_count;
++static int wo31_handshake_written;
+ 
+-static int available(void)
++static int available_core(void)
+ {
+-#if defined(__APPLE__)
++#if defined(__APPLE__) || defined(WO31_DIAGNOSTIC_TEST_BRIDGE)
+     return openmw_ios_renderer_diag_enabled && openmw_ios_renderer_diag_record
+-        && openmw_ios_renderer_diag_texture_category && openmw_ios_renderer_diag_hash
+         && openmw_ios_renderer_diag_enabled();
+ #else
+     return 0;
+ #endif
+ }
+ 
++static int available_texture(void)
++{
++#if defined(__APPLE__) || defined(WO31_DIAGNOSTIC_TEST_BRIDGE)
++    return available_core() && openmw_ios_renderer_diag_texture_category && openmw_ios_renderer_diag_hash;
++#else
++    return 0;
++#endif
++}
++
++void wo31_diag_handshake(const char* entry)
++{
++    if (wo31_handshake_written || !available_core())
++        return;
++    wo31_handshake_written = 1;
++    openmw_ios_renderer_diag_record("handshake", "gl4es", "bridge-resolved",
++        entry ? entry : "unknown-entry");
++}
++
+ static void hash_string(uint64_t hash, char* output, size_t size)
+ {
+     snprintf(output, size, "%016llx", (unsigned long long)hash);
+@@ -40,10 +66,12 @@ static void hash_string(uint64_t hash, char* output, size_t size)
+ void wo31_diag_texture_upload(unsigned int texture, const void* data, size_t size, unsigned int format,
+     int width, int height, int alpha, int simple_alpha, int complex_alpha)
+ {
+-    if (!available() || !data || !size || !texture)
++    if (!available_texture() || !data || !size || !texture)
+         return;
+     const uint64_t hash = openmw_ios_renderer_diag_hash(data, size);
+-    const int category = openmw_ios_renderer_diag_texture_category(hash);
++    int category = openmw_ios_renderer_diag_texture_category(hash);
++    if (!category && (alpha || simple_alpha > 0 || complex_alpha > 0))
++        category = -1;
+     if (!category)
+         return;
+     unsigned int slot = wo31_texture_count < 192 ? wo31_texture_count++ : 191;
+@@ -67,6 +95,14 @@ void wo31_diag_texture_upload(unsigned int texture, const void* data, size_t siz
+ 
+ int wo31_diag_texture_category_for_name(unsigned int texture)
+ {
++#if defined(__APPLE__) || defined(WO31_DIAGNOSTIC_TEST_BRIDGE)
++    if (available_core() && openmw_ios_renderer_diag_texture_category_for_gl_name)
++    {
++        const int category = openmw_ios_renderer_diag_texture_category_for_gl_name(texture);
++        if (category)
++            return category;
++    }
++#endif
+     for (unsigned int i = 0; i < wo31_texture_count; ++i)
+         if (wo31_textures[i].texture == texture)
+             return wo31_textures[i].category;
+@@ -77,7 +113,7 @@ void wo31_diag_draw(unsigned int program, unsigned int texture, int category, in
+     unsigned int dst_rgb, unsigned int src_alpha, unsigned int dst_alpha, int alpha_test, unsigned int alpha_func,
+     float alpha_ref, int fog, float fog_start, float fog_end, const float* fog_color, int count)
+ {
+-    if (!available() || !category)
++    if (!available_core() || !category)
+         return;
+     char correlation[48];
+     char detail[448];
+@@ -91,8 +127,9 @@ void wo31_diag_draw(unsigned int program, unsigned int texture, int category, in
+ 
+ void wo31_diag_fog_received(unsigned int pname, const float* params)
+ {
+-    if (!available() || !params)
++    if (!available_core() || !params)
+         return;
++    ++wo31_fog_received_count;
+     char detail[256];
+     snprintf(detail, sizeof(detail), "pname=%u;value=%.6g,%.6g,%.6g,%.6g", pname, params[0],
+         pname == 0x0B66 ? params[1] : 0.f, pname == 0x0B66 ? params[2] : 0.f,
+@@ -102,14 +139,14 @@ void wo31_diag_fog_received(unsigned int pname, const float* params)
+ 
+ void wo31_diag_fog_applied(unsigned int program, int has_fog, float start, float end, const float* color)
+ {
+-    if (!available() || !color || !has_fog)
++    if (!available_core() || !color)
+         return;
+     char correlation[48];
+     char detail[320];
+     snprintf(correlation, sizeof(correlation), "program-%u", program);
+     snprintf(detail, sizeof(detail),
+-        "program=%u;has_builtin_fog=%d;start=%.6g;end=%.6g;scale=%.9g;color=%.6g,%.6g,%.6g,%.6g",
+-        program, has_fog, start, end, end != start ? 1.f / (end - start) : 0.f,
++        "program=%u;has_builtin_fog=%d;received_count=%u;start=%.6g;end=%.6g;scale=%.9g;color=%.6g,%.6g,%.6g,%.6g",
++        program, has_fog, wo31_fog_received_count, start, end, end != start ? 1.f / (end - start) : 0.f,
+         color[0], color[1], color[2], color[3]);
+     openmw_ios_renderer_diag_record("r2.applied", "gl4es", correlation, detail);
+ }
+diff --git a/src/gl/ios_renderer_diag.h b/src/gl/ios_renderer_diag.h
+--- a/src/gl/ios_renderer_diag.h
++++ b/src/gl/ios_renderer_diag.h
+@@ -4,6 +4,7 @@
+ #include <stddef.h>
+ #include <stdint.h>
+ 
++void wo31_diag_handshake(const char* entry);
+ void wo31_diag_texture_upload(unsigned int texture, const void* data, size_t size, unsigned int format,
+     int width, int height, int alpha, int simple_alpha, int complex_alpha);
+ int wo31_diag_texture_category_for_name(unsigned int texture);

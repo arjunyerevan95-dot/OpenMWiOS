@@ -1,0 +1,39 @@
+diff --git a/components/sceneutil/stateupdater.cpp b/components/sceneutil/stateupdater.cpp
+--- a/components/sceneutil/stateupdater.cpp
++++ b/components/sceneutil/stateupdater.cpp
+@@ -1,5 +1,7 @@
+ #include "stateupdater.hpp"
+ 
++#include <cstdio>
++
+ #include <osg/Fog>
+ #include <osg/LightModel>
+ #include <osg/PolygonMode>
+@@ -12,6 +14,10 @@
+ #include <components/stereo/multiview.hpp>
+ #include <components/stereo/stereomanager.hpp>
+ 
++#ifdef OPENMW_IOS
++#include <ios/openmw_ios_renderer_diagnostics.h>
++#endif
++
+ namespace SceneUtil
+ {
+     PerViewUniformStateUpdater::PerViewUniformStateUpdater(Resource::SceneManager* sceneManager, int opaqueTextureUnit)
+@@ -151,6 +157,16 @@ namespace SceneUtil
+         fog->setColor(mFogColor);
+         fog->setStart(mFogStart);
+         fog->setEnd(mFogEnd);
++#ifdef OPENMW_IOS
++        if (openmw_ios_renderer_diag_enabled())
++        {
++            char detail[256];
++            std::snprintf(detail, sizeof(detail),
++                "start=%.6g;end=%.6g;color=%.6g,%.6g,%.6g,%.6g",
++                mFogStart, mFogEnd, mFogColor.r(), mFogColor.g(), mFogColor.b(), mFogColor.a());
++            openmw_ios_renderer_diag_record("r2.intent.apply", "openmw", "osg-fog-state", detail);
++        }
++#endif
+     }
+ 
+     void StateUpdater::setAmbientColor(const osg::Vec4f& col)
