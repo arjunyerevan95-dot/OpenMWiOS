@@ -1,0 +1,53 @@
+
+name: Build Morrowind for iOS
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: macos-15
+    timeout-minutes: 360
+
+    steps:
+      - name: Checkout workflow repository
+        uses: actions/checkout@v4
+
+      - name: Checkout OpenMW iOS source
+        run: |
+          git clone https://gitlab.com/duron27/openmw_ios.git source
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Check build tools
+        run: |
+          xcodebuild -version
+          cmake --version
+          git --version
+
+      - name: Make Gradle executable
+        working-directory: source
+        run: chmod +x gradlew
+
+      - name: Build OpenMW for iPhone
+        working-directory: source
+        run: |
+          ./gradlew :composeApp:buildNativeIosDevice \
+            --stacktrace \
+            --info
+
+      - name: Save build diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Morrowind-iOS-build-logs
+          path: |
+            source/composeApp/build/
+          if-no-files-found: warn
