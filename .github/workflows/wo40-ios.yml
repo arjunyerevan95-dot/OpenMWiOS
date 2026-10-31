@@ -33,8 +33,9 @@ jobs:
         run: |
           set -euo pipefail
           test "$(uname -m)" = arm64
-          xcodebuild -version
-          xcodebuild -version | grep -q '^Xcode 27.1$'
+          xcode_version="$(xcodebuild -version)"
+          printf '%s\n' "$xcode_version"
+          [[ "$xcode_version" == $'Xcode 27.1\n'* ]]
           xcrun --sdk iphoneos --show-sdk-version
           git merge-base --is-ancestor 2931be63bd2147e437a2b077ed6c97f563648a0a HEAD
           test -z "$(git diff 2931be63bd2147e437a2b077ed6c97f563648a0a -- ios-deps apps/openmw/mwrender files/shaders)"

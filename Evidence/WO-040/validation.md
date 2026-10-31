@@ -10,4 +10,6 @@ Result: **PASS 132 executable input/layout/profile checks**, plus focused wiring
 
 Also passed: bash -n ios/build.sh; Python AST syntax for both validation scripts; YAML parse and manual workflow event-filter review; git diff --check. Primary build runs the same executable contract under Apple clang before the integrated compilation.
 
+Primary CI stopped before its executable tests/compile because the version-check consumer closed the pipe early. The repaired actual preflight shell was executed locally with a delayed two-line producer: old script exit 141, repaired script exit 0, including real candidate ancestry and graphics-diff checks. This validates the shell repair, not Apple compilation. See report.md for exact run/failure.
+
 Limits: these fixtures do not run UIKit, NSUserDefaults, an SDL device, physical input or the iOS GPU. Actual app relaunch persistence, controls on real hardware, startup/load and device takeover remain pending until the touch checklist is observed. The integrated Apple compile/link/package result will be recorded separately. No stock renderer/performance comparison is required or claimed.
