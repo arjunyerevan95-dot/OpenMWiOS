@@ -1,5 +1,12 @@
 #include "inputmanagerimp.hpp"
 
+#ifdef __APPLE__
+#include <TargetConditionals.h>
+#if TARGET_OS_IPHONE
+#include "../ios/openmw_ios_touch_controls.h"
+#endif
+#endif
+
 #include <osgViewer/ViewerEventHandlers>
 
 #include <components/esm3/esmreader.hpp>
@@ -45,6 +52,9 @@ namespace MWInput
         mInputWrapper->setMouseEventCallback(mMouseManager.get());
         mInputWrapper->setControllerEventCallback(mControllerManager.get());
         mInputWrapper->setSensorEventCallback(mSensorManager.get());
+#if defined(__APPLE__) && TARGET_OS_IPHONE
+        openmw_ios_install_touch_controls(window);
+#endif
     }
 
     void InputManager::clear()
@@ -53,7 +63,12 @@ namespace MWInput
         mControlSwitch->clear();
     }
 
-    InputManager::~InputManager() {}
+    InputManager::~InputManager()
+    {
+#if defined(__APPLE__) && TARGET_OS_IPHONE
+        openmw_ios_shutdown_touch_controls();
+#endif
+    }
 
     void InputManager::update(float dt, bool disableControls, bool disableEvents)
     {
@@ -106,6 +121,9 @@ namespace MWInput
 
     void InputManager::changeInputMode(bool guiMode)
     {
+#if defined(__APPLE__) && TARGET_OS_IPHONE
+        openmw_ios_set_gameplay_mode(!guiMode);
+#endif
         mControllerManager->setGuiCursorEnabled(guiMode);
         mMouseManager->setGuiCursorEnabled(guiMode);
         mGyroManager->setGuiCursorEnabled(guiMode);

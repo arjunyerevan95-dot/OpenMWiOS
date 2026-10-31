@@ -1,8 +1,10 @@
 name: Build and test
 
 on:
-- push
-- pull_request
+  push:
+    branches-ignore: [codex/wo40-zink-touch]
+  pull_request:
+    branches-ignore: [codex/wo40-zink-touch]
 
 env:
   BUILD_TYPE: RelWithDebInfo

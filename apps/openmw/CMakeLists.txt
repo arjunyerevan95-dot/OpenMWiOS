@@ -152,6 +152,7 @@ if(BUILD_OPENMW)
             ios/firstlaunch.cpp
             ios/metalfx.mm
             ios/platform.mm
+            ios/openmw_ios_touch_controls.mm
             ${CMAKE_SOURCE_DIR}/apps/mwiniimporter/importer.cpp
         )
     else()
@@ -162,6 +163,10 @@ if(BUILD_OPENMW)
         )
     endif()
 
+    if (IOS)
+        # Ported UIKit adapter owns its cached UIImages and uses explicit release.
+        set_source_files_properties(ios/openmw_ios_touch_controls.mm PROPERTIES COMPILE_OPTIONS "-fno-objc-arc")
+    endif()
     target_link_libraries(openmw openmw-lib)
 
     # Workaround necessary to ensure osgAnimation::MatrixLinearSampler dynamic casts work under Clang

@@ -22,7 +22,7 @@ Target options: --simulator <name|UDID> | --device <name|UDID>  (default: $DEFAU
 Configuration: --release (optimized, stripped, dSYM) for build, install, run, ipa, upload. default: debug
 Personal values (home-screen name, bundle ID, team, icon, repo server): ios/build.config, see ios/build.config.sample
 
-  build   [simulator|device|both]   build app (both: simulator + device of the configuration), increments build
+  build   [simulator|device|both] [--unsigned]   build app (both: simulator + device of the configuration), increments build
                                     number once. default: simulator
   install [target]                  install current build on target (current: DerivedData/current-<platform>-
                                     <configuration> = CFBundleVersion of the slice's app). no current build -> exit 1
@@ -164,8 +164,14 @@ xcbuild() {
     next_build_number
     generate_project
     echo "==> build $sdk $CONFIG (version $(version), build $BUILD_NUMBER) as \"$APP_NAME\" ($BUNDLE_ID)"
+    local signing=(-allowProvisioningUpdates)
+    if [ -n "$UNSIGNED" ]; then
+        # Credential-free candidate build. Keep the capability file in source;
+        # the eventual sideload signer must decide its provisioning entitlements.
+        signing=(CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY= DEVELOPMENT_TEAM=)
+    fi
     xcodebuild -project "$PROJECT" -scheme OpenMW -configuration "$CONFIG" -sdk "$sdk" \
-        -derivedDataPath "$DERIVED" -allowProvisioningUpdates -quiet \
+        -derivedDataPath "$DERIVED" -quiet "${signing[@]}" \
         MARKETING_VERSION="$(version)" CURRENT_PROJECT_VERSION="$BUILD_NUMBER" \
         OPENMW_BUILD_DIR="$DERIVED/openmw/$CONFIG-$sdk" \
         APP_DISPLAY_NAME="$APP_NAME" PRODUCT_BUNDLE_IDENTIFIER="$BUNDLE_ID" DEVELOPMENT_TEAM="$TEAM_ID" "$@"
@@ -309,7 +315,9 @@ make_ipa() {  # [--unsigned]
     rm -rf "$out/Payload" && mkdir -p "$out/Payload"
     cp -R "$(app_path device)" "$out/Payload/"
     if [ "${1:-}" = --unsigned ]; then
-        codesign --remove-signature "$out/Payload/OpenMW.app"
+        if codesign -d "$out/Payload/OpenMW.app" >/dev/null 2>&1; then
+            codesign --remove-signature "$out/Payload/OpenMW.app"
+        fi
         rm -rf "$out/Payload/OpenMW.app/_CodeSignature" "$out/Payload/OpenMW.app/embedded.mobileprovision"
     fi
     (cd "$out" && rm -f "$name" && zip -qry "$name" Payload && rm -rf Payload)
@@ -432,7 +440,7 @@ allow() {  # <allowed options...>: reject options not valid for this command
 
 case "$command" in
     build)
-        allow --release
+        allow --release --unsigned
         [ ${#POSITIONAL[@]} -le 1 ] || die "usage: $SCRIPT build [simulator|device|both]"
         target=${POSITIONAL[0]:-simulator}
         case "$target" in simulator|device|both) build "$target" ;; *) die "unknown target '$target'" ;; esac ;;

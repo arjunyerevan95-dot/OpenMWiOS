@@ -1,4 +1,6 @@
 #include "platform.hpp"
+#include "openmw_ios_touch_controls.h"
+#include "openmw_ios_touch_state.hpp"
 
 #include <components/debug/debuglog.hpp>
 #include <components/settings/values.hpp>
@@ -12,7 +14,6 @@
 #include <SDL_syswm.h>
 
 #import <AVFAudio/AVFAudio.h>
-#import <CoreText/CoreText.h>
 #import <GameController/GameController.h>
 #import <UIKit/UIKit.h>
 
@@ -24,15 +25,8 @@
 #include <iterator>
 #include <string>
 
-// target of the two-finger tap on the game view
-@interface OMWTwoFingerTap : NSObject
-- (void)tapped:(UITapGestureRecognizer*)recognizer;
-@end
-
 namespace
 {
-    // on-screen controls (system-drawn GCVirtualController) while no keyboard, mouse or game controller is connected
-    GCVirtualController* sTouchController = nil;
     // decided once GameController has reported the devices connected at launch
     bool sDevicesReported = false;
 
@@ -64,148 +58,27 @@ namespace
         return false;
     }
 
-    // the touch controller is a GCController too, but never counts as one
     bool hasGameController()
     {
-        for (GCController* controller in GCController.controllers)
-            if (sTouchController == nil || controller != sTouchController.controller)
-                return true;
-        return false;
+        // Our SDL virtual device is not a GameController-framework device.
+        return GCController.controllers.count != 0;
     }
 
-    // console-style menus unless a keyboard or mouse is connected without a game controller
+    OpenMWIOS::Touch::DevicePolicy inputPolicy()
+    {
+        return OpenMWIOS::Touch::devicePolicy(sDevicesReported,
+            GCKeyboard.coalescedKeyboard != nil, hasUserMouse(), hasGameController());
+    }
+
     bool wantsControllerMenus()
     {
-        const bool keyboardOrMouse = GCKeyboard.coalescedKeyboard != nil || hasUserMouse();
-        return hasGameController() || !keyboardOrMouse;
+        // Touch uses pointer menus so all ordinary menu touches pass through SDL.
+        return inputPolicy().controllerMenus;
     }
 
-    // A button face like the system's A/B/X/Y: a disc with the label cut out. The touch controller draws an element's
-    // path as its face, centered on the origin (y up) and scaled to the button.
-    UIBezierPath* labeledFace(NSString* label)
-    {
-        CTFontRef font = CTFontCreateUIFontForLanguage(kCTFontUIFontEmphasizedSystem, 24, nullptr);
-        CGMutablePathRef glyphs = CGPathCreateMutable();
-        CGFloat x = 0;
-        for (NSUInteger i = 0; i < label.length; ++i)
-        {
-            const UniChar character = [label characterAtIndex:i];
-            CGGlyph glyph;
-            CTFontGetGlyphsForCharacters(font, &character, &glyph, 1);
-            if (CGPathRef path = CTFontCreatePathForGlyph(font, glyph, nullptr))
-            {
-                const CGAffineTransform advance = CGAffineTransformMakeTranslation(x, 0);
-                CGPathAddPath(glyphs, &advance, path);
-                CGPathRelease(path);
-            }
-            x += CTFontGetAdvancesForGlyphs(font, kCTFontOrientationDefault, &glyph, nullptr, 1);
-        }
-        CFRelease(font);
-
-        const CGRect bounds = CGPathGetPathBoundingBox(glyphs);
-        const CGAffineTransform center
-            = CGAffineTransformMakeTranslation(-CGRectGetMidX(bounds), -CGRectGetMidY(bounds));
-        CGPathRef centered = CGPathCreateCopyByTransformingPath(glyphs, &center);
-        CGPathRelease(glyphs);
-
-        UIBezierPath* face = [UIBezierPath bezierPathWithArcCenter:CGPointZero
-                                                            radius:20
-                                                        startAngle:0
-                                                          endAngle:2 * M_PI
-                                                         clockwise:YES];
-        [face appendPath:[UIBezierPath bezierPathWithCGPath:centered]];
-        CGPathRelease(centered);
-        face.usesEvenOddFillRule = YES;
-        return face;
-    }
-
-    // The touch controller has all elements of OpenMW's default controller bindings but sneak, view, game menu and
-    // quicksave (it cannot draw L3, R3, Menu or Home). A two-finger tap opens the game menu, quicksave is Save there.
-    // ponytail: no touch input for sneak and view (upgrade path: more gestures, or app-drawn controls via the hidden
-    // configuration).
     void updateTouchController()
     {
-        const bool wanted
-            = sDevicesReported && GCKeyboard.coalescedKeyboard == nil && !hasUserMouse() && !hasGameController();
-        if (wanted == (sTouchController != nil))
-            return;
-
-        if (!wanted)
-        {
-            [sTouchController disconnect];
-            [sTouchController release];
-            sTouchController = nil;
-            Log(Debug::Info) << "Touch controls off";
-            return;
-        }
-
-        GCVirtualControllerConfiguration* configuration = [[GCVirtualControllerConfiguration alloc] init];
-        configuration.elements = [NSSet setWithArray:@[ GCInputLeftThumbstick, GCInputRightThumbstick, GCInputButtonA,
-            GCInputButtonB, GCInputButtonX, GCInputButtonY, GCInputLeftShoulder, GCInputRightShoulder,
-            GCInputLeftTrigger, GCInputRightTrigger ]];
-        GCVirtualController* controller = [[GCVirtualController alloc] initWithConfiguration:configuration];
-        [configuration release];
-        sTouchController = controller;
-        Log(Debug::Info) << "Touch controls requested";
-        [controller connectWithReplyHandler:^(NSError* error) {
-            dispatch_async(dispatch_get_main_queue(), ^{
-                if (controller != sTouchController)
-                    return; // disconnected meanwhile
-                if (error != nil)
-                {
-                    Log(Debug::Warning) << "Failed to show the touch controls: " << error.description.UTF8String;
-                    [sTouchController release];
-                    sTouchController = nil;
-                    return;
-                }
-                // the names OpenMW's controller menus show in their hints for this controller type
-                NSDictionary<NSString*, NSString*>* labels = @{ GCInputLeftShoulder : @"L1",
-                    GCInputRightShoulder : @"R1", GCInputLeftTrigger : @"L2", GCInputRightTrigger : @"R2" };
-                for (NSString* element in labels)
-                    [controller updateConfigurationForElement:element
-                                                configuration:^GCVirtualControllerElementConfiguration*(
-                                                    GCVirtualControllerElementConfiguration* elementConfiguration) {
-                                                    elementConfiguration.path = labeledFace(labels[element]);
-                                                    return elementConfiguration;
-                                                }];
-                Log(Debug::Info) << "Touch controls on";
-            });
-        }];
-    }
-
-    // the touch controller's undrawn Menu button is SDL's Start button (OpenMW: game menu)
-    void pressStart()
-    {
-        GCVirtualController* controller = sTouchController;
-        if (controller == nil)
-            return;
-        [controller setValue:1 forButtonElement:GCInputButtonMenu];
-        // held across several frames: SDL reads the button state once per frame
-        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, NSEC_PER_SEC / 5), dispatch_get_main_queue(),
-            ^{ [controller setValue:0 forButtonElement:GCInputButtonMenu]; });
-    }
-
-    // adds the two-finger tap recognizer to SDL's window once it exists
-    int addTwoFingerTap(void*, SDL_Event* event)
-    {
-        if (event->type != SDL_WINDOWEVENT)
-            return 0;
-        SDL_SysWMinfo info;
-        SDL_VERSION(&info.version);
-        SDL_Window* window = SDL_GetWindowFromID(event->window.windowID);
-        if (window == nullptr || !SDL_GetWindowWMInfo(window, &info))
-            return 0;
-
-        static OMWTwoFingerTap* target = [[OMWTwoFingerTap alloc] init]; // recognizers do not retain their target
-        UITapGestureRecognizer* tap = [[UITapGestureRecognizer alloc] initWithTarget:target action:@selector(tapped:)];
-        tap.numberOfTouchesRequired = 2;
-        // SDL still gets every touch, without delay
-        tap.cancelsTouchesInView = NO;
-        tap.delaysTouchesEnded = NO;
-        [info.info.uikit.window addGestureRecognizer:tap];
-        [tap release];
-        SDL_DelEventWatch(addTwoFingerTap, nullptr);
-        return 0;
+        openmw_ios_set_touch_enabled(inputPolicy().touch);
     }
 
     // Gamepad-style menus follow the connected devices. ponytail: the window manager saves the switched value to
@@ -231,13 +104,6 @@ namespace
         updateTouchController();
     }
 }
-
-@implementation OMWTwoFingerTap
-- (void)tapped:(UITapGestureRecognizer*)recognizer
-{
-    pressStart();
-}
-@end
 
 void OMW::initIosPlatform()
 {
@@ -288,8 +154,6 @@ void OMW::initIosPlatform()
             sDevicesReported = true;
             updateTouchController();
         });
-        // before SDL_Init: SDL keeps event watches added before its event loop starts
-        SDL_AddEventWatch(addTwoFingerTap, nullptr);
         for (NSString* name in @[ GCKeyboardDidConnectNotification, GCKeyboardDidDisconnectNotification,
                  GCMouseDidConnectNotification, GCMouseDidDisconnectNotification, GCControllerDidConnectNotification,
                  GCControllerDidDisconnectNotification ])
