@@ -9,6 +9,7 @@
 - Last durable decision: [DEC-018](../Decisions/DEC-018.md)
 - Current objective: port our customizable touch controls directly onto pinned joedemo42/OpenMW Zink release v0.52-149 and deliver an integrated unsigned IPA
 - Engineering execution status: **ACTIVE; explicit WO-040 start directive delivered to the assigned worker on 2026-10-31 after separate READY publication**
+- Latest worker checkpoint: receipt demonstrated by its WO40-specific response and completed preflight reads; app reports **waitingOnApproval**. Formal start receipt and implementation/artifact remain pending. Resolve the approval in the existing worker chat; do not duplicate dispatch.
 - Last updated: 2026-10-31
 
 ## Current direction and selected candidate foundation

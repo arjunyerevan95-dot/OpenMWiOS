@@ -43,3 +43,9 @@ Initial state is READY, with no WO40 start directive sent at this checkpoint. Pu
 READY issuance was committed and pushed as `b8bf69b4b73f991a35eecb0029dff812c3e2310b`. At approximately 11:53 UTC, the orchestrator sent `Start WO-040 now` directly to assigned worker `01a0b99a-8578-7503-bc57-a9665b14950f`, naming the canonical file/publication, exact Zink baseline, waived comparison, new checkout guard, closed WO38/39 authority and stop/review protocol. The send returned the same thread ID without error. No model/thinking override was supplied.
 
 WO40 transitions READY -> ACTIVE in a separate canonical commit. Successful delivery does not itself prove worker receipt or technical completion; subsequent acknowledgment and work results must be reported as such. No duplicate directive or CI run was sent by the orchestrator.
+
+## Observed worker receipt / approval checkpoint
+
+Activation was committed/pushed separately as `70dbf9863b64199fca424dec7a05aac21d59725f`. Direct thread inspection shows a new in-progress turn `01a191ce-edc1-7360-b52f-a63a880cb9f7`. The worker responded specifically that it will follow WO40, keep WO38/39 closed and preserve the donor graphics stack; it read the canonical order/decision and checked source tag, candidate path and CI. This establishes receipt beyond transport success. A formal receipt message back to the orchestrator is not yet present.
+
+The app currently reports `active` with `waitingOnApproval`. The pending approval's exact operation is not exposed in the returned turn items, so its cause is not guessed. The user must resolve the tool approval in the existing worker chat; no second directive or replacement worker is needed. The latest repository run list remains unchanged after both canonical publications: no new CI was triggered by issuance/activation. No integrated source/IPA result is claimed.
