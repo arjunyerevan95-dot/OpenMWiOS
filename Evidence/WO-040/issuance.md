@@ -37,3 +37,9 @@ The orchestrator inspected the recipes/platform/SDL patch and our checked-out to
 ## Publication and dispatch
 
 Initial state is READY, with no WO40 start directive sent at this checkpoint. Publish issuance before dispatch; record delivery/activation separately. No source changes or CI dispatch occurred during issuance.
+
+## Subsequent activation — 2026-10-31
+
+READY issuance was committed and pushed as `b8bf69b4b73f991a35eecb0029dff812c3e2310b`. At approximately 11:53 UTC, the orchestrator sent `Start WO-040 now` directly to assigned worker `01a0b99a-8578-7503-bc57-a9665b14950f`, naming the canonical file/publication, exact Zink baseline, waived comparison, new checkout guard, closed WO38/39 authority and stop/review protocol. The send returned the same thread ID without error. No model/thinking override was supplied.
+
+WO40 transitions READY -> ACTIVE in a separate canonical commit. Successful delivery does not itself prove worker receipt or technical completion; subsequent acknowledgment and work results must be reported as such. No duplicate directive or CI run was sent by the orchestrator.
