@@ -1,4 +1,6 @@
-WO-040 primary integrated unsigned arm64 build (1 of maximum 2).
+WO-040 repair integrated unsigned arm64 build (2 of maximum 2).
 Foundation: 2931be63bd2147e437a2b077ed6c97f563648a0a.
 Implementation: 5b55597d9e183a50e7eed4594f9bc1444ec4dd6a.
+Evidenced preflight-only repair: f5514a8cd1ab828b8b45d35dbf3f2d7e7444e94a.
+Primary run 41199873586 failed with a broken pipe; the repaired preflight passed locally.
 No stock renderer build, signing credentials or release publication.
