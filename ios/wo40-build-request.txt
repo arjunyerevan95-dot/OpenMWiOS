@@ -1,0 +1,4 @@
+WO-040 primary integrated unsigned arm64 build (1 of maximum 2).
+Foundation: 2931be63bd2147e437a2b077ed6c97f563648a0a.
+Implementation: 5b55597d9e183a50e7eed4594f9bc1444ec4dd6a.
+No stock renderer build, signing credentials or release publication.
