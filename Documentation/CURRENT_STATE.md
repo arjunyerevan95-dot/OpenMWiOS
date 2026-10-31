@@ -3,13 +3,19 @@
 - Project: OpenMWiOS
 - Canonical ControlPlane branch: `codex/wo29-ios-crash-isolation`
 - Accepted engineering baseline commit: `93f892dd0cf9834259b4cad2045ddb2ef9c53ed9`
-- Active work order: [WO-039](../WorkOrders/WO-039.md) — repeatable renderer capture contract
-- Ready work order: none
-- Last completed/closed work order: [WO-038](../WorkOrders/WO-038.md) — **SUPERSEDED / PARTIAL EXECUTION EVIDENCE ACCEPTED; NO NEW RUNTIME OR RENDERER QUALIFICATION**
-- Last durable decision: [DEC-017](../Decisions/DEC-017.md)
-- Current objective: prove a repeatable, source-backed renderer observation contract before production diagnostic integration or another iPhone build
-- Engineering execution status: **ACTIVE; WO-039 explicit start directive delivered to the adopted replacement worker on 2026-09-19**
-- Last updated: 2026-09-19
+- Active work order: none
+- Ready work order: [WO-040](../WorkOrders/WO-040.md) — customizable touch controls on the Zink iOS foundation
+- Last completed/closed work order: [WO-039](../WorkOrders/WO-039.md) — **SUPERSEDED; INTERRUPTED RECOVERY, NO TECHNICAL COMPLETION ACCEPTED**
+- Last durable decision: [DEC-018](../Decisions/DEC-018.md)
+- Current objective: port our customizable touch controls directly onto pinned joedemo42/OpenMW Zink release v0.52-149 and deliver an integrated unsigned IPA
+- Engineering execution status: **READY; WO-040 start directive not yet sent**
+- Last updated: 2026-10-31
+
+## Current direction and selected candidate foundation
+
+The user authorizes direct control porting onto joedemo42/OpenMW `v0.52-149`, exact source `2931be63bd2147e437a2b077ed6c97f563648a0a` (OpenMW 0.52, Mesa/Zink -> MoltenVK -> Metal). They accept its documented limitations and external rendering/performance reports and explicitly waive the proposed pre-port stock-IPA comparison of the old rendering defects. Do not recreate that prerequisite or resume WO39. This is a user-authorized foundation selection, not independent device qualification or proof of an old bug's cause.
+
+WO40 is READY for direct touch integration, focused tests and bounded unsigned IPA delivery. Preserve the donor renderer/dependencies; adapt only input/platform seams and the minimum build/packaging/branch-scoped CI. New source goes into an isolated candidate checkout and new `codex/wo40-zink-touch` branch, not a destructive rebase of the old repository. The historical qualified runtime remains WO33 `93f892dd0cf9834259b4cad2045ddb2ef9c53ed9`; no integrated Zink runtime has yet been accepted. See [DEC-018](../Decisions/DEC-018.md), [issuance evidence](../Evidence/WO-040/issuance.md), and [WO40](../WorkOrders/WO-040.md) for exact paths, donor commits, boundaries and budget.
 
 ## Highest qualified runtime milestone
 
@@ -68,6 +74,10 @@ The diagnostic system is inactive unless `OPENMW_IOS_RENDERER_DIAGNOSTICS=1` and
 
 ## Current primary engineering boundary
 
+Integrate our UIKit/SDL customizable controls into the selected Zink port without changing its graphics stack. Resolve competing virtual-controller/menu ownership, Pause short/long-press arbitration, safe-area editor/profile behavior, input lifetime and unsigned candidate packaging. No stock renderer validation gate is required. The following rendering history remains evidence, not current execution authority.
+
+## Retained GL4ES renderer findings — historical track
+
 The remaining primary defect is exterior distance/horizon presentation:
 
 - large white or blank regions appear beyond nearby rendered geometry;
@@ -82,7 +92,7 @@ WO35 then proved `sky_blending=1` at view/far distance 7168 on the physical devi
 
 WO36 has now removed the remaining global distance/paging hypothesis. At constant `7168`, enabling distant terrain changed `object_paging` from `0` to `1` without materially changing the target. At `16384`, moderate-distance coverage improved, but the same dark silhouettes, blue band, and pale uncovered region recurred at the farther boundary with a modest observed performance cost. Exact Arm A state was restored; the device remains at `7168`, with no `[Terrain]` override and with the user's retained sky-blending preference.
 
-The next renderer boundary is end-to-end coverage, fog and sky composition. Existing diagnostics prove camera/fog intent and broad program receipt but cannot fully establish photographed pixel ownership or distinguish all coverage/depth/sky failures. Black silhouettes and the blue/white horizon remain distinct until correlated evidence proves convergence. DEC-017 replaces the one-shot attribution prescription with a repeatable capture-contract gate; it does not declare a root cause or authorize a renderer migration.
+The historical next renderer boundary was end-to-end coverage, fog and sky composition. Existing diagnostics prove camera/fog intent and broad program receipt but cannot fully establish photographed pixel ownership or distinguish all coverage/depth/sky failures. Black silhouettes and the blue/white horizon remain distinct until correlated evidence proves convergence. DEC-017 prescribed a repeatable capture-contract gate without declaring a root cause. DEC-018 now supersedes that prescription in favor of the user-authorized external Zink foundation; it does not retroactively solve the old causal question.
 
 WO37 did not reach that attribution. Its original diagnostic failed compiling the native readback loader; Amendment 1 repaired the loader and produced an IPA, but two device sessions recorded `target_request=none` and no target records. Amendment 2 then preserved explicit requests while adding a bounded auto-first-exterior fallback. Local patch reconstruction and validation passed, but Fast run `33265712820` missed the incremental build-state cache and exposed a cold OSG configuration defect: optional host GLib discovery resolved a Homebrew prefix whose `glibconfig.h` was absent. Configuration stopped before OpenMW compilation, so no IPA or renderer evidence exists from the final run.
 
@@ -94,7 +104,7 @@ WO38 Amendment 1 produced Pause candidate `457ab881442302a9bd59435c1878ed4e72f6e
 
 The September 19 review found a measurement/acceptance mismatch: the observer explicitly reports unsupported depth and unobserved sky RTT, projects bounding boxes rather than exact coverage, and samples a bounded one-shot center-pixel sequence. Better startup placement cannot guarantee the missing proof. WO38 is now SUPERSEDED with execution/build evidence partially accepted. Its preserved IPA may supply later observations, but old capture/build authority is closed.
 
-WO39 is ACTIVE for a bounded source/state model, isolated executable capture-controller tests and a feasible repeatable observation/reference plan. It authorizes no production changes or CI; the orchestrator must review the plan's ability to distinguish failure classes before granting integration/build authority. Diagnostic depth/fog/sky visualizations may be designed, clearly separated from ordinary presentation. Explicit-uniform modernization and native GLES3 remain candidates, not accepted solutions.
+WO39 was activated for source/design/isolated fixtures but its execution turn was interrupted during preliminary recovery. It is now SUPERSEDED with no completed technical result accepted. The old capture-contract, explicit-uniform and native-GLES3 investigations are not prerequisites for WO40.
 
 ## Secondary and deferred boundaries
 
@@ -123,13 +133,19 @@ The original WO38 execution stopped correctly at evidence commit `6f3eb24ae9be73
 
 WO38 is SUPERSEDED under DEC-017. Its two authorized builds completed; the Amendment 1 IPA is `OpenMW-iOS-fast-67` (ID `9730898326`), SHA-256 `9312EA3B1AD757E9CEE8A22785907F93AD9C68A33E02D845210FF5F733660593`. The remote artifact has expired, but the original local IPA was independently hash-verified and preserved; see the final review for its path. No rebuild is needed merely to recover that binary. No worker-authored canonical changes were found. Historical worker capture-preparation notes are not current execution authority.
 
-WO39 is ACTIVE. The previous OpenMW Instrumentor failed remote context compaction while receiving the status-only notice; it did not acknowledge that notice or begin WO39. The user authorized and bootstrapped replacement **OpenMWiOS Astra Worker**, thread `01a0b99a-8578-7503-bc57-a9665b14950f`. Its read-only adoption is accepted and assignment recorded in the [worker continuity record](../Evidence/WO-039/worker-continuity.md). The assignment was published separately while READY at `4cd82f9aac0f2561bca8ac5470851287b1c8ee6c`, followed by the explicit start directive on September 19. This replaces the prior worker, not the repository or engineering baseline; scope and budgets are unchanged. Its default cwd is unrelated, so execution must use explicit OpenMW paths and the separate WO39 worktree. Do not resend the directive, resume WO38, duplicate execution or dispatch CI under WO39. Latest CI verified at issuance remains the completed successful August 30 run `33306995685`.
+WO39 is SUPERSEDED. The prior Instrumentor's compaction failure and replacement-worker adoption remain in the [continuity record](../Evidence/WO-039/worker-continuity.md). **OpenMWiOS Astra Worker**, thread `01a0b99a-8578-7503-bc57-a9665b14950f`, received and acknowledged the September 19 start, but its last execution turn is interrupted. October 31 inspection found no WO39 worktree, remote execution branch or completion report. See [closure review](../Evidence/WO-039/orchestrator-final-review.md). No in-flight build is being interrupted. Do not resume WO38/39.
 
-Codebase Memory's connected query reported no indexed projects during the September 19 review. Historical index loss is not established. Direct source was used; no reindex or configuration migration occurred. Graph unavailability does not block WO39.
+WO40 is assigned to that same worker, with settings unchanged and a new explicit-path candidate checkout. It is READY, not yet dispatched at this checkpoint. Latest repository CI is unrelated October 25 `patch-1` run `40158810951`, completed/action_required; last successful iOS project build remains WO38 `33306995685`. No queued/in-progress project workflow was returned. Do not alter the unrelated PR/run.
+
+Codebase Memory's October 31 inventory contains unrelated projects but no OpenMW tree. Historical index loss is not established. Direct source was used; no reindex or configuration migration occurred. Graph unavailability does not block WO40.
 
 ## Latest important evidence
 
-- [ACTIVE WO39](../WorkOrders/WO-039.md)
+- [READY WO40](../WorkOrders/WO-040.md)
+- [DEC-018: Zink foundation and direct control port](../Decisions/DEC-018.md)
+- [WO40 issuance evidence](../Evidence/WO-040/issuance.md)
+- [WO39 closure review](../Evidence/WO-039/orchestrator-final-review.md)
+- [Superseded WO39](../WorkOrders/WO-039.md)
 - [WO39 replacement-worker adoption](../Evidence/WO-039/worker-continuity.md)
 - [DEC-017: repeatable capture contract](../Decisions/DEC-017.md)
 - [WO38 final orchestrator review](../Evidence/WO-038/orchestrator-final-review.md)
@@ -174,9 +190,9 @@ Codebase Memory's connected query reported no indexed projects during the Septem
 ## Recovery path
 
 1. Read this file.
-2. Read ACTIVE [WO-039](../WorkOrders/WO-039.md), [DEC-017](../Decisions/DEC-017.md), and the [WO38 final review](../Evidence/WO-038/orchestrator-final-review.md). Follow only references needed for the current question.
+2. Read [WO-040](../WorkOrders/WO-040.md), [DEC-018](../Decisions/DEC-018.md), and [WO40 issuance findings](../Evidence/WO-040/issuance.md). Follow only references needed for the current question; no old renderer reconstruction is required.
 3. Inspect current Git and CI state before issuing new work.
 4. Use Codebase Memory for structural navigation, then verify implementation facts against checked-out source.
 5. Use the Google ledger only for unresolved historical context.
 
-Current execution state is ACTIVE. The adopted replacement worker has the explicit WO39 start directive. Exact next orchestrator action: review its source-backed capture design and executable fixture evidence when it reaches the mandated review gate. Do not issue another order, resend the start directive, or authorize integration/CI by implication.
+Current execution state is READY. Exact next orchestrator action: publish WO40 and send its explicit start directive to the existing assigned worker, then record READY -> ACTIVE separately. WO38/39 authority remains closed. Workers produce source/evidence only; the orchestrator reviews and accepts the integrated result.
