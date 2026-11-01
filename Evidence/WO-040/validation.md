@@ -19,3 +19,5 @@ Artifact retrieval used `gh run download 41200954123 --repo arjunyerevan95-dot/O
 Independent parsing of the downloaded dSYM's DWARF Mach-O also confirmed arm64 and the same UUID as the app executable.
 
 Limits: these fixtures do not run UIKit, NSUserDefaults, an SDL device, physical input or the iOS GPU. Actual app relaunch persistence, controls on real hardware, startup/load and device takeover remain pending until the touch checklist is observed. Successful compile/link/package does not establish those runtime results. No stock renderer/performance comparison is required or claimed.
+
+Device follow-up on 2026-11-01: after the verified game-data transfer into LiveContainer, the user reported that the candidate "works great" and identified inability to swipe-aim while holding a button such as Attack. This general report supplies initial device feedback. Detailed Menu/editor/persistence/release observations and the exact aiming gesture remain pending. See [device feedback in the report](report.md#device-feedback-after-delivery). The automated tests did not cover a button-owned touch also producing aiming deltas.

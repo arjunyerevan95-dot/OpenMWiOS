@@ -1,6 +1,6 @@
 # WO40 execution report
 
-Status: **implementation/build complete; touch device validation pending**. Stop condition **C**: integrated IPA and evidence are ready for orchestrator review. No runtime acceptance is claimed.
+Status: **implementation/build complete; initial device feedback received; detailed touch validation pending**. The implementation/build handoff stopped at condition C. The first device report and remaining input issue are recorded below for orchestrator review.
 
 The selected Zink source is pinned and the customizable touch port is isolated on codex/wo40-zink-touch. See [manifest](manifest.md), [integration](integration.md) and [validation](validation.md). Graphics/dependency pins and patches are unchanged. Existing repositories/artifacts and canonical files remain intact.
 
@@ -34,4 +34,14 @@ Touch-only device checklist (all observations pending):
 5. Save, force-quit/relaunch and check the saved layout/opacity.
 6. Background/resume while holding input and connect/disconnect an external input device; no duplicate controller/menu action or stuck input.
 
-Device validation: **pending**. User-waived old-renderer/performance comparison remains waived. No runtime baseline is advanced by this worker.
+Device validation: **initial positive user report with a held-button aiming issue**. The checklist above describes the requested checks. Individual results for Menu/editor/persistence/interruption have yet to be supplied.
+
+## Device feedback after delivery
+
+On 2026-11-01, the user installed the delivered candidate in LiveContainer and reached the app's game-data prompt. At the user's request, the worker copied the PC Steam Morrowind game-data contents to the selected guest container's `Documents/Data` and `Morrowind.ini` to `Documents/Config` over the paired iPhone's Wi-Fi connection. All 7,219 files (1,118,314,608 bytes) matched source SHA-1 digests on the phone. The six ESM/BSA files and INI were checked again after publication to the final paths. The temporary import directories were removed after the verified import. The game data stays on the user's PC and phone.
+
+The user then reported, "It works great now," and requested publication to GitHub. They also reported, "when I have a certain button like attack button held I can't swipe to aim." This establishes a positive general device observation and a specific input complaint. It leaves the individual checklist results open.
+
+Read-only source triage found a concrete same-finger limitation. `Ownership::begin` in `apps/openmw/ios/openmw_ios_touch_model.hpp` assigns a touch beginning on a button to `Role::Button`. `touchesMoved:withEvent:` in `apps/openmw/ios/openmw_ios_touch_controls.mm` emits relative mouse movement only for `Role::Look`. A button touch's movement therefore produces no aiming deltas. A separate touch can acquire `Role::Look`; the report still needs clarification about whether the intended aim gesture uses the Attack finger, a second finger, or both. Root cause for a second-finger failure has yet to be established.
+
+This publication records device feedback and source triage. The delivered code/IPA remains at f4d9f9d8d6bcba1b3bc59201724aab62627aaa4e. CURRENT_STATE and the orchestrator's build review close WO40 with no READY/ACTIVE order and 2/2 macOS runs consumed. A repair requires the orchestrator's next order/amendment and explicit start directive. User-waived old-renderer/performance comparison remains waived. Runtime acceptance is reserved for the orchestrator.
