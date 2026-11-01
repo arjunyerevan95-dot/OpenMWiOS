@@ -3,20 +3,20 @@
 - Project: OpenMWiOS
 - Canonical ControlPlane branch: `codex/wo29-ios-crash-isolation`
 - Accepted engineering baseline commit: `93f892dd0cf9834259b4cad2045ddb2ef9c53ed9`
-- Active work order: [WO-040](../WorkOrders/WO-040.md) — customizable touch controls on the Zink iOS foundation
+- Active work order: none
 - Ready work order: none
-- Last completed/closed work order: [WO-039](../WorkOrders/WO-039.md) — **SUPERSEDED; INTERRUPTED RECOVERY, NO TECHNICAL COMPLETION ACCEPTED**
+- Last completed/closed work order: [WO-040](../WorkOrders/WO-040.md) — **ACCEPTED for implementation/build delivery only (stop C); device validation pending**
 - Last durable decision: [DEC-018](../Decisions/DEC-018.md)
-- Current objective: port our customizable touch controls directly onto pinned joedemo42/OpenMW Zink release v0.52-149 and deliver an integrated unsigned IPA
-- Engineering execution status: **ACTIVE; explicit WO-040 start directive delivered to the assigned worker on 2026-10-31 after separate READY publication**
-- Latest worker checkpoint: **formal start receipt received; execution in progress**. Worker verified the pinned tag and completed the isolated candidate clone. The latest thread snapshot has no pending-approval flag. No integrated source/IPA result is accepted; do not duplicate dispatch.
-- Last updated: 2026-10-31
+- Current objective: collect touch-only iPhone observations on the delivered Zink Touch IPA; no source or build work is authorized.
+- Engineering execution status: **STOPPED; worker handed off the verified IPA, 2/2 builds consumed, no READY or ACTIVE order**
+- Latest build candidate: `f4d9f9d8d6bcba1b3bc59201724aab62627aaa4e`; [artifact 13044247922](https://github.com/arjunyerevan95-dot/OpenMWiOS/actions/runs/41200954123/artifacts/13044247922), [orchestrator review](../Evidence/WO-040/orchestrator-build-review.md). Not the device-qualified runtime baseline.
+- Last updated: 2026-11-01
 
 ## Current direction and selected candidate foundation
 
 The user authorizes direct control porting onto joedemo42/OpenMW `v0.52-149`, exact source `2931be63bd2147e437a2b077ed6c97f563648a0a` (OpenMW 0.52, Mesa/Zink -> MoltenVK -> Metal). They accept its documented limitations and external rendering/performance reports and explicitly waive the proposed pre-port stock-IPA comparison of the old rendering defects. Do not recreate that prerequisite or resume WO39. This is a user-authorized foundation selection, not independent device qualification or proof of an old bug's cause.
 
-WO40 is ACTIVE for direct touch integration, focused tests and bounded unsigned IPA delivery. Preserve the donor renderer/dependencies; adapt only input/platform seams and the minimum build/packaging/branch-scoped CI. New source goes into an isolated candidate checkout and new `codex/wo40-zink-touch` branch, not a destructive rebase of the old repository. The historical qualified runtime remains WO33 `93f892dd0cf9834259b4cad2045ddb2ef9c53ed9`; no integrated Zink runtime has yet been accepted. See [DEC-018](../Decisions/DEC-018.md), [issuance evidence](../Evidence/WO-040/issuance.md), and [WO40](../WorkOrders/WO-040.md) for exact paths, donor commits, boundaries and budget.
+WO40 delivered the integrated unsigned `OpenMW Zink Touch` IPA (iOS 18+, `org.openmw.ios.zinktouch`). The implementation, tests and package are accepted for device testing, not as a physical-device runtime result. The verified bytes, artifact links and outstanding observations are in the [build review](../Evidence/WO-040/orchestrator-build-review.md). The historical qualified runtime remains WO33 `93f892dd0cf9834259b4cad2045ddb2ef9c53ed9`.
 
 ## Highest qualified runtime milestone
 
@@ -37,7 +37,7 @@ This is a qualified Fast Development runtime baseline, not a Full Qualification 
 
 WO34, WO35, and WO36 did not advance this milestone. WO34's wider terrain-radius candidate produced no material visual change. WO35 proved sky blending active but left the blue/white cutoff materially present. WO36 proved distant terrain/object paging and `16384` view distance only move the same boundary farther away. None made an accepted product change. The accepted source/artifact baseline remains WO33 commit `93f892dd0cf9834259b4cad2045ddb2ef9c53ed9`.
 
-## Accepted candidate
+## Last device-qualified candidate (WO33, legacy GL4ES)
 
 - OpenMW: `f4bec41444214a7903bebd178389ca22ca13f646` (0.51.0)
 - SDL: 2.32.10 / `5d249570393f7a37e037abf22cd6012a4cc56a71`
@@ -75,7 +75,7 @@ The diagnostic system is inactive unless `OPENMW_IOS_RENDERER_DIAGNOSTICS=1` and
 
 ## Current primary engineering boundary
 
-Integrate our UIKit/SDL customizable controls into the selected Zink port without changing its graphics stack. Resolve competing virtual-controller/menu ownership, Pause short/long-press arbitration, safe-area editor/profile behavior, input lifetime and unsigned candidate packaging. No stock renderer validation gate is required. The following rendering history remains evidence, not current execution authority.
+The remaining question is whether the integrated UIKit/SDL controls work on the physical iPhone as they did in fixtures: launch/load, single-action short Menu, editor-only long Menu, layout/opacity persistence and release on interruption or device takeover. Use the delivered IPA. Do not rebuild or reopen the waived renderer/performance comparison. The following rendering history is not current execution authority.
 
 ## Retained GL4ES renderer findings — historical track
 
@@ -136,13 +136,14 @@ WO38 is SUPERSEDED under DEC-017. Its two authorized builds completed; the Amend
 
 WO39 is SUPERSEDED. The prior Instrumentor's compaction failure and replacement-worker adoption remain in the [continuity record](../Evidence/WO-039/worker-continuity.md). **OpenMWiOS Astra Worker**, thread `01a0b99a-8578-7503-bc57-a9665b14950f`, received and acknowledged the September 19 start, but its last execution turn is interrupted. October 31 inspection found no WO39 worktree, remote execution branch or completion report. See [closure review](../Evidence/WO-039/orchestrator-final-review.md). No in-flight build is being interrupted. Do not resume WO38/39.
 
-WO40 is assigned to that same worker, with settings unchanged and a new explicit-path candidate checkout. READY publication `b8bf69b4b73f991a35eecb0029dff812c3e2310b` preceded the explicit direct start on October 31 at approximately 11:53 UTC; it is now ACTIVE. Delivery returned the correct worker thread without error; acknowledgment and execution results are separate evidence. Latest repository CI at issuance is unrelated October 25 `patch-1` run `40158810951`, completed/action_required; last successful iOS project build remains WO38 `33306995685`. No queued/in-progress project workflow was returned. Do not alter the unrelated PR/run.
+WO40 READY publication `b8bf69b4b73f991a35eecb0029dff812c3e2310b` preceded its October 31 explicit start. The same worker stopped at condition C. Primary CI `41199873586` failed in the runner-version pipeline; repair `41200954123` passed the executable tests, compile/link, packaging and upload. Final evidence `d24d65cdae7c580fea5cc4a833f26ffee37c95c6` changes only evidence relative to built source `f4d9f9d8d6bcba1b3bc59201724aab62627aaa4e`. No third run, new work order or runtime-baseline advance.
 
 Codebase Memory's October 31 inventory contains unrelated projects but no OpenMW tree. Historical index loss is not established. Direct source was used; no reindex or configuration migration occurred. Graph unavailability does not block WO40.
 
 ## Latest important evidence
 
-- [ACTIVE WO40](../WorkOrders/WO-040.md)
+- [Accepted WO40 build delivery](../WorkOrders/WO-040.md)
+- [WO40 orchestrator build review and device handoff](../Evidence/WO-040/orchestrator-build-review.md)
 - [DEC-018: Zink foundation and direct control port](../Decisions/DEC-018.md)
 - [WO40 issuance evidence](../Evidence/WO-040/issuance.md)
 - [WO39 closure review](../Evidence/WO-039/orchestrator-final-review.md)
@@ -191,9 +192,9 @@ Codebase Memory's October 31 inventory contains unrelated projects but no OpenMW
 ## Recovery path
 
 1. Read this file.
-2. Read [WO-040](../WorkOrders/WO-040.md), [DEC-018](../Decisions/DEC-018.md), and [WO40 issuance findings](../Evidence/WO-040/issuance.md). Follow only references needed for the current question; no old renderer reconstruction is required.
+2. Read the [WO40 build review and device handoff](../Evidence/WO-040/orchestrator-build-review.md), [WO-040](../WorkOrders/WO-040.md) and [DEC-018](../Decisions/DEC-018.md). No old renderer reconstruction is required.
 3. Inspect current Git and CI state before issuing new work.
 4. Use Codebase Memory for structural navigation, then verify implementation facts against checked-out source.
 5. Use the Google ledger only for unresolved historical context.
 
-Current execution state is ACTIVE. Exact next orchestrator action: review WO40's integration/build report and touch-device status when the existing worker reaches its handoff gate. Do not resend its start directive, duplicate execution or issue overlapping work. WO38/39 authority remains closed. Workers produce source/evidence only; the orchestrator reviews and accepts the integrated result.
+Current execution state is STOPPED. Next orchestrator action: review the user's physical-device touch observations against this exact build. No new engineering work or build is authorized. Any repair or subsequent scope requires an issued READY order/amendment and explicit directive.
