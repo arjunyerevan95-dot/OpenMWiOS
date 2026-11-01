@@ -5,9 +5,9 @@
 - Accepted engineering baseline commit: `93f892dd0cf9834259b4cad2045ddb2ef9c53ed9`
 - Active work order: none
 - Ready work order: none
-- Last completed/closed work order: [WO-040](../WorkOrders/WO-040.md) — **ACCEPTED for implementation/build delivery only (stop C); device validation pending**
+- Last completed/closed work order: [WO-040](../WorkOrders/WO-040.md) — **ACCEPTED for implementation/build delivery (stop C); initial iPhone gameplay reported, detailed control checks incomplete**
 - Last durable decision: [DEC-018](../Decisions/DEC-018.md)
-- Current objective: collect touch-only iPhone observations on the delivered Zink Touch IPA; no source or build work is authorized.
+- Current objective: retain the working Zink Touch build and track the confirmed same-finger Attack/aim limitation; no source or build work is authorized.
 - Engineering execution status: **STOPPED; worker handed off the verified IPA, 2/2 builds consumed, no READY or ACTIVE order**
 - Latest build candidate: `f4d9f9d8d6bcba1b3bc59201724aab62627aaa4e`; [artifact 13044247922](https://github.com/arjunyerevan95-dot/OpenMWiOS/actions/runs/41200954123/artifacts/13044247922), [orchestrator review](../Evidence/WO-040/orchestrator-build-review.md). Not the device-qualified runtime baseline.
 - Last updated: 2026-11-01
@@ -16,7 +16,7 @@
 
 The user authorizes direct control porting onto joedemo42/OpenMW `v0.52-149`, exact source `2931be63bd2147e437a2b077ed6c97f563648a0a` (OpenMW 0.52, Mesa/Zink -> MoltenVK -> Metal). They accept its documented limitations and external rendering/performance reports and explicitly waive the proposed pre-port stock-IPA comparison of the old rendering defects. Do not recreate that prerequisite or resume WO39. This is a user-authorized foundation selection, not independent device qualification or proof of an old bug's cause.
 
-WO40 delivered the integrated unsigned `OpenMW Zink Touch` IPA (iOS 18+, `org.openmw.ios.zinktouch`). The implementation, tests and package are accepted for device testing, not as a physical-device runtime result. The verified bytes, artifact links and outstanding observations are in the [build review](../Evidence/WO-040/orchestrator-build-review.md). The historical qualified runtime remains WO33 `93f892dd0cf9834259b4cad2045ddb2ef9c53ed9`.
+WO40 delivered the integrated unsigned `OpenMW Zink Touch` IPA (iOS 18+, `org.openmw.ios.zinktouch`). The [build review](../Evidence/WO-040/orchestrator-build-review.md) identifies the verified bytes. The [subsequent device review](../Evidence/WO-040/orchestrator-device-feedback.md) records the user's positive LiveContainer gameplay report and one specific touch limitation. It is not full control qualification. The historical qualified runtime remains WO33 `93f892dd0cf9834259b4cad2045ddb2ef9c53ed9`.
 
 ## Highest qualified runtime milestone
 
@@ -75,7 +75,7 @@ The diagnostic system is inactive unless `OPENMW_IOS_RENDERER_DIAGNOSTICS=1` and
 
 ## Current primary engineering boundary
 
-The remaining question is whether the integrated UIKit/SDL controls work on the physical iPhone as they did in fixtures: launch/load, single-action short Menu, editor-only long Menu, layout/opacity persistence and release on interruption or device takeover. Use the delivered IPA. Do not rebuild or reopen the waived renderer/performance comparison. The following rendering history is not current execution authority.
+The user reports working gameplay on the iPhone, but dragging the finger already holding Attack does not aim. The shipped input code assigns that touch to the button and only sends camera movement for a look touch. A separate look finger was not reported broken. Single-action short Menu, editor-only long Menu, layout/opacity persistence and release on interruption or controller takeover remain individually unverified on this candidate. Do not rebuild or reopen the waived renderer/performance comparison. The following rendering history is not current execution authority.
 
 ## Retained GL4ES renderer findings — historical track
 
@@ -142,6 +142,7 @@ Codebase Memory's October 31 inventory contains unrelated projects but no OpenMW
 
 ## Latest important evidence
 
+- [WO40 first iPhone gameplay feedback and same-finger Attack/aim triage](../Evidence/WO-040/orchestrator-device-feedback.md)
 - [Accepted WO40 build delivery](../WorkOrders/WO-040.md)
 - [WO40 orchestrator build review and device handoff](../Evidence/WO-040/orchestrator-build-review.md)
 - [DEC-018: Zink foundation and direct control port](../Decisions/DEC-018.md)
@@ -192,9 +193,9 @@ Codebase Memory's October 31 inventory contains unrelated projects but no OpenMW
 ## Recovery path
 
 1. Read this file.
-2. Read the [WO40 build review and device handoff](../Evidence/WO-040/orchestrator-build-review.md), [WO-040](../WorkOrders/WO-040.md) and [DEC-018](../Decisions/DEC-018.md). No old renderer reconstruction is required.
+2. Read the [WO40 device feedback](../Evidence/WO-040/orchestrator-device-feedback.md), [build review](../Evidence/WO-040/orchestrator-build-review.md), [WO-040](../WorkOrders/WO-040.md) and [DEC-018](../Decisions/DEC-018.md). No old renderer reconstruction is required.
 3. Inspect current Git and CI state before issuing new work.
 4. Use Codebase Memory for structural navigation, then verify implementation facts against checked-out source.
 5. Use the Google ledger only for unresolved historical context.
 
-Current execution state is STOPPED. Next orchestrator action: review the user's physical-device touch observations against this exact build. No new engineering work or build is authorized. Any repair or subsequent scope requires an issued READY order/amendment and explicit directive.
+Current execution state is STOPPED. Initial physical-device feedback has been reviewed. The identified candidate for a subsequent touch order is same-finger Attack drag-to-aim; WO40 remains closed. No new engineering work or build is authorized without a canonical READY order and explicit start.
