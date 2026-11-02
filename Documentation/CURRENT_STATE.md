@@ -7,7 +7,7 @@
 - Ready work order: [WO-041 — same-finger Attack drag-to-aim](../WorkOrders/WO-041.md) (issued; not started)
 - Last completed/closed work order: [WO-040](../WorkOrders/WO-040.md) — **ACCEPTED for implementation/build delivery (stop C); initial iPhone gameplay reported, detailed control checks incomplete**
 - Last durable decision: [DEC-018](../Decisions/DEC-018.md)
-- Current objective: enable dragging the thumb holding Attack to aim, while preserving the working Zink Touch build. The separate report of slight input lag is unmeasured; no general latency changes are in scope.
+- Current objective: enable dragging the thumb holding Attack to aim, while preserving the working Zink Touch build. The user separately feels slight lag when swiping empty space to turn the camera; the delay is unmeasured and no general latency changes are in scope.
 - Engineering execution status: **STOPPED; WO-041 READY, awaiting explicit start. WO-040 is closed.**
 - Latest build candidate: `f4d9f9d8d6bcba1b3bc59201724aab62627aaa4e`; [artifact 13044247922](https://github.com/arjunyerevan95-dot/OpenMWiOS/actions/runs/41200954123/artifacts/13044247922), [orchestrator review](../Evidence/WO-040/orchestrator-build-review.md). Not the device-qualified runtime baseline.
 - Last updated: 2026-11-02
