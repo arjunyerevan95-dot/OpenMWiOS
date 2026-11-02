@@ -4,13 +4,13 @@
 - Canonical ControlPlane branch: `codex/wo29-ios-crash-isolation`
 - Accepted engineering baseline commit: `93f892dd0cf9834259b4cad2045ddb2ef9c53ed9`
 - Active work order: none
-- Ready work order: none
+- Ready work order: [WO-041 — same-finger Attack drag-to-aim](../WorkOrders/WO-041.md) (issued; not started)
 - Last completed/closed work order: [WO-040](../WorkOrders/WO-040.md) — **ACCEPTED for implementation/build delivery (stop C); initial iPhone gameplay reported, detailed control checks incomplete**
 - Last durable decision: [DEC-018](../Decisions/DEC-018.md)
-- Current objective: retain the working Zink Touch build and track the confirmed same-finger Attack/aim limitation; no source or build work is authorized.
-- Engineering execution status: **STOPPED; worker handed off the verified IPA, 2/2 builds consumed, no READY or ACTIVE order**
+- Current objective: enable dragging the thumb holding Attack to aim, while preserving the working Zink Touch build. The separate report of slight input lag is unmeasured; no general latency changes are in scope.
+- Engineering execution status: **STOPPED; WO-041 READY, awaiting explicit start. WO-040 is closed.**
 - Latest build candidate: `f4d9f9d8d6bcba1b3bc59201724aab62627aaa4e`; [artifact 13044247922](https://github.com/arjunyerevan95-dot/OpenMWiOS/actions/runs/41200954123/artifacts/13044247922), [orchestrator review](../Evidence/WO-040/orchestrator-build-review.md). Not the device-qualified runtime baseline.
-- Last updated: 2026-11-01
+- Last updated: 2026-11-02
 
 ## Current direction and selected candidate foundation
 
@@ -75,7 +75,7 @@ The diagnostic system is inactive unless `OPENMW_IOS_RENDERER_DIAGNOSTICS=1` and
 
 ## Current primary engineering boundary
 
-The user reports working gameplay on the iPhone, but dragging the finger already holding Attack does not aim. The shipped input code assigns that touch to the button and only sends camera movement for a look touch. A separate look finger was not reported broken. Single-action short Menu, editor-only long Menu, layout/opacity persistence and release on interruption or controller takeover remain individually unverified on this candidate. Do not rebuild or reopen the waived renderer/performance comparison. The following rendering history is not current execution authority.
+The user reports working gameplay on the iPhone, but dragging the finger already holding Attack does not aim. The shipped input code assigns that touch to the button and only sends camera movement for a look touch. A separate look finger was not reported broken. Single-action short Menu, editor-only long Menu, layout/opacity persistence and release on interruption or controller takeover remain individually unverified on this candidate. WO-041 defines the input-only follow-up and its build limit after start. The waived renderer/performance comparison stays closed. The following rendering history is not current execution authority.
 
 ## Retained GL4ES renderer findings — historical track
 
@@ -193,9 +193,9 @@ Codebase Memory's October 31 inventory contains unrelated projects but no OpenMW
 ## Recovery path
 
 1. Read this file.
-2. Read the [WO40 device feedback](../Evidence/WO-040/orchestrator-device-feedback.md), [build review](../Evidence/WO-040/orchestrator-build-review.md), [WO-040](../WorkOrders/WO-040.md) and [DEC-018](../Decisions/DEC-018.md). No old renderer reconstruction is required.
+2. Read [WO-041](../WorkOrders/WO-041.md) and its linked WO40 device feedback, build handoff and foundation decision. No old renderer reconstruction is required.
 3. Inspect current Git and CI state before issuing new work.
 4. Use Codebase Memory for structural navigation, then verify implementation facts against checked-out source.
 5. Use the Google ledger only for unresolved historical context.
 
-Current execution state is STOPPED. Initial physical-device feedback has been reviewed. The identified candidate for a subsequent touch order is same-finger Attack drag-to-aim; WO40 remains closed. No new engineering work or build is authorized without a canonical READY order and explicit start.
+Current execution state is STOPPED. Next orchestrator action: start the existing READY WO-041 by explicit directive to the existing worker. No source change or build has been started for WO-041.
