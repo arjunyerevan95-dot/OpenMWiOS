@@ -72,6 +72,26 @@ namespace OpenMWIOS::Touch
         std::array<Button, ActionCount> buttons;
     };
 
+    constexpr std::uint32_t ProfileVersion = 1;
+
+    struct NormalizedControl
+    {
+        // Center is normalized to the current safe-area rectangle. Radius is
+        // normalized to its short side so profiles remain portable across
+        // iPhone/iPad sizes and orientations.
+        Point center;
+        float radius = 0.f;
+    };
+
+    struct ControlProfile
+    {
+        std::uint32_t version = ProfileVersion;
+        bool customized = false;
+        float idleOpacity = 0.20f;
+        float movementRadius = 0.f;
+        std::array<NormalizedControl, ActionCount> buttons{};
+    };
+
     inline float clamp(float value, float minimum, float maximum)
     {
         return std::max(minimum, std::min(value, maximum));
@@ -141,6 +161,79 @@ namespace OpenMWIOS::Touch
             };
         }
         return layout;
+    }
+
+    inline Point normalizedPoint(const Layout& layout, Point point)
+    {
+        const float contentWidth = std::max(layout.width - layout.safeArea.left - layout.safeArea.right, 1.f);
+        const float contentHeight = std::max(layout.height - layout.safeArea.top - layout.safeArea.bottom, 1.f);
+        return { (point.x - layout.safeArea.left) / contentWidth,
+            (point.y - layout.safeArea.top) / contentHeight };
+    }
+
+    inline Point denormalizedPoint(const Layout& layout, Point point)
+    {
+        const float contentWidth = std::max(layout.width - layout.safeArea.left - layout.safeArea.right, 1.f);
+        const float contentHeight = std::max(layout.height - layout.safeArea.top - layout.safeArea.bottom, 1.f);
+        return { layout.safeArea.left + point.x * contentWidth, layout.safeArea.top + point.y * contentHeight };
+    }
+
+    inline float safeShortSide(const Layout& layout)
+    {
+        return std::max(std::min(layout.width - layout.safeArea.left - layout.safeArea.right,
+                            layout.height - layout.safeArea.top - layout.safeArea.bottom),
+            1.f);
+    }
+
+    inline ControlProfile profileFromLayout(const Layout& layout)
+    {
+        ControlProfile profile;
+        const float shortSide = safeShortSide(layout);
+        profile.movementRadius = layout.movementRadius / shortSide;
+        for (std::size_t index = 0; index < ActionCount; ++index)
+        {
+            profile.buttons[index].center = normalizedPoint(layout, layout.buttons[index].bounds.center);
+            profile.buttons[index].radius = layout.buttons[index].bounds.radius / shortSide;
+        }
+        return profile;
+    }
+
+    inline void clampCircleToSafeArea(Circle& circle, const Layout& layout, float minimumRadius = 18.f)
+    {
+        const float maximumRadius = safeShortSide(layout) * 0.24f;
+        circle.radius = clamp(circle.radius, minimumRadius, maximumRadius);
+        circle.center.x = clamp(circle.center.x, layout.safeArea.left + circle.radius,
+            layout.width - layout.safeArea.right - circle.radius);
+        circle.center.y = clamp(circle.center.y, layout.safeArea.top + circle.radius,
+            layout.height - layout.safeArea.bottom - circle.radius);
+    }
+
+    inline void applyProfile(Layout& layout, const ControlProfile& profile)
+    {
+        if (!profile.customized || profile.version != ProfileVersion)
+            return;
+        const float shortSide = safeShortSide(layout);
+        layout.movementRadius = clamp(profile.movementRadius * shortSide, 36.f, shortSide * 0.24f);
+        for (std::size_t index = 0; index < ActionCount; ++index)
+        {
+            layout.buttons[index].bounds.center = denormalizedPoint(layout, profile.buttons[index].center);
+            layout.buttons[index].bounds.radius = profile.buttons[index].radius * shortSide;
+            // Menu is the only way back into the editor, so retain a slightly
+            // larger minimum and never permit it outside the safe area.
+            const float minimumRadius = layout.buttons[index].action == Action::Pause ? 24.f : 18.f;
+            clampCircleToSafeArea(layout.buttons[index].bounds, layout, minimumRadius);
+        }
+    }
+
+    inline void updateProfileButton(ControlProfile& profile, const Layout& layout, std::size_t index)
+    {
+        if (index >= ActionCount)
+            return;
+        profile.version = ProfileVersion;
+        profile.customized = true;
+        profile.buttons[index].center = normalizedPoint(layout, layout.buttons[index].bounds.center);
+        profile.buttons[index].radius = layout.buttons[index].bounds.radius / safeShortSide(layout);
+        profile.movementRadius = layout.movementRadius / safeShortSide(layout);
     }
 
     inline bool visibleInMode(Action action, bool gameplayMode)
