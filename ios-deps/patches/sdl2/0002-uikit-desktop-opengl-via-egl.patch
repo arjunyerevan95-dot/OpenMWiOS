@@ -133,7 +133,7 @@ diff -ruN a/src/video/uikit/SDL_uikitegl.h b/src/video/uikit/SDL_uikitegl.h
 diff -ruN a/src/video/uikit/SDL_uikitegl.m b/src/video/uikit/SDL_uikitegl.m
 --- a/src/video/uikit/SDL_uikitegl.m	1970-01-01 01:00:00
 +++ b/src/video/uikit/SDL_uikitegl.m	2026-09-30 07:36:35
-@@ -0,0 +1,472 @@
+@@ -0,0 +1,473 @@
 +/*
 +  Simple DirectMedia Layer
 +  Copyright (C) 1997-2025 Sam Lantinga <slouken@libsdl.org>
@@ -176,6 +176,7 @@ diff -ruN a/src/video/uikit/SDL_uikitegl.m b/src/video/uikit/SDL_uikitegl.m
 +#include "SDL_uikitwindow.h"
 +#include "../SDL_egl_c.h"
 +#include "SDL_opengl.h"
++#include "SDL_hints.h"
 +
 +#include <mach/vm_page_size.h>
 +
