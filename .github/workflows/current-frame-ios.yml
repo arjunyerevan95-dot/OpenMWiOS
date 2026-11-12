@@ -44,7 +44,7 @@ jobs:
         shell: bash
         env:
           CXX: clang++
-        run: python3 validation/wo40/run_tests.py
+        run: python3 validation/current-frame/run_touch_tests.py
       - name: Integrated device build
         shell: bash
         run: |

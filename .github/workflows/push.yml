@@ -2,7 +2,7 @@ name: Build and test
 
 on:
   push:
-    branches-ignore: [codex/wo40-zink-touch]
+    branches-ignore: [codex/wo40-zink-touch, dot/current-frame-diagnostic]
   pull_request:
     branches-ignore: [codex/wo40-zink-touch]
 

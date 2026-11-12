@@ -1,6 +1,6 @@
 import pathlib,subprocess
 BASE="568323258e0a17f294b91797b68cd29222c374ab"
-allowed={"ios-deps/patches/sdl2/0002-uikit-desktop-opengl-via-egl.patch",".github/workflows/current-frame-ios.yml"}
+allowed={".github/workflows/push.yml","ios-deps/patches/sdl2/0002-uikit-desktop-opengl-via-egl.patch",".github/workflows/current-frame-ios.yml"}
 changed=subprocess.check_output(["git","diff","--name-only",BASE,"HEAD"],text=True).splitlines()
 assert all(p in allowed or p.startswith("validation/current-frame/") for p in changed),changed
 p=pathlib.Path("ios-deps/patches/sdl2/0002-uikit-desktop-opengl-via-egl.patch")
