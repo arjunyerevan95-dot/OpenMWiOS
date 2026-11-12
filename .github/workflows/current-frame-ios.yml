@@ -1,0 +1,76 @@
+name: OpenMW current-frame diagnostic
+on:
+  push:
+    branches: [dot/current-frame-diagnostic]
+    paths:
+      - 'ios-deps/patches/sdl2/0002-uikit-desktop-opengl-via-egl.patch'
+      - 'validation/current-frame/**'
+      - '.github/workflows/current-frame-ios.yml'
+permissions:
+  contents: read
+concurrency:
+  group: wo40-zink-touch
+  cancel-in-progress: false
+jobs:
+  build:
+    if: github.repository == 'arjunyerevan95-dot/OpenMWiOS' && contains(github.event.head_commit.message, '[current-frame-build]')
+    runs-on: xcode-27
+    timeout-minutes: 180
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_27.1.app/Contents/Developer
+      HOMEBREW_NO_AUTO_UPDATE: '1'
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - name: Verify foundation and runner
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(uname -m)" = arm64
+          xcode_version="$(xcodebuild -version)"
+          printf '%s\n' "$xcode_version"
+          [[ "$xcode_version" == $'Xcode 27.1\n'* ]]
+          xcrun --sdk iphoneos --show-sdk-version
+          git merge-base --is-ancestor 2931be63bd2147e437a2b077ed6c97f563648a0a HEAD
+          git diff --exit-code 568323258e0a17f294b91797b68cd29222c374ab -- .github/workflows/wo40-ios.yml
+          python3 validation/current-frame/check_scope.py
+      - name: Host tools used by pinned donor recipes
+        shell: bash
+        run: |
+          brew install cmake ninja meson xcodegen pkgconf python@3.14 bison@3.8
+          echo "$(brew --prefix python@3.14)/libexec/bin" >> "$GITHUB_PATH"
+      - name: Executable touch contract
+        shell: bash
+        env:
+          CXX: clang++
+        run: python3 validation/wo40/run_tests.py
+      - name: Integrated device build
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p log/wo40
+          printf '%s\n' 'APP_NAME=OpenMW Frame Diagnostic' 'BUNDLE_ID=org.openmw.ios.framediagnostic' > ios/build.config
+          ./build-ios.sh build device --release --unsigned 2>&1 | tee log/wo40/build.log
+          ./build-ios.sh ipa --release --unsigned
+          python3 validation/current-frame/package_manifest.py
+      - name: Compact build logs
+        if: always()
+        shell: bash
+        run: |
+          mkdir -p log/wo40
+          if [ -f log/wo40/build.log ]; then
+            tail -n 1200 log/wo40/build.log > log/wo40/build-tail.txt
+            gzip log/wo40/build.log
+          fi
+          git rev-parse HEAD > log/wo40/source.txt
+          xcodebuild -version > log/wo40/xcode.txt
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: OpenMW-Current-Frame-Diagnostic-${{ github.run_id }}
+          path: |
+            DerivedData/wo40-artifact/
+            log/wo40/
+          if-no-files-found: error
+          retention-days: 30

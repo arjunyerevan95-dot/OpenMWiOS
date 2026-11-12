@@ -133,7 +133,7 @@ diff -ruN a/src/video/uikit/SDL_uikitegl.h b/src/video/uikit/SDL_uikitegl.h
 diff -ruN a/src/video/uikit/SDL_uikitegl.m b/src/video/uikit/SDL_uikitegl.m
 --- a/src/video/uikit/SDL_uikitegl.m	1970-01-01 01:00:00
 +++ b/src/video/uikit/SDL_uikitegl.m	2026-09-30 07:36:35
-@@ -0,0 +1,470 @@
+@@ -0,0 +1,472 @@
 +/*
 +  Simple DirectMedia Layer
 +  Copyright (C) 1997-2025 Sam Lantinga <slouken@libsdl.org>
@@ -536,7 +536,9 @@ diff -ruN a/src/video/uikit/SDL_uikitegl.m b/src/video/uikit/SDL_uikitegl.m
 +        }
 +        if (UIKit_EGL_hasAsyncReadback) {
 +            SDL_uikiteglframe *frame = egl.frames[egl.swaps % UIKIT_EGL_FRAMES];
-+            present = egl.frames[(egl.swaps + UIKIT_EGL_FRAMES - 1) % UIKIT_EGL_FRAMES];
++            /* Diagnostic branch only: present current frame; may reduce throughput. */
++            SDL_bool current_frame = SDL_GetHintBoolean("SDL_UIKIT_EGL_CURRENT_FRAME", SDL_TRUE);
++            present = current_frame ? frame : egl.frames[(egl.swaps + UIKIT_EGL_FRAMES - 1) % UIKIT_EGL_FRAMES];
 +            egl.swaps++;
 +
 +            /* start this frame's readback, then present the previous frame's */
