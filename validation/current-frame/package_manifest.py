@@ -17,8 +17,8 @@ def sha(path):
     with path.open("rb") as f:
         return hashlib.file_digest(f, "sha256").hexdigest()
 info = plistlib.loads((APP / "Info.plist").read_bytes())
-assert info["CFBundleIdentifier"] == "org.openmw.ios.framediagnostic"
-assert info["CFBundleDisplayName"] == "OpenMW Frame Diagnostic"
+assert info["CFBundleIdentifier"] == "org.openmw.ios.zinktouch"
+assert info["CFBundleDisplayName"] == "OpenMW Zink Touch"
 exe = APP / info["CFBundleExecutable"]
 assert run("lipo", "-archs", str(exe)) == "arm64"
 assert not (APP / "embedded.mobileprovision").exists()
@@ -26,7 +26,7 @@ assert not (APP / "_CodeSignature").exists()
 assert subprocess.run(["codesign", "-d", str(APP)], capture_output=True).returncode != 0
 ipas = list((ROOT / "DerivedData/ipa").glob("*-unsigned.ipa"))
 assert len(ipas) == 1, ipas
-ipa = Path(shutil.copy2(ipas[0], OUT / "OpenMW-Current-Frame-Diagnostic-unsigned.ipa"))
+ipa = Path(shutil.copy2(ipas[0], OUT / "OpenMW-Zink-Touch-Current-Frame-unsigned.ipa"))
 dsym = Path(str(APP) + ".dSYM")
 if dsym.is_dir():
     subprocess.run(["ditto", "-c", "-k", "--keepParent", str(dsym), str(OUT / "OpenMW.dSYM.zip")], check=True)
@@ -47,7 +47,7 @@ manifest = {
     "executableSHA256": sha(exe), "uuid": run("dwarfdump", "--uuid", str(exe)),
     "dSYM": dsym.is_dir(),
     "entitlementsSource": plistlib.loads((ROOT/"ios/OpenMW/OpenMW.entitlements").read_bytes()),
-    "deviceValidation": "pending; NOT a validated latency fix",
+    "deviceValidation": "diagnostic subjective A/B reported more responsive; main-app device validation pending",
     "presentationDiagnostic": "current PBO frame; SDL_UIKIT_EGL_CURRENT_FRAME default true",
 }
 archives = []

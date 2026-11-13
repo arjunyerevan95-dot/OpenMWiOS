@@ -537,7 +537,7 @@ diff -ruN a/src/video/uikit/SDL_uikitegl.m b/src/video/uikit/SDL_uikitegl.m
 +        }
 +        if (UIKit_EGL_hasAsyncReadback) {
 +            SDL_uikiteglframe *frame = egl.frames[egl.swaps % UIKIT_EGL_FRAMES];
-+            /* Diagnostic branch only: present current frame; may reduce throughput. */
++            /* Present current frame by default; hint retains legacy throughput mode. */
 +            SDL_bool current_frame = SDL_GetHintBoolean("SDL_UIKIT_EGL_CURRENT_FRAME", SDL_TRUE);
 +            present = current_frame ? frame : egl.frames[(egl.swaps + UIKIT_EGL_FRAMES - 1) % UIKIT_EGL_FRAMES];
 +            egl.swaps++;

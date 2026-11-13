@@ -16,3 +16,9 @@ def ring(current):
 assert ring(False)==[None,0,1,2,3,4]
 assert ring(True)==list(range(6))
 print("Scope, patch syntax and ring-selection model pass; GPU/device validation pending.")
+
+workflow=pathlib.Path(".github/workflows/current-frame-ios.yml").read_text()
+assert "BUNDLE_ID=org.openmw.ios.zinktouch" in workflow
+assert "APP_NAME=OpenMW Zink Touch" in workflow
+assert "framediagnostic" not in workflow
+subprocess.run(["git","diff","--exit-code",BASE,"--","apps/openmw/ios","components/files","ios/OpenMW"],check=True)

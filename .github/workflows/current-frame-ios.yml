@@ -1,7 +1,7 @@
-name: OpenMW current-frame diagnostic
+name: OpenMW current-frame main-app update
 on:
   push:
-    branches: [dot/current-frame-diagnostic]
+    branches: [dot/main-current-frame]
     paths:
       - 'ios-deps/patches/sdl2/0002-uikit-desktop-opengl-via-egl.patch'
       - 'validation/current-frame/**'
@@ -50,7 +50,7 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p log/wo40
-          printf '%s\n' 'APP_NAME=OpenMW Frame Diagnostic' 'BUNDLE_ID=org.openmw.ios.framediagnostic' > ios/build.config
+          printf '%s\n' 'APP_NAME=OpenMW Zink Touch' 'BUNDLE_ID=org.openmw.ios.zinktouch' > ios/build.config
           ./build-ios.sh build device --release --unsigned 2>&1 | tee log/wo40/build.log
           ./build-ios.sh ipa --release --unsigned
           python3 validation/current-frame/package_manifest.py
@@ -68,7 +68,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: OpenMW-Current-Frame-Diagnostic-${{ github.run_id }}
+          name: OpenMW-Current-Frame-Main-${{ github.run_id }}
           path: |
             DerivedData/wo40-artifact/
             log/wo40/
