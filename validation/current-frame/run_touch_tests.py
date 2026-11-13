@@ -49,3 +49,12 @@ assert "SDL_CONTROLLER_BUTTON_MISC1" in adapter
 assert "_useGesture.cancel();" in adapter
 assert "_useGesture.finish(touchId(touch), CACurrentMediaTime(), cancelled == YES)" in adapter
 print("PASS Use tap/hold/release/cancel contract; native UIKit and LuaPhysics device test pending")
+
+with tempfile.TemporaryDirectory(prefix="openmw-parry-gesture-") as directory:
+    exe = pathlib.Path(directory) / "parry-test"
+    subprocess.run([compiler, "-std=c++17", "-Wall", "-Wextra", "-Werror", str(ROOT / "validation/parry-gesture/test.cpp"), "-o", str(exe)], check=True)
+    subprocess.run([str(exe)], check=True)
+assert "getCreatureStats(player).getDrawState() == MWMechanics::DrawState::Weapon" in input_manager
+assert "_parryGesture.cancel();" in adapter
+assert "if (previous->role == Role::Look)" in adapter
+print("PASS right-side gesture parry model; UIKit/device validation pending")

@@ -244,6 +244,7 @@ namespace OpenMWIOS::Touch
 
     inline bool visibleInMode(Action action, bool gameplayMode)
     {
+        if (action == Action::Parry) return false; // retained only for old profile compatibility
         if (gameplayMode)
             return true;
         return action == Action::Inventory || action == Action::Pause || action == Action::Journal;

@@ -5,6 +5,8 @@
 #import "openmw_ios_touch_icons.hpp"
 #import "openmw_ios_touch_model.hpp"
 #import "openmw_ios_use_gesture.hpp"
+#import "openmw_ios_parry_gesture.hpp"
+#include <atomic>
 
 #import <Foundation/Foundation.h>
 #import <QuartzCore/QuartzCore.h>
@@ -180,6 +182,7 @@ namespace
     Uint32 sWindowId = 0;
     bool sTouchEnabled = false;
     bool sGameplayMode = false;
+    std::atomic<bool> sWeaponReady{false};
 
     void openmw_ios_log(const char* milestone, const char* detail)
     {
@@ -286,6 +289,7 @@ namespace
     OpenMWIOS::Touch::Point _editorLastPoint;
     OpenMWIOS::Touch::MenuGesture _menu;
     OpenMWIOS::Touch::UseGesture _useGesture;
+    OpenMWIOS::Touch::ParryGesture _parryGesture;
     std::uintptr_t _consumedMenuLongPressId;
 }
 
@@ -582,6 +586,8 @@ namespace
         [self diagnose:"touch_mode_transition"
             detail:_gameplayMode ? @"mode=gameplay" : @"mode=gui;non-control-touches=passthrough"];
     }
+    [self setAction:Action::Parry pressed:_parryGesture.pressed(CACurrentMediaTime(),
+        _inputReady && _gameplayMode && !_editing && sWeaponReady.load())];
     if (_inputReady && _gameplayMode && !_editing && _useGesture.update(CACurrentMediaTime()))
         [self setPhysicsGrab:YES];
     if (_inputReady && !_editing && _menu.expired(CACurrentMediaTime()))
@@ -731,6 +737,7 @@ namespace
 {
     [self setPhysicsGrab:NO];
     _useGesture.cancel();
+    _parryGesture.cancel();
     _menu.cancel();
     for (const auto& [identifier, binding] : _ownership.bindings())
     {
@@ -781,6 +788,7 @@ namespace
             }
             for (std::size_t index = 0; index < OpenMWIOS::Touch::ActionCount; ++index)
             {
+                if (_layout.buttons[index].action == Action::Parry) continue;
                 const auto& circle = _layout.buttons[index].bounds;
                 if (!circle.contains(point, 1.25f))
                     continue;
@@ -822,6 +830,8 @@ namespace
         }
         else if (binding->role == Role::Look)
         {
+            if (sWeaponReady.load())
+                _parryGesture.begin(touchId(touch), point.x, point.y, CACurrentMediaTime());
             [self diagnose:"touch_look_acquired"
                      detail:[NSString stringWithFormat:@"id=%llu", static_cast<unsigned long long>(touchId(touch))]];
         }
@@ -891,8 +901,14 @@ namespace
             [self updateMovementFrom:previous->startPoint to:point];
         else if (OpenMWIOS::Touch::drivesLook(*previous))
         {
-            const float dx = point.x - previous->lastPoint.x;
-            const float dy = point.y - previous->lastPoint.y;
+            float dx = point.x - previous->lastPoint.x;
+            float dy = point.y - previous->lastPoint.y;
+            if (previous->role == Role::Look)
+            {
+                const bool look = _parryGesture.move(touchId(touch), point.x, point.y, dx, dy);
+                [self setAction:Action::Parry pressed:_parryGesture.pressed(CACurrentMediaTime(), sWeaponReady.load())];
+                if (!look) continue;
+            }
             pushRelativeMouse(dx, dy);
             [self diagnose:"touch_look_delta"
                      detail:[NSString stringWithFormat:@"id=%llu;delta=%.2f,%.2f",
@@ -943,7 +959,11 @@ namespace
             [self diagnose:"touch_movement_released" detail:cancelled ? @"cancelled=yes" : @"cancelled=no"];
         }
         else if (binding->role == Role::Look)
+        {
+            _parryGesture.finish(touchId(touch), CACurrentMediaTime(), cancelled == YES);
+            [self setAction:Action::Parry pressed:_parryGesture.pressed(CACurrentMediaTime(), sWeaponReady.load())];
             [self diagnose:"touch_look_released" detail:cancelled ? @"cancelled=yes" : @"cancelled=no"];
+        }
         else if (binding->role == Role::Button && binding->action)
         {
             if (touchId(touch) == _useGesture.touch())
@@ -1023,6 +1043,7 @@ namespace
     };
     for (const auto& button : _layout.buttons)
     {
+        if (button.action == Action::Parry) continue; // legacy profile slot, no standalone button
         if (!_editing && !OpenMWIOS::Touch::visibleInMode(button.action, _gameplayMode))
             continue;
         const bool pressed = _pressedActions[static_cast<std::size_t>(button.action)];
@@ -1184,4 +1205,9 @@ extern "C" void openmw_ios_shutdown_touch_controls(void)
         sWindowId = 0;
         sGameplayMode = false;
     });
+}
+
+extern "C" void openmw_ios_set_weapon_ready(bool ready)
+{
+    sWeaponReady.store(ready);
 }

@@ -28,9 +28,9 @@ int main() {
  o.begin(1,attack,layout); o.clear(); assert(!o.move(1,attack));
  Point parry{},jump{};
  for(auto& b:layout.buttons) {if(b.action==Action::Parry)parry=b.bounds.center; if(b.action==Action::Jump)jump=b.bounds.center;}
- assert(o.begin(3,parry,layout)->action==Action::Parry);
+ auto formerParry=o.begin(3,parry,layout); assert(formerParry && formerParry->role==Role::Look);
  assert(o.begin(4,jump,layout)->action==Action::Jump);
- assert(!drivesLook(*o.move(3,{parry.x+20,parry.y})));
+ assert(drivesLook(*o.move(3,{parry.x+20,parry.y})));
  o.end(3); assert(o.bindings().at(4).action==Action::Jump); o.clear();
  std::cout<<"PASS held Attack drag, independent swipe, release and cancellation\n";
 }

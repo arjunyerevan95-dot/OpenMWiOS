@@ -4,6 +4,8 @@
 #include <TargetConditionals.h>
 #if TARGET_OS_IPHONE
 #include "../ios/openmw_ios_touch_controls.h"
+#include "../mwworld/class.hpp"
+#include "../mwmechanics/creaturestats.hpp"
 #endif
 #endif
 
@@ -73,6 +75,11 @@ namespace MWInput
     void InputManager::update(float dt, bool disableControls, bool disableEvents)
     {
         mControlsDisabled = disableControls;
+#if defined(__APPLE__) && TARGET_OS_IPHONE
+        const auto player = MWBase::Environment::get().getWorld()->getPlayerPtr();
+        openmw_ios_set_weapon_ready(!disableControls && !player.isEmpty()
+            && player.getClass().getCreatureStats(player).getDrawState() == MWMechanics::DrawState::Weapon);
+#endif
 
         mInputWrapper->setMouseVisible(MWBase::Environment::get().getWindowManager()->getCursorVisible());
         mInputWrapper->capture(disableEvents);
