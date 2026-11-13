@@ -40,6 +40,8 @@ namespace
     {
         switch (action)
         {
+            case Action::Parry:
+                return SDL_CONTROLLER_BUTTON_DPAD_DOWN;
             case Action::Activate:
                 return SDL_CONTROLLER_BUTTON_A;
             case Action::ReadyWeapon:
@@ -102,6 +104,7 @@ namespace
             case Action::Wait:
                 return SDL_SCANCODE_T;
             case Action::Attack:
+            case Action::Parry:
             case Action::Inventory:
                 return SDL_SCANCODE_UNKNOWN;
         }
@@ -114,6 +117,8 @@ namespace
         {
             case Action::Activate:
                 return @"USE";
+            case Action::Parry:
+                return @"PARRY";
             case Action::Attack:
                 return @"ATK";
             case Action::Jump:
@@ -413,13 +418,14 @@ namespace
     if ([stored[@"version"] unsignedIntValue] != OpenMWIOS::Touch::ProfileVersion)
         return;
     NSArray* controls = stored[@"controls"];
-    if (![controls isKindOfClass:NSArray.class] || controls.count != OpenMWIOS::Touch::ActionCount)
+    if (![controls isKindOfClass:NSArray.class] || !OpenMWIOS::Touch::supportedProfileControlCount(controls.count))
         return;
     ControlProfile candidate = _profile;
     candidate.customized = true;
     candidate.idleOpacity = [stored[@"opacity"] floatValue];
     candidate.movementRadius = [stored[@"movementRadius"] floatValue];
-    for (std::size_t index = 0; index < OpenMWIOS::Touch::ActionCount; ++index)
+    // Migrate the twelve-button profile without moving any existing button.
+    for (std::size_t index = 0; index < controls.count; ++index)
     {
         id item = controls[index];
         if (![item isKindOfClass:NSDictionary.class])
@@ -862,7 +868,7 @@ namespace
             continue;
         if (previous->role == Role::Movement)
             [self updateMovementFrom:previous->startPoint to:point];
-        else if (previous->role == Role::Look)
+        else if (OpenMWIOS::Touch::drivesLook(*previous))
         {
             const float dx = point.x - previous->lastPoint.x;
             const float dy = point.y - previous->lastPoint.y;

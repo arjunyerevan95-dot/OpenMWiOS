@@ -51,9 +51,14 @@ namespace OpenMWIOS::Touch
         TogglePOV,
         QuickSave,
         Wait,
+        Parry,
     };
 
-    constexpr std::size_t ActionCount = 12;
+    constexpr std::size_t ActionCount = 13;
+    constexpr bool supportedProfileControlCount(std::size_t count)
+    {
+        return count == 12 || count == ActionCount;
+    }
 
     struct Button
     {
@@ -148,6 +153,7 @@ namespace OpenMWIOS::Touch
             AndroidButton{ Action::TogglePOV, 90.f, 0.f, 70.f },
             AndroidButton{ Action::QuickSave, 180.f, 0.f, 70.f },
             AndroidButton{ Action::Wait, 360.f, 0.f, 70.f },
+            AndroidButton{ Action::Parry, 935.f, 315.f, 120.f },
         };
 
         for (std::size_t index = 0; index < layout.buttons.size(); ++index)
@@ -281,6 +287,12 @@ namespace OpenMWIOS::Touch
         Point startPoint;
         Point lastPoint;
     };
+
+    inline bool drivesLook(const Binding& binding)
+    {
+        return binding.role == Role::Look
+            || (binding.role == Role::Button && binding.action == Action::Attack);
+    }
 
     class Ownership
     {

@@ -31,4 +31,12 @@ assert "[[UIImage alloc] initWithData:data]" in adapter and "validProfile(candid
 assert "SDL_JOYSTICK_AXIS_MIN" in adapter and "MenuGesture _menu" in adapter
 assert "dispatch_after" not in adapter  # no stale long-press timer with reused touch address
 subprocess.run(["python3", str(ROOT / "validation/current-frame/check_scope.py")], cwd=ROOT, check=True)
-print("PASS unchanged touch contract and separate diagnostic scope guard")
+with tempfile.TemporaryDirectory(prefix="openmw-held-") as directory:
+    exe = pathlib.Path(directory) / "held-test"
+    subprocess.run([compiler, "-std=c++17", "-Wall", "-Wextra", "-I", str(ROOT), str(ROOT / "validation/wo40/held_attack_swipe.cpp"), "-o", str(exe)], check=True)
+    subprocess.run([str(exe)], check=True)
+assert "case Action::Parry:\n                return SDL_CONTROLLER_BUTTON_DPAD_DOWN;" in adapter
+assert "case Action::Jump:\n                return SDL_CONTROLLER_AXIS_TRIGGERLEFT;" in adapter
+assert "else if (OpenMWIOS::Touch::drivesLook(*previous))" in adapter
+assert "supportedProfileControlCount(controls.count)" in adapter
+print("PASS touch contracts, mapping wiring and preserved current-frame dependency scope; UIKit/device test pending")

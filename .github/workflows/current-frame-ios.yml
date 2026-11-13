@@ -1,10 +1,12 @@
-name: OpenMW current-frame main-app update
+name: OpenMW Parry and multitouch main-app update
 on:
   push:
-    branches: [dot/main-current-frame]
+    branches: [dot/parry-multitouch]
     paths:
       - 'ios-deps/patches/sdl2/0002-uikit-desktop-opengl-via-egl.patch'
       - 'validation/current-frame/**'
+      - 'apps/openmw/ios/openmw_ios_touch*'
+      - 'validation/wo40/held_attack_swipe.cpp'
       - '.github/workflows/current-frame-ios.yml'
 permissions:
   contents: read
@@ -13,7 +15,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   build:
-    if: github.repository == 'arjunyerevan95-dot/OpenMWiOS' && contains(github.event.head_commit.message, '[current-frame-build]')
+    if: github.repository == 'arjunyerevan95-dot/OpenMWiOS' && contains(github.event.head_commit.message, '[parry-touch-build]')
     runs-on: xcode-27
     timeout-minutes: 180
     env:
@@ -68,7 +70,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: OpenMW-Current-Frame-Main-${{ github.run_id }}
+          name: OpenMW-Parry-Multitouch-${{ github.run_id }}
           path: |
             DerivedData/wo40-artifact/
             log/wo40/
