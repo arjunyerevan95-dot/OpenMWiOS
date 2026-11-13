@@ -40,3 +40,12 @@ assert "case Action::Jump:\n                return SDL_CONTROLLER_AXIS_TRIGGERLE
 assert "else if (OpenMWIOS::Touch::drivesLook(*previous))" in adapter
 assert "supportedProfileControlCount(controls.count)" in adapter
 print("PASS touch contracts, mapping wiring and preserved current-frame dependency scope; UIKit/device test pending")
+
+with tempfile.TemporaryDirectory(prefix="openmw-use-") as directory:
+    exe = pathlib.Path(directory) / "use-test"
+    subprocess.run([compiler, "-std=c++17", "-Wall", "-Wextra", "-Werror", str(ROOT / "validation/use-drag/test.cpp"), "-o", str(exe)], check=True)
+    subprocess.run([str(exe)], check=True)
+assert "SDL_CONTROLLER_BUTTON_MISC1" in adapter
+assert "_useGesture.cancel();" in adapter
+assert "_useGesture.finish(touchId(touch), CACurrentMediaTime(), cancelled == YES)" in adapter
+print("PASS Use tap/hold/release/cancel contract; native UIKit and LuaPhysics device test pending")

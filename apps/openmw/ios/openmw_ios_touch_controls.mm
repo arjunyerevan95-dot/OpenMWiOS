@@ -4,6 +4,7 @@
 #import "openmw_ios_touch_state.hpp"
 #import "openmw_ios_touch_icons.hpp"
 #import "openmw_ios_touch_model.hpp"
+#import "openmw_ios_use_gesture.hpp"
 
 #import <Foundation/Foundation.h>
 #import <QuartzCore/QuartzCore.h>
@@ -284,6 +285,7 @@ namespace
     BOOL _editorResizing;
     OpenMWIOS::Touch::Point _editorLastPoint;
     OpenMWIOS::Touch::MenuGesture _menu;
+    OpenMWIOS::Touch::UseGesture _useGesture;
     std::uintptr_t _consumedMenuLongPressId;
 }
 
@@ -580,6 +582,8 @@ namespace
         [self diagnose:"touch_mode_transition"
             detail:_gameplayMode ? @"mode=gameplay" : @"mode=gui;non-control-touches=passthrough"];
     }
+    if (_inputReady && _gameplayMode && !_editing && _useGesture.update(CACurrentMediaTime()))
+        [self setPhysicsGrab:YES];
     if (_inputReady && !_editing && _menu.expired(CACurrentMediaTime()))
         [self enterEditor];
 }
@@ -711,8 +715,22 @@ namespace
     [self setNeedsDisplay];
 }
 
+- (void)setPhysicsGrab:(BOOL)pressed
+{
+    // Misc1 has no default gameplay binding. Companion Lua binds it only to
+    // GrabPhysicsObject; never use Lua "Use", which means attack/throw.
+    if (_virtualJoystick)
+    {
+        SDL_JoystickSetVirtualButton(_virtualJoystick, SDL_CONTROLLER_BUTTON_MISC1,
+            pressed ? SDL_PRESSED : SDL_RELEASED);
+        SDL_JoystickUpdate();
+    }
+}
+
 - (void)releaseAllInputs
 {
+    [self setPhysicsGrab:NO];
+    _useGesture.cancel();
     _menu.cancel();
     for (const auto& [identifier, binding] : _ownership.bindings())
     {
@@ -809,7 +827,10 @@ namespace
         }
         else if (binding->role == Role::Button && binding->action)
         {
-            [self setAction:*binding->action pressed:true];
+            if (*binding->action == Action::Activate && _gameplayMode && [self ensureVirtualController])
+                _useGesture.begin(touchId(touch), CACurrentMediaTime());
+            else
+                [self setAction:*binding->action pressed:true];
             [self diagnose:"touch_action_pressed"
                      detail:[NSString stringWithFormat:@"id=%llu;action=%@",
                                  static_cast<unsigned long long>(touchId(touch)), labelForAction(*binding->action)]];
@@ -925,7 +946,18 @@ namespace
             [self diagnose:"touch_look_released" detail:cancelled ? @"cancelled=yes" : @"cancelled=no"];
         else if (binding->role == Role::Button && binding->action)
         {
-            [self setAction:*binding->action pressed:false];
+            if (touchId(touch) == _useGesture.touch())
+            {
+                const auto result = _useGesture.finish(touchId(touch), CACurrentMediaTime(), cancelled == YES);
+                [self setPhysicsGrab:NO];
+                if (result == OpenMWIOS::Touch::UseGesture::End::Tap)
+                {
+                    [self setAction:Action::Activate pressed:true];
+                    [self setAction:Action::Activate pressed:false];
+                }
+            }
+            else
+                [self setAction:*binding->action pressed:false];
             [self diagnose:"touch_action_released"
                      detail:[NSString stringWithFormat:@"action=%@;cancelled=%@", labelForAction(*binding->action),
                                  cancelled ? @"yes" : @"no"]];
