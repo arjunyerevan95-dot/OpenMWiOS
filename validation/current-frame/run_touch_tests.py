@@ -58,3 +58,7 @@ assert "getCreatureStats(player).getDrawState() == MWMechanics::DrawState::Weapo
 assert "_parryGesture.cancel();" in adapter
 assert "if (previous->role == Role::Look)" in adapter
 print("PASS right-side gesture parry model; UIKit/device validation pending")
+
+assert "weaponReadyForInput(disableControls, disableEvents," in input_manager
+assert "environment.getStateManager()->getState() == MWBase::StateManager::State_Running" in input_manager
+print("PASS startup/loading/menu player-query guard; device startup retest pending")

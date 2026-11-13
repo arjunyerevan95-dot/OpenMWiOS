@@ -21,3 +21,13 @@ No gesture uses the Attack or Activate actions. Swipe on Attack stays immediate.
 Cancellation, background, editor, GUI transitions, sheathing/casting release guard.
 C++ model exercises taps, holds, swipe arbitration, cancellation and weapon loss.
 Device timing, actual combat and gesture feel remain unverified until IPA testing.
+
+## Startup regression guard
+The first gesture build queried World::getPlayerPtr unconditionally from
+InputManager::update. LoadingScreen::draw pumps update(0,true,true) while
+Morrowind.esm is loading, before World::setupPlayer. getPlayerPtr dereferences
+mPlayer, so checking Ptr::isEmpty afterward cannot protect startup.
+The corrected path queries the player only when controls/events are enabled,
+State_Running is set, and no GUI is active. Executable tests verify the callback
+is never touched for loading, initial menu, disabled events or modal screens.
+Phone log599b5430 stopped at Morrowind.esm loading; runtime retest still required.

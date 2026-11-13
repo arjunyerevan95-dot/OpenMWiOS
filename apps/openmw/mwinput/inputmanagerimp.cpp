@@ -4,6 +4,8 @@
 #include <TargetConditionals.h>
 #if TARGET_OS_IPHONE
 #include "../ios/openmw_ios_touch_controls.h"
+#include "../ios/openmw_ios_parry_gesture.hpp"
+#include "../mwbase/statemanager.hpp"
 #include "../mwworld/class.hpp"
 #include "../mwmechanics/creaturestats.hpp"
 #endif
@@ -76,9 +78,14 @@ namespace MWInput
     {
         mControlsDisabled = disableControls;
 #if defined(__APPLE__) && TARGET_OS_IPHONE
-        const auto player = MWBase::Environment::get().getWorld()->getPlayerPtr();
-        openmw_ios_set_weapon_ready(!disableControls && !player.isEmpty()
-            && player.getClass().getCreatureStats(player).getDrawState() == MWMechanics::DrawState::Weapon);
+        const auto& environment = MWBase::Environment::get();
+        openmw_ios_set_weapon_ready(OpenMWIOS::Touch::weaponReadyForInput(disableControls, disableEvents,
+            environment.getStateManager()->getState() == MWBase::StateManager::State_Running,
+            environment.getWindowManager()->isGuiMode(), [&] {
+                const auto player = environment.getWorld()->getPlayerPtr();
+                return !player.isEmpty()
+                    && player.getClass().getCreatureStats(player).getDrawState() == MWMechanics::DrawState::Weapon;
+            }));
 #endif
 
         mInputWrapper->setMouseVisible(MWBase::Environment::get().getWindowManager()->getCursorVisible());

@@ -2,6 +2,13 @@
 #include <cmath>
 #include <cstdint>
 namespace OpenMWIOS::Touch {
+// Loading screens pump input before World/player construction completes.
+// Never evaluate the player query outside normal running gameplay.
+template <class Query>
+bool weaponReadyForInput(bool controlsDisabled, bool eventsDisabled, bool gameRunning, bool guiMode, Query query)
+{
+    return !controlsDisabled && !eventsDisabled && gameRunning && !guiMode && query();
+}
 class ParryGesture {
     std::uintptr_t mTouch = 0;
     float mX = 0, mY = 0;
