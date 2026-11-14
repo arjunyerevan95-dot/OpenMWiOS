@@ -7,6 +7,7 @@ retain deferred taps, natural dominant-axis scrolling and the existing hold-to-d
 Pans release capture without a click, so a pan cannot add/edit a marker. Ordinary taps
 still use MyGUI press/release and its double-click detection. Mode/loading generations,
 geometry changes, widget removal and cancellation discard the active gesture.
+Cancellation resets only mouse focus/capture and retains the dialog's modal membership.
 
 HUD hit targets are normalized value snapshots of the visible named stats, equipped-weapon
 and MouseEmulationCursor widgets, computed on the engine thread. UIKit never reads widgets.

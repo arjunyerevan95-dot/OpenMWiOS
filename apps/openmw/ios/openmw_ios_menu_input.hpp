@@ -34,11 +34,15 @@ namespace OpenMWIOS::Touch
         ~MenuInput() { MyGUI::WidgetManager::getInstance().unregisterUnlinker(this); }
         void cancel()
         {
-            // unlinkWidget clears capture and releases the widget without synthesizing clicks.
+            // Reset mouse focus/capture without removing a modal root or synthesizing clicks.
             auto* target = mTarget;
             const bool pressed = mPressed;
             mPressed = false; mTarget = nullptr; mGesture.cancel(); mWheelRemainder = 0;
-            if (pressed && target) MyGUI::InputManager::getInstance().unlinkWidget(target);
+            if (pressed && target)
+            {
+                auto& input = MyGUI::InputManager::getInstance();
+                if (input.getMouseFocusWidget() == target) input._resetMouseFocusWidget();
+            }
         }
         void handle(const SDL_TouchFingerEvent& event, float& cursorX, float& cursorY, int& wheel, bool enabled)
         {

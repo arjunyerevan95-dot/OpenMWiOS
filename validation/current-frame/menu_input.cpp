@@ -58,5 +58,10 @@ int main()
     event(SDL_FINGERDOWN,100,100,1100);
     SDL_TouchFingerEvent stale;stale.touchId=MenuDevice;stale.fingerId=(std::int64_t(inputGeneration())<<32)|1;
     invalidateInput();router.handle(stale,x,y,wheel,true);assert(!gui.captured);
+    gui.picked=&modal;gui.modal=true;
+    event(SDL_FINGERDOWN,100,100,1200);event(SDL_FINGERMOTION,130,100,1700);
+    assert(gui.captured);
+    event(SDL_FINGERUP,130,100,1710);
+    assert(gui.modal && !gui.captured && modal.releases==1 && modal.clicks==0);
     std::cout<<"PASS production menu routing: immediate pan, natural scroll, taps, cancel, modal/overlap, removal, scaling, disabled/stale input\n";
 }

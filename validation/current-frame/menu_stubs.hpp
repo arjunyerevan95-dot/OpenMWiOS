@@ -48,7 +48,7 @@ namespace MyGUI
     struct InputManager
     {
         Widget *picked=nullptr,*focus=nullptr;
-        bool captured=false;
+        bool captured=false,modal=false;
         int wheel=0;
         static InputManager& getInstance() { static InputManager m; return m; }
         bool isCaptureMouse() { return captured; }
@@ -63,7 +63,9 @@ namespace MyGUI
         { injectMouseMove(x,y,wheel);captured=true;if(focus) ++focus->presses; }
         void injectMouseRelease(int,int,MouseButton::Enum)
         { captured=false;if(focus){++focus->releases;++focus->clicks;} }
+        void _resetMouseFocusWidget()
+        { if(focus && captured) ++focus->releases; captured=false; focus=nullptr; }
         void unlinkWidget(Widget* p)
-        { if(focus==p) {if(captured) ++focus->releases;captured=false;focus=nullptr;} }
+        { modal=false; if(focus==p) {if(captured) ++focus->releases;captured=false;focus=nullptr;} }
     };
 }
