@@ -490,8 +490,24 @@ namespace NifOsg
 
     void MaterialColorController::setDefaults(osg::StateSet* stateset)
     {
-        stateset->setAttribute(static_cast<SceneUtil::Material*>(mBaseMaterial->clone(osg::CopyOp::DEEP_COPY_ALL)),
-            osg::StateAttribute::ON);
+        auto* material = static_cast<SceneUtil::Material*>(mBaseMaterial->clone(osg::CopyOp::DEEP_COPY_ALL));
+        stateset->setAttribute(material, osg::StateAttribute::ON);
+
+        // StateSetUpdater shallow-copies its two buffers. Material uniforms must
+        // belong to this buffer before either initialization or animation writes.
+        for (const char* name : { "material.diffuse", "material.ambient", "material.specular",
+                 "material.emission", "material.shininess", "material.emissiveMult",
+                 "material.specStrength", "material.vertexColorMode" })
+        {
+            const auto it = stateset->getUniformList().find(name);
+            if (it != stateset->getUniformList().end())
+            {
+                const auto mode = it->second.second;
+                stateset->addUniform(new osg::Uniform(*it->second.first, osg::CopyOp::DEEP_COPY_ALL), mode);
+            }
+        }
+        std::erase_if(mInitializedStateSets,
+            [stateset](const auto& entry) { return !entry.valid() || entry.get() == stateset; });
     }
 
     void MaterialColorController::apply(osg::StateSet* stateset, osg::NodeVisitor* nv)
@@ -501,6 +517,14 @@ namespace NifOsg
             osg::Vec3f value = mData.interpKey(getInputValue(nv));
             SceneUtil::Material* mat
                 = static_cast<SceneUtil::Material*>(stateset->getAttribute(osg::StateAttribute::MATERIAL));
+            // Preserve the original no-input behavior and initialize every buffer
+            // on its first active update. Subsequent frames touch only this color.
+            if (std::none_of(mInitializedStateSets.begin(), mInitializedStateSets.end(),
+                    [stateset](const auto& entry) { return entry.get() == stateset; }))
+            {
+                mat->updateStateSet(stateset);
+                mInitializedStateSets.emplace_back(stateset);
+            }
             using TargetColor = Nif::NiMaterialColorController::TargetColor;
             switch (mTargetColor)
             {
@@ -509,6 +533,7 @@ namespace NifOsg
                     osg::Vec4f diffuse = mat->getDiffuse();
                     diffuse.set(value.x(), value.y(), value.z(), diffuse.a());
                     mat->setDiffuse(diffuse);
+                    stateset->getUniform("material.diffuse")->set(diffuse);
                     break;
                 }
                 case TargetColor::Specular:
@@ -516,6 +541,7 @@ namespace NifOsg
                     osg::Vec4f specular = mat->getSpecular();
                     specular.set(value.x(), value.y(), value.z(), specular.a());
                     mat->setSpecular(specular);
+                    stateset->getUniform("material.specular")->set(specular);
                     break;
                 }
                 case TargetColor::Emissive:
@@ -523,6 +549,7 @@ namespace NifOsg
                     osg::Vec4f emissive = mat->getEmission();
                     emissive.set(value.x(), value.y(), value.z(), emissive.a());
                     mat->setEmission(emissive);
+                    stateset->getUniform("material.emission")->set(emissive);
                     break;
                 }
                 case TargetColor::Ambient:
@@ -531,9 +558,9 @@ namespace NifOsg
                     osg::Vec4f ambient = mat->getAmbient();
                     ambient.set(value.x(), value.y(), value.z(), ambient.a());
                     mat->setAmbient(ambient);
+                    stateset->getUniform("material.ambient")->set(ambient);
                 }
             }
-            mat->updateStateSet(stateset);
         }
     }
 

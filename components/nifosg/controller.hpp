@@ -361,6 +361,8 @@ namespace NifOsg
             Nif::NiMaterialColorController::TargetColor::Ambient
         };
         osg::ref_ptr<const SceneUtil::Material> mBaseMaterial;
+        // Per-buffer initialization, not per-controller: StateSetUpdater alternates buffers.
+        std::vector<osg::observer_ptr<osg::StateSet>> mInitializedStateSets;
     };
 
     class FlipController : public SceneUtil::StateSetUpdater, public SceneUtil::Controller

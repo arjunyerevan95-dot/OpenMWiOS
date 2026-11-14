@@ -33,6 +33,7 @@
 #include <components/vfs/manager.hpp>
 
 #include "removedalphafunc.hpp"
+#include "sampleruniform.hpp"
 #include "shadermanager.hpp"
 
 namespace Shader
@@ -627,7 +628,7 @@ namespace Shader
         {
             const int unitSoftEffect
                 = mShaderManager.reserveGlobalTextureUnits(Shader::ShaderManager::Slot::OpaqueDepthTexture);
-            writableStateSet->addUniform(new osg::Uniform("opaqueDepthTex", unitSoftEffect));
+            writableStateSet->addUniform(opaqueDepthSamplerUniform(unitSoftEffect));
             addedState->addUniform("opaqueDepthTex");
         }
 

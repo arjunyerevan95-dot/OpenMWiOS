@@ -80,6 +80,8 @@ file(GLOB UNITTEST_SRC_FILES
     esm3/testcstringids.cpp
 
     nifosg/testnifloader.cpp
+    nifosg/testmaterialcolorcontroller.cpp
+    shader/testsampleruniform.cpp
 
     esmterrain/testgridsampling.cpp
 
