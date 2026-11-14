@@ -112,11 +112,7 @@ namespace OpenMWIOS::Touch
         const float shortSide = std::min(layout.width, layout.height);
         const float stickRadius = clamp(shortSide * 0.15f, 48.f, 92.f);
         const float contentWidth = std::max(layout.width - safeArea.left - safeArea.right, 1.f);
-        // Restore the inset default row shown in the earlier 18:44 reference.
-        // This is visual spacing only: real safeArea/profile coordinates and
-        // the working parry region remain unchanged.
-        const float defaultTop = std::max(safeArea.top, layout.height * 0.145f);
-        const float contentHeight = std::max(layout.height - defaultTop - safeArea.bottom, 1.f);
+        const float contentHeight = std::max(layout.height - safeArea.top - safeArea.bottom, 1.f);
 
         // The archived Android OSC uses a 1024x768 virtual coordinate system.
         // Preserve its asymmetric placement, while resolving every point against
@@ -124,7 +120,7 @@ namespace OpenMWIOS::Touch
         const auto androidButton = [&](float virtualX, float virtualY, float virtualSize) {
             const float radius = clamp(virtualSize * contentWidth / 2048.f, 22.f, 72.f);
             const float topLeftX = safeArea.left + virtualX * contentWidth / 1024.f;
-            const float topLeftY = defaultTop + virtualY * contentHeight / 768.f;
+            const float topLeftY = safeArea.top + virtualY * contentHeight / 768.f;
             return Point{
                 clamp(topLeftX + radius, safeArea.left + radius,
                     layout.width - safeArea.right - radius),

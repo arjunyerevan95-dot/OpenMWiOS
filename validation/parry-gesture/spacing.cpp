@@ -6,7 +6,7 @@ int main(){
  for(float w:{844.f,1000.f,1536.f}) {
  auto l=makeLayout(w,w*707/1536,{0,0,0,0});
  const auto& pause=l.buttons[static_cast<int>(Action::Pause)].bounds;
- assert(std::abs(pause.center.y-(l.height*.145f+pause.radius))<.01f);
+ assert(std::abs(pause.center.y-pause.radius)<.01f);
  assert(inParryZone({l.width*.95f,l.height*.4f},l));
  assert(!inParryZone({l.width*.95f,l.height*.8f},l));
  auto p=profileFromLayout(l);p.customized=true;
