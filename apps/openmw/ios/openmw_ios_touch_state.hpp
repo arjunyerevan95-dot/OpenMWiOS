@@ -78,6 +78,44 @@ namespace OpenMWIOS::Touch
         return true;
     }
 
+    class EditorPinch
+    {
+        int mIndex = -1;
+        Circle mCircle{};
+        float mMovement = 0;
+    public:
+        bool active() const { return mIndex >= 0; }
+        bool begin(bool editing, int index, const Layout& layout)
+        {
+            if (!editing || index < 0 || index > static_cast<int>(ActionCount)
+                || (index < static_cast<int>(ActionCount) && layout.buttons[index].action == Action::Parry)) return false;
+            mIndex = index; mMovement = layout.movementRadius;
+            if (index < static_cast<int>(ActionCount)) mCircle = layout.buttons[index].bounds;
+            return true;
+        }
+        void update(Layout& layout, float scale)
+        {
+            if (!active() || !std::isfinite(scale) || scale <= 0) return;
+            if (mIndex == static_cast<int>(ActionCount))
+                layout.movementRadius = clamp(mMovement * scale, 36.f, safeShortSide(layout) * 0.24f);
+            else
+            {
+                auto& b = layout.buttons[mIndex];
+                b.bounds = mCircle; b.bounds.radius *= scale;
+                clampCircleToSafeArea(b.bounds, layout, b.action == Action::Pause ? 24.f : 18.f);
+            }
+        }
+        void finish(Layout& layout, bool cancel)
+        {
+            if (active() && cancel)
+            {
+                if (mIndex == static_cast<int>(ActionCount)) layout.movementRadius = mMovement;
+                else layout.buttons[mIndex].bounds = mCircle;
+            }
+            mIndex = -1;
+        }
+    };
+
     class ProfileEditor
     {
     public:

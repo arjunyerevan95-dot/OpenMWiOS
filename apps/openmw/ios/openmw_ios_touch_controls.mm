@@ -305,7 +305,7 @@ namespace
 
 }
 
-@interface OpenMWTouchOverlay : UIView
+@interface OpenMWTouchOverlay : UIView <UIGestureRecognizerDelegate>
 - (void)releaseAllInputs;
 - (void)closeVirtualController;
 - (void)updateInputMode:(CADisplayLink*)link;
@@ -327,6 +327,8 @@ namespace
     int _diagnosticBudget;
     ControlProfile _profile;
     OpenMWIOS::Touch::ProfileEditor _editorSession;
+    OpenMWIOS::Touch::EditorPinch _editorPinch;
+    UIPinchGestureRecognizer* _pinchRecognizer;
     BOOL _editing;
     NSInteger _selectedControl;
     std::uintptr_t _editorTouchId;
@@ -366,6 +368,13 @@ namespace
         _editorSession.changed();
         [self rebuildLayout];
         [self loadProfile];
+        _pinchRecognizer = [[UIPinchGestureRecognizer alloc] initWithTarget:self action:@selector(editorPinched:)];
+        _pinchRecognizer.delegate = self;
+        _pinchRecognizer.enabled = NO;
+        _pinchRecognizer.cancelsTouchesInView = YES;
+        [self addGestureRecognizer:_pinchRecognizer];
+        [_pinchRecognizer release]; // UIView owns the recognizer
+
 
         _displayLink = [CADisplayLink displayLinkWithTarget:self selector:@selector(updateInputMode:)];
         [_displayLink addToRunLoop:NSRunLoop.mainRunLoop forMode:NSRunLoopCommonModes];
@@ -423,6 +432,7 @@ namespace
 - (void)layoutSubviews
 {
     [super layoutSubviews];
+    _editorPinch.finish(_layout, true);
     [self releaseAllInputs];
     if (_editing)
         [self captureLayoutIntoProfile];
@@ -554,6 +564,33 @@ namespace
     return MIN(4, MAX(0, static_cast<NSInteger>((point.x - CGRectGetMinX(toolbar)) / itemWidth)));
 }
 
+- (BOOL)gestureRecognizerShouldBegin:(UIGestureRecognizer*)recognizer
+{
+    return recognizer == _pinchRecognizer && _editing && _selectedControl >= 0
+        && _selectedControl <= static_cast<NSInteger>(OpenMWIOS::Touch::ActionCount);
+}
+
+- (void)editorPinched:(UIPinchGestureRecognizer*)gesture
+{
+    if (!_editing) return;
+    if (gesture.state == UIGestureRecognizerStateBegan)
+    {
+        _editorTouchId = 0;
+        _editorResizing = NO;
+        _editorPinch.begin(true, static_cast<int>(_selectedControl), _layout);
+    }
+    if (gesture.state == UIGestureRecognizerStateChanged || gesture.state == UIGestureRecognizerStateEnded)
+    {
+        _editorPinch.update(_layout, gesture.scale);
+        _editorSession.changed();
+    }
+    if (gesture.state == UIGestureRecognizerStateEnded)
+        _editorPinch.finish(_layout, false);
+    if (gesture.state == UIGestureRecognizerStateCancelled || gesture.state == UIGestureRecognizerStateFailed)
+        _editorPinch.finish(_layout, true);
+    [self setNeedsDisplay];
+}
+
 - (void)enterEditor
 {
     const std::uintptr_t triggeringTouch = _menu.touch();
@@ -561,6 +598,7 @@ namespace
     _consumedMenuLongPressId = triggeringTouch;
     _editorSession.begin(_profile);
     _editing = YES;
+    _pinchRecognizer.enabled = YES;
     _selectedControl = static_cast<NSInteger>(Action::Pause);
     _editorSession.changed();
     [self diagnose:"touch_editor" detail:@"state=entered;trigger=menu-long-press;input=suppressed"];
@@ -569,6 +607,8 @@ namespace
 
 - (void)leaveEditorSaving:(BOOL)save
 {
+    _editorPinch.finish(_layout, false);
+    _pinchRecognizer.enabled = NO;
     if (save)
         [self saveProfile];
     else
@@ -823,6 +863,7 @@ namespace
 
         if (_editing)
         {
+            if (_editorPinch.active() || event.allTouches.count > 1) continue;
             if (touchId(touch) == _consumedMenuLongPressId)
                 continue;
             const NSInteger toolbarItem = [self editorToolbarItemAtPoint:location];
@@ -919,6 +960,7 @@ namespace
         const OpenMWIOS::Touch::Point point{ static_cast<float>(location.x), static_cast<float>(location.y) };
         if (_editing)
         {
+            if (_editorPinch.active()) continue;
             if (touchId(touch) == _consumedMenuLongPressId || touchId(touch) != _editorTouchId)
                 continue;
             if (_selectedControl == static_cast<NSInteger>(OpenMWIOS::Touch::ActionCount))
