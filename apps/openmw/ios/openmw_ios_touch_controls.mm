@@ -429,6 +429,12 @@ namespace
     [self rebuildLayout];
 }
 
+- (void)safeAreaInsetsDidChange
+{
+    [super safeAreaInsetsDidChange];
+    [self setNeedsLayout];
+}
+
 - (BOOL)pointInside:(CGPoint)point withEvent:(UIEvent*)event
 {
     (void)event;
@@ -451,6 +457,10 @@ namespace
         { static_cast<float>(insets.top), static_cast<float>(insets.left), static_cast<float>(insets.bottom),
             static_cast<float>(insets.right) });
     OpenMWIOS::Touch::applyProfile(_layout, _profile);
+    [self diagnose:"touch_layout_geometry"
+             detail:[NSString stringWithFormat:@"bounds=%.1fx%.1f;safe=%.1f,%.1f,%.1f,%.1f;custom=%d",
+                 self.bounds.size.width, self.bounds.size.height, insets.top, insets.left, insets.bottom,
+                 insets.right, _profile.customized ? 1 : 0]];
     [self setNeedsDisplay];
 }
 

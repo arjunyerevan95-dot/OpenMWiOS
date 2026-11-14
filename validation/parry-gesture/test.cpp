@@ -24,7 +24,7 @@ int main() {
  g.begin(3,900,300,3); assert(!g.pressed(3,false)); assert(!g.pressed(3.1,true));
  using namespace OpenMWIOS::Touch;
  auto layout=makeLayout(1000,500,{});
- assert(inParryZone({990,150},layout));
+ assert(inParryZone({990,250},layout));
  assert(!inParryZone({990,480},layout));
  assert(!inParryZone({500,150},layout));
  assert(!inParryZone({0,0},Layout{}));
@@ -33,14 +33,14 @@ int main() {
  assert(!inParryZone({790,350},inset));
  Ownership owner;
  // Empty upper-right gap, lower-right aim, and left movement coexist.
- auto parry=owner.begin(10,{990,150},layout,true);
+ auto parry=owner.begin(10,{990,250},layout,true);
  assert(parry && parry->role==Role::Parry && !drivesLook(*parry));
- assert(!owner.begin(11,{990,150},layout,true));
+ assert(!owner.begin(11,{990,250},layout,true));
  auto aim=owner.begin(12,{800,480},layout,true);
  assert(aim && aim->role==Role::Look && drivesLook(*aim));
  auto move=owner.begin(13,{100,400},layout,true);
  assert(move && move->role==Role::Movement);
  auto drag=owner.move(10,{500,450}); assert(drag && drag->role==Role::Parry && !drivesLook(*drag));
- owner.end(10); assert(owner.begin(14,{990,150},layout,true)->role==Role::Parry);
- Ownership menu; assert(!menu.begin(15,{990,150},layout,false));
+ owner.end(10); assert(owner.begin(14,{990,250},layout,true)->role==Role::Parry);
+ Ownership menu; assert(!menu.begin(15,{990,250},layout,false));
 }

@@ -76,3 +76,10 @@ print("PASS deferred menu tap and dominant-axis touch scrolling; UIKit/device va
 
 assert "event.motion.state = dragging ? SDL_BUTTON_LMASK : 0;" in adapter
 assert adapter.count("self.bounds.size.height, 0, false, -1, true);") == 2
+
+with tempfile.TemporaryDirectory(prefix="openmw-spacing-") as directory:
+    exe = pathlib.Path(directory) / "spacing-test"
+    subprocess.run([compiler, "-std=c++17", "-Wall", "-Wextra", "-Werror", str(ROOT / "validation/parry-gesture/spacing.cpp"), "-o", str(exe)], check=True)
+    subprocess.run([str(exe)], check=True)
+assert "safeAreaInsetsDidChange" in adapter and "touch_layout_geometry" in adapter
+print("PASS default reference spacing, custom coordinates/radii, preserved parry region; device validation pending")

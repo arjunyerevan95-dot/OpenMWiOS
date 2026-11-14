@@ -28,6 +28,7 @@ int main() {
  o.begin(1,attack,layout); o.clear(); assert(!o.move(1,attack));
  Point parry{},jump{};
  for(auto& b:layout.buttons) {if(b.action==Action::Parry)parry=b.bounds.center; if(b.action==Action::Jump)jump=b.bounds.center;}
+ parry={790.f,150.f}; // fixed working corner, not the hidden legacy button slot
  auto formerParry=o.begin(3,parry,layout); assert(formerParry && formerParry->role==Role::Parry);
  assert(o.begin(4,jump,layout)->action==Action::Jump);
  assert(!drivesLook(*o.move(3,{parry.x+20,parry.y})));
