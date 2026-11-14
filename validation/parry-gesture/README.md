@@ -31,3 +31,6 @@ The corrected path queries the player only when controls/events are enabled,
 State_Running is set, and no GUI is active. Executable tests verify the callback
 is never touched for loading, initial menu, disabled events or modal screens.
 Phone log599b5430 stopped at Morrowind.esm loading; runtime retest still required.
+
+## Dedicated corner revision
+User screenshot IMG_4663 marks the upper-right gap below Inventory. The safe-area normalized x=0.86..1, y=0.24..0.54 region now owns a separate Parry touch after visible controls get priority. Press is immediate; dragging outside stays Parry and never rotates the camera. Lower/right look, held Attack aim and movement remain independent. Profile schema/positions unchanged. Host tests cover concurrent ownership, drift, release/cancel, weapon readiness and startup guard. UIKit/iPhone verification remains required.

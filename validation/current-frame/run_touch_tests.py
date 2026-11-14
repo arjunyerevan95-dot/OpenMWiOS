@@ -56,9 +56,23 @@ with tempfile.TemporaryDirectory(prefix="openmw-parry-gesture-") as directory:
     subprocess.run([str(exe)], check=True)
 assert "getCreatureStats(player).getDrawState() == MWMechanics::DrawState::Weapon" in input_manager
 assert "_parryGesture.cancel();" in adapter
-assert "if (previous->role == Role::Look)" in adapter
+assert "else if (binding->role == Role::Parry)" in adapter
 print("PASS right-side gesture parry model; UIKit/device validation pending")
 
 assert "weaponReadyForInput(disableControls, disableEvents," in input_manager
 assert "environment.getStateManager()->getState() == MWBase::StateManager::State_Running" in input_manager
 print("PASS startup/loading/menu player-query guard; device startup retest pending")
+
+with tempfile.TemporaryDirectory(prefix="openmw-menu-touch-") as directory:
+    exe = pathlib.Path(directory) / "menu-touch-test"
+    subprocess.run([compiler, "-std=c++17", "-Wall", "-Wextra", "-Werror", str(ROOT / "validation/menu-touch/test.cpp"), "-o", str(exe)], check=True)
+    subprocess.run([str(exe)], check=True)
+assert "OpenMWIOS::Touch::MenuTouch _guiTouch" in adapter
+assert "_guiTouch.cancel();" in adapter
+assert "event.wheel.preciseY = wheel;" in adapter
+assert "event.wheel.mouseX = px; event.wheel.mouseY = py;" in adapter
+assert "_guiTouch.finish(identifier, cancelled == YES)" in adapter
+print("PASS deferred menu tap and dominant-axis touch scrolling; UIKit/device validation pending")
+
+assert "event.motion.state = dragging ? SDL_BUTTON_LMASK : 0;" in adapter
+assert adapter.count("self.bounds.size.height, 0, false, -1, true);") == 2

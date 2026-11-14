@@ -6,6 +6,7 @@
 #import "openmw_ios_touch_model.hpp"
 #import "openmw_ios_use_gesture.hpp"
 #import "openmw_ios_parry_gesture.hpp"
+#import "openmw_ios_menu_touch.hpp"
 #include <atomic>
 
 #import <Foundation/Foundation.h>
@@ -239,6 +240,50 @@ namespace
         SDL_PushEvent(&event);
     }
 
+    void pushMenuPointer(float x, float y, float viewWidth, float viewHeight, float wheel, bool click, int dragEdge = 0, bool dragging = false)
+    {
+        SDL_Window* window = currentSDLWindow();
+        if (!window || viewWidth <= 0 || viewHeight <= 0) return;
+        int width = 0, height = 0;
+        SDL_GetWindowSize(window, &width, &height);
+        const int px = static_cast<int>(std::lround(x * width / viewWidth));
+        const int py = static_cast<int>(std::lround(y * height / viewHeight));
+        SDL_Event event{};
+        event.type = SDL_MOUSEMOTION;
+        event.motion.timestamp = SDL_GetTicks();
+        event.motion.windowID = SDL_GetWindowID(window);
+        event.motion.x = px; event.motion.y = py;
+        event.motion.state = dragging ? SDL_BUTTON_LMASK : 0;
+        SDL_PushEvent(&event);
+        if (wheel != 0)
+        {
+            event = {};
+            event.type = SDL_MOUSEWHEEL;
+            event.wheel.timestamp = SDL_GetTicks();
+            event.wheel.windowID = SDL_GetWindowID(window);
+            event.wheel.preciseY = wheel;
+            event.wheel.direction = SDL_MOUSEWHEEL_NORMAL;
+            event.wheel.mouseX = px; event.wheel.mouseY = py;
+            SDL_PushEvent(&event);
+        }
+        if (click || dragEdge)
+        {
+            for (bool down : {true, false})
+            {
+                if (!click && down != (dragEdge > 0)) continue;
+                event = {};
+                event.type = down ? SDL_MOUSEBUTTONDOWN : SDL_MOUSEBUTTONUP;
+                event.button.timestamp = SDL_GetTicks();
+                event.button.windowID = SDL_GetWindowID(window);
+                event.button.button = SDL_BUTTON_LEFT;
+                event.button.state = down ? SDL_PRESSED : SDL_RELEASED;
+                event.button.clicks = 1;
+                event.button.x = px; event.button.y = py;
+                SDL_PushEvent(&event);
+            }
+        }
+    }
+
     void pushMouseButton(Uint8 button, bool down)
     {
         int x = 0;
@@ -288,6 +333,7 @@ namespace
     BOOL _editorResizing;
     OpenMWIOS::Touch::Point _editorLastPoint;
     OpenMWIOS::Touch::MenuGesture _menu;
+    OpenMWIOS::Touch::MenuTouch _guiTouch;
     OpenMWIOS::Touch::UseGesture _useGesture;
     OpenMWIOS::Touch::ParryGesture _parryGesture;
     std::uintptr_t _consumedMenuLongPressId;
@@ -393,13 +439,9 @@ namespace
     if (_gameplayMode && !_editing)
         return YES;
 
-    const OpenMWIOS::Touch::Point touchPoint{ static_cast<float>(point.x), static_cast<float>(point.y) };
-    for (const auto& button : _layout.buttons)
-    {
-        if (OpenMWIOS::Touch::visibleInMode(button.action, false) && button.bounds.contains(touchPoint, 1.15f))
-            return YES;
-    }
-    return NO;
+    // Own menu touches: swipe scrolls, tap selects, hold-then-drag preserves desktop dragging.
+    // Overlay controls are still resolved first in touchesBegan.
+    return YES;
 }
 
 - (void)rebuildLayout
@@ -584,7 +626,7 @@ namespace
             [self closeVirtualController];
         [self setNeedsDisplay];
         [self diagnose:"touch_mode_transition"
-            detail:_gameplayMode ? @"mode=gameplay" : @"mode=gui;non-control-touches=passthrough"];
+            detail:_gameplayMode ? @"mode=gameplay" : @"mode=gui;tap-select-drag-scroll"];
     }
     [self setAction:Action::Parry pressed:_parryGesture.pressed(CACurrentMediaTime(),
         _inputReady && _gameplayMode && !_editing && sWeaponReady.load())];
@@ -739,6 +781,9 @@ namespace
     _useGesture.cancel();
     _parryGesture.cancel();
     _menu.cancel();
+    if (_guiTouch.dragging())
+        pushMenuPointer(_guiTouch.currentX(), _guiTouch.currentY(), self.bounds.size.width, self.bounds.size.height, 0, false, -1, true);
+    _guiTouch.cancel();
     for (const auto& [identifier, binding] : _ownership.bindings())
     {
         (void)identifier;
@@ -817,7 +862,11 @@ namespace
 
         const auto binding = _ownership.begin(touchId(touch), point, _layout, _gameplayMode);
         if (!binding)
+        {
+            if (!_gameplayMode && _guiTouch.begin(touchId(touch), point.x, point.y, CACurrentMediaTime()))
+                pushMenuPointer(point.x, point.y, self.bounds.size.width, self.bounds.size.height, 0, false);
             continue;
+        }
 
         if (binding->role == Role::Movement)
         {
@@ -828,11 +877,12 @@ namespace
                      detail:[NSString stringWithFormat:@"id=%llu;vector=%.3f,%.3f;magnitude=%.3f",
                                  static_cast<unsigned long long>(touchId(touch)), vector.x, vector.y, vector.magnitude]];
         }
-        else if (binding->role == Role::Look)
+        else if (binding->role == Role::Parry)
         {
             if (sWeaponReady.load())
                 _parryGesture.begin(touchId(touch), point.x, point.y, CACurrentMediaTime());
-            [self diagnose:"touch_look_acquired"
+            [self setAction:Action::Parry pressed:_parryGesture.pressed(CACurrentMediaTime(), sWeaponReady.load())];
+            [self diagnose:"touch_parry_acquired"
                      detail:[NSString stringWithFormat:@"id=%llu", static_cast<unsigned long long>(touchId(touch))]];
         }
         else if (binding->role == Role::Button && binding->action)
@@ -894,6 +944,20 @@ namespace
             _menu.move(touchId(touch), point);
             continue;
         }
+        if (_guiTouch.owns(touchId(touch)))
+        {
+            const bool wasDragging = _guiTouch.dragging();
+            const float wheel = _guiTouch.move(touchId(touch), point.x, point.y, CACurrentMediaTime());
+            if (_guiTouch.dragging())
+            {
+                if (!wasDragging)
+                    pushMenuPointer(_guiTouch.x(), _guiTouch.y(), self.bounds.size.width, self.bounds.size.height, 0, false, 1);
+                pushMenuPointer(point.x, point.y, self.bounds.size.width, self.bounds.size.height, 0, false, 0, true);
+            }
+            else if (wheel != 0)
+                pushMenuPointer(_guiTouch.x(), _guiTouch.y(), self.bounds.size.width, self.bounds.size.height, wheel, false);
+            continue;
+        }
         const auto previous = _ownership.move(touchId(touch), point);
         if (!previous)
             continue;
@@ -903,12 +967,6 @@ namespace
         {
             float dx = point.x - previous->lastPoint.x;
             float dy = point.y - previous->lastPoint.y;
-            if (previous->role == Role::Look)
-            {
-                const bool look = _parryGesture.move(touchId(touch), point.x, point.y, dx, dy);
-                [self setAction:Action::Parry pressed:_parryGesture.pressed(CACurrentMediaTime(), sWeaponReady.load())];
-                if (!look) continue;
-            }
             pushRelativeMouse(dx, dy);
             [self diagnose:"touch_look_delta"
                      detail:[NSString stringWithFormat:@"id=%llu;delta=%.2f,%.2f",
@@ -950,6 +1008,15 @@ namespace
             }
             continue;
         }
+        if (_guiTouch.owns(identifier))
+        {
+            const float x = _guiTouch.x(), y = _guiTouch.y();
+            if (_guiTouch.dragging())
+                pushMenuPointer(_guiTouch.currentX(), _guiTouch.currentY(), self.bounds.size.width, self.bounds.size.height, 0, false, -1, true);
+            if (_guiTouch.finish(identifier, cancelled == YES))
+                pushMenuPointer(x, y, self.bounds.size.width, self.bounds.size.height, 0, true);
+            continue;
+        }
         const auto binding = _ownership.end(touchId(touch));
         if (!binding)
             continue;
@@ -958,11 +1025,11 @@ namespace
             [self releaseMovement];
             [self diagnose:"touch_movement_released" detail:cancelled ? @"cancelled=yes" : @"cancelled=no"];
         }
-        else if (binding->role == Role::Look)
+        else if (binding->role == Role::Parry)
         {
             _parryGesture.finish(touchId(touch), CACurrentMediaTime(), cancelled == YES);
             [self setAction:Action::Parry pressed:_parryGesture.pressed(CACurrentMediaTime(), sWeaponReady.load())];
-            [self diagnose:"touch_look_released" detail:cancelled ? @"cancelled=yes" : @"cancelled=no"];
+            [self diagnose:"touch_parry_released" detail:cancelled ? @"cancelled=yes" : @"cancelled=no"];
         }
         else if (binding->role == Role::Button && binding->action)
         {

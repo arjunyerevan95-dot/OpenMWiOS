@@ -278,6 +278,7 @@ namespace OpenMWIOS::Touch
         None,
         Movement,
         Look,
+        Parry,
         Button,
     };
 
@@ -295,6 +296,18 @@ namespace OpenMWIOS::Touch
             || (binding.role == Role::Button && binding.action == Action::Attack);
     }
 
+    // Dedicated upper-right gap from the approved screenshot. Buttons win hit
+    // testing; a touch captured here never turns into camera movement.
+    inline bool inParryZone(Point point, const Layout& layout)
+    {
+        const float w = layout.width - layout.safeArea.left - layout.safeArea.right;
+        const float h = layout.height - layout.safeArea.top - layout.safeArea.bottom;
+        if (w <= 0.f || h <= 0.f) return false;
+        const float x = (point.x - layout.safeArea.left) / w;
+        const float y = (point.y - layout.safeArea.top) / h;
+        return x >= 0.86f && x <= 1.f && y >= 0.24f && y <= 0.54f;
+    }
+
     class Ownership
     {
     public:
@@ -310,6 +323,10 @@ namespace OpenMWIOS::Touch
                     && !actionOwned(button.action))
                     return add(touchId, { Role::Button, button.action, point, point });
             }
+
+            if (gameplayMode && inParryZone(point, layout))
+                return roleOwned(Role::Parry) ? std::nullopt
+                    : add(touchId, { Role::Parry, std::nullopt, point, point });
 
             if (gameplayMode && point.x <= layout.movementBoundaryX && !roleOwned(Role::Movement))
             {
