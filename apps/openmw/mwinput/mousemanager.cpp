@@ -49,8 +49,8 @@ namespace MWInput
 #if defined(__APPLE__) && TARGET_OS_IPHONE
     void MouseManager::touchEvent(const SDL_TouchFingerEvent& arg)
     {
-        auto* windows = MWBase::Environment::get().getWindowManager();
-        auto* input = MWBase::Environment::get().getInputManager();
+        MWBase::WindowManager* windows = MWBase::Environment::get().getWindowManager();
+        MWBase::InputManager* input = MWBase::Environment::get().getInputManager();
         const int oldWheel = mMouseWheel;
         mMenuInput.handle(arg, mGuiCursorX, mGuiCursorY, mMouseWheel,
             windows->isGuiMode() && !input->controlsDisabled() && !mBindingsManager->isDetectingBindingState());

@@ -1,0 +1,67 @@
+#include "apps/openmw/ios/openmw_ios_menu_input.hpp"
+#include "components/misc/notnullptr.hpp"
+#include <cassert>
+#include <iostream>
+namespace MWBase
+{
+    struct WindowManager
+    {
+        bool gui=true,active=false;
+        bool isGuiMode() const { return gui; }
+        void setCursorActive(bool value) { active=value; }
+    };
+    struct InputManager
+    {
+        bool disabled=false,joystick=true;int idleResets=0;
+        bool controlsDisabled() const { return disabled; }
+        void setJoystickLastUsed(bool value) { joystick=value; }
+        void resetIdleTime() { ++idleResets; }
+    };
+    struct Environment
+    {
+        WindowManager windows;InputManager input;
+        static Environment& get() { static Environment e; return e; }
+        Misc::NotNullPtr<WindowManager> getWindowManager() { return &windows; }
+        Misc::NotNullPtr<InputManager> getInputManager() { return &input; }
+    };
+}
+namespace LuaUi
+{
+    int wheels=0;
+    void dispatchMouseWheel(MyGUI::Widget*,float,float,float,float) { ++wheels; }
+}
+namespace OpenMWIOS::Touch { std::uint32_t inputGeneration() { return 1; } }
+namespace MWInput
+{
+    struct BindingsManager { bool isDetectingBindingState() const { return false; } };
+    struct MouseManager
+    {
+        OpenMWIOS::Touch::MenuInput mMenuInput;
+        float mGuiCursorX=0,mGuiCursorY=0;int mMouseWheel=0;
+        BindingsManager bindings;BindingsManager* mBindingsManager=&bindings;
+        void touchEvent(const SDL_TouchFingerEvent& arg);
+    };
+// PRODUCTION_BRIDGE
+}
+int main()
+{
+    MWInput::MouseManager manager;
+    auto& environment=MWBase::Environment::get();
+    MyGUI::Widget map,list;map.direct=true;
+    auto& gui=MyGUI::InputManager::getInstance();gui.picked=&map;
+    SDL_TouchFingerEvent event;event.touchId=OpenMWIOS::Touch::MenuDevice;
+    event.fingerId=(std::int64_t(1)<<32)|1;event.dx=500;event.dy=250;event.x=.2f;event.y=.4f;
+    event.type=SDL_FINGERDOWN;event.timestamp=100;manager.touchEvent(event);
+    event.type=SDL_FINGERMOTION;event.timestamp=110;event.x=.3f;manager.touchEvent(event);
+    assert(map.presses==1 && map.drags==1 && manager.mGuiCursorX==300);
+    assert(!environment.input.joystick && environment.input.idleResets==2 && environment.windows.active);
+    environment.input.disabled=true;
+    event.type=SDL_FINGERUP;event.timestamp=120;manager.touchEvent(event);
+    assert(!gui.captured && map.clicks==0);
+    environment.input.disabled=false;gui.picked=&list;
+    event.type=SDL_FINGERDOWN;event.timestamp=200;event.x=.2f;event.y=.4f;manager.touchEvent(event);
+    event.type=SDL_FINGERMOTION;event.timestamp=210;event.y=.256f;manager.touchEvent(event);
+    assert(manager.mMouseWheel==-120 && LuaUi::wheels==1 && list.presses==0);
+    event.type=SDL_FINGERUP;event.timestamp=220;manager.touchEvent(event);
+    std::cout<<"PASS actual touch bridge: engine NotNullPtr getters, map pan, Lua wheel and disabled input\n";
+}
