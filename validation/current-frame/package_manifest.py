@@ -47,7 +47,7 @@ manifest = {
     "executableSHA256": sha(exe), "uuid": run("dwarfdump", "--uuid", str(exe)),
     "dSYM": dsym.is_dir(),
     "entitlementsSource": plistlib.loads((ROOT/"ios/OpenMW/OpenMW.entitlements").read_bytes()),
-    "deviceValidation": "136+ executable model/profile checks pass; dedicated Parry and held Attack+swipe require UIKit/device test",
+    "deviceValidation": "Targeted menu/map routing and HUD gesture/ownership tests pass; native map markers, HUD identity and haptics require phone test",
     "presentationDiagnostic": "current PBO frame; SDL_UIKIT_EGL_CURRENT_FRAME default true",
 }
 archives = []
@@ -57,3 +57,4 @@ for path in sorted((ROOT/"ios-deps/source").glob("*/*")):
 manifest["dependencyArchives"] = archives
 (OUT / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n")
 print(json.dumps(manifest, indent=2))
+

@@ -838,6 +838,7 @@ namespace MWGui
         mButton->setCaptionWithReplacing(global ? "#{sLocal}" : "#{sWorld}");
 
         getWidget(mEventBoxGlobal, "EventBoxGlobal");
+        mEventBoxGlobal->setUserString("OpenMWTouchDrag", "true");
         mEventBoxGlobal->eventMouseDrag += MyGUI::newDelegate(this, &MapWindow::onMouseDrag);
         mEventBoxGlobal->eventMouseButtonPressed += MyGUI::newDelegate(this, &MapWindow::onDragStart);
 
@@ -848,6 +849,7 @@ namespace MWGui
         mEventBoxGlobal->setDepth(Global_ExploreOverlayLayer);
 
         getWidget(mEventBoxLocal, "EventBoxLocal");
+        mEventBoxLocal->setUserString("OpenMWTouchDrag", "true");
         mEventBoxLocal->eventMouseDrag += MyGUI::newDelegate(this, &MapWindow::onMouseDrag);
         mEventBoxLocal->eventMouseButtonPressed += MyGUI::newDelegate(this, &MapWindow::onDragStart);
         mEventBoxLocal->eventMouseButtonDoubleClick += MyGUI::newDelegate(this, &MapWindow::onMapDoubleClicked);
@@ -1102,6 +1104,7 @@ namespace MWGui
         markerWidget->setColour(
             MyGUI::Colour::parse(MyGUI::LanguageManager::getInstance().replaceTags("#{fontcolour=normal}")));
         markerWidget->setDepth(Global_MarkerLayer);
+        markerWidget->setUserString("OpenMWTouchDrag", "true");
         markerWidget->eventMouseDrag += MyGUI::newDelegate(this, &MapWindow::onMouseDrag);
         if (Settings::map().mAllowZooming)
             markerWidget->eventMouseWheel += MyGUI::newDelegate(this, &MapWindow::onMapZoomed);
@@ -1398,6 +1401,7 @@ namespace MWGui
 
     void MapWindow::customMarkerCreated(MyGUI::Widget* marker)
     {
+        marker->setUserString("OpenMWTouchDrag", "true");
         marker->eventMouseDrag += MyGUI::newDelegate(this, &MapWindow::onMouseDrag);
         marker->eventMouseButtonPressed += MyGUI::newDelegate(this, &MapWindow::onDragStart);
         marker->eventMouseButtonDoubleClick += MyGUI::newDelegate(this, &MapWindow::onCustomMarkerDoubleClicked);
@@ -1407,6 +1411,7 @@ namespace MWGui
 
     void MapWindow::doorMarkerCreated(MyGUI::Widget* marker)
     {
+        marker->setUserString("OpenMWTouchDrag", "true");
         marker->eventMouseDrag += MyGUI::newDelegate(this, &MapWindow::onMouseDrag);
         marker->eventMouseButtonPressed += MyGUI::newDelegate(this, &MapWindow::onDragStart);
         if (Settings::map().mAllowZooming)
@@ -1638,3 +1643,4 @@ namespace MWGui
     }
 
 }
+

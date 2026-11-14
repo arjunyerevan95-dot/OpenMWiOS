@@ -50,6 +50,7 @@ namespace SDLUtil
         virtual void mousePressed(const SDL_MouseButtonEvent& arg, Uint8 id) = 0;
         virtual void mouseReleased(const SDL_MouseButtonEvent& arg, Uint8 id) = 0;
         virtual void mouseWheelMoved(const SDL_MouseWheelEvent& arg) = 0;
+        virtual void touchEvent(const SDL_TouchFingerEvent&) {}
     };
 
     class SensorListener
@@ -103,3 +104,4 @@ namespace SDLUtil
 }
 
 #endif
+

@@ -1,4 +1,10 @@
 #include "hud.hpp"
+#ifdef __APPLE__
+#include <TargetConditionals.h>
+#if TARGET_OS_IPHONE
+#include "../ios/openmw_ios_touch_targets.hpp"
+#endif
+#endif
 
 #include <MyGUI_Button.h>
 #include <MyGUI_ImageBox.h>
@@ -108,6 +114,9 @@ namespace MWGui
 
     HUD::~HUD()
     {
+#if defined(__APPLE__) && TARGET_OS_IPHONE
+        OpenMWIOS::Touch::publishHudTargets({});
+#endif
         mMainWidget->eventMouseLostFocus.clear();
         mMainWidget->eventMouseMove.clear();
         mMainWidget->eventMouseButtonClick.clear();
@@ -297,6 +306,32 @@ namespace MWGui
     void HUD::onFrame(float dt)
     {
         LocalMapBase::onFrame(dt);
+#if defined(__APPLE__) && TARGET_OS_IPHONE
+        // Resolve the real widgets every frame: UI mods, visibility and scale all apply.
+        const auto view = MyGUI::RenderManager::getInstance().getViewSize();
+        const auto rect = [&](MyGUI::Widget* widget) -> OpenMWIOS::Touch::TargetRect {
+            if (view.width <= 0 || view.height <= 0) return {};
+            for (auto* ancestor = widget; ancestor; ancestor = ancestor->getParent())
+                if (!ancestor->getVisible() || !ancestor->getEnabled()) return {};
+            const auto c = widget->getAbsoluteCoord();
+            return { float(c.left)/view.width, float(c.top)/view.height,
+                float(c.right())/view.width, float(c.bottom())/view.height };
+        };
+        OpenMWIOS::Touch::HudTargets targets;
+        if (!MWBase::Environment::get().getWindowManager()->isGuiMode())
+        {
+            if (mHealth->getVisible() && mMagicka->getVisible() && mStamina->getVisible())
+            {
+                const auto h = rect(mHealthFrame), m = rect(mMagicka->getParent()), f = rect(mStamina->getParent());
+                if (h.valid() && m.valid() && f.valid())
+                    targets.stats = { std::min({h.left,m.left,f.left}), std::min({h.top,m.top,f.top}),
+                        std::max({h.right,m.right,f.right}), std::max({h.bottom,m.bottom,f.bottom}) };
+            }
+            targets.weapon = rect(mWeapBox);
+            targets.mouse = rect(mMouseEmulationCursor);
+        }
+        OpenMWIOS::Touch::publishHudTargets(targets);
+#endif
 
         mCellNameTimer -= dt;
         mWeaponSpellTimer -= dt;
@@ -636,3 +671,4 @@ namespace MWGui
     }
 
 }
+

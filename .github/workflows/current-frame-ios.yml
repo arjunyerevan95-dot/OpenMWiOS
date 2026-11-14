@@ -36,17 +36,17 @@ jobs:
           xcrun --sdk iphoneos --show-sdk-version
           git merge-base --is-ancestor 2931be63bd2147e437a2b077ed6c97f563648a0a HEAD
           git diff --exit-code 568323258e0a17f294b91797b68cd29222c374ab -- .github/workflows/wo40-ios.yml
-          python3 validation/current-frame/check_scope.py
+          python3 validation/current-frame/check_input_scope.py
       - name: Host tools used by pinned donor recipes
         shell: bash
         run: |
           brew install cmake ninja meson xcodegen pkgconf python@3.14 bison@3.8
           echo "$(brew --prefix python@3.14)/libexec/bin" >> "$GITHUB_PATH"
-      - name: Targeted editor and saved-profile contract
+      - name: Targeted menu, map and HUD input contracts
         shell: bash
         env:
           CXX: clang++
-        run: python3 validation/current-frame/run_editor_tests.py
+        run: python3 validation/current-frame/run_menu_tests.py
       - name: Integrated device build
         shell: bash
         run: |
@@ -76,3 +76,4 @@ jobs:
             log/wo40/
           if-no-files-found: error
           retention-days: 30
+

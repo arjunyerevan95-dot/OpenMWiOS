@@ -1,6 +1,7 @@
 #pragma once
 #include <SDL_video.h>
 #ifdef __cplusplus
+#include "openmw_ios_touch_targets.hpp"
 extern "C" {
 #else
 #include <stdbool.h>
@@ -13,3 +14,4 @@ void openmw_ios_shutdown_touch_controls(void);
 #ifdef __cplusplus
 }
 #endif
+

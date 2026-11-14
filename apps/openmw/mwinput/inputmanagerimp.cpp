@@ -78,6 +78,13 @@ namespace MWInput
     {
         mControlsDisabled = disableControls;
 #if defined(__APPLE__) && TARGET_OS_IPHONE
+        if (disableControls || disableEvents)
+        {
+            mMouseManager->cancelTouch();
+            OpenMWIOS::Touch::invalidateInput();
+        }
+#endif
+#if defined(__APPLE__) && TARGET_OS_IPHONE
         const auto& environment = MWBase::Environment::get();
         openmw_ios_set_weapon_ready(OpenMWIOS::Touch::weaponReadyForInput(disableControls, disableEvents,
             environment.getStateManager()->getState() == MWBase::StateManager::State_Running,
@@ -136,6 +143,8 @@ namespace MWInput
     void InputManager::changeInputMode(bool guiMode)
     {
 #if defined(__APPLE__) && TARGET_OS_IPHONE
+        mMouseManager->cancelTouch();
+        OpenMWIOS::Touch::invalidateInput();
         openmw_ios_set_gameplay_mode(!guiMode);
 #endif
         mControllerManager->setGuiCursorEnabled(guiMode);
@@ -319,3 +328,4 @@ namespace MWInput
         mBindingsManager->saveBindings();
     }
 }
+

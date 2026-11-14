@@ -69,6 +69,7 @@ namespace SDLUtil
             SDL_FlushEvent(SDL_MOUSEBUTTONDOWN);
             SDL_FlushEvent(SDL_MOUSEMOTION);
             SDL_FlushEvent(SDL_MOUSEWHEEL);
+            SDL_FlushEvents(SDL_FINGERDOWN, SDL_FINGERMOTION);
 
             return;
         }
@@ -211,6 +212,8 @@ namespace SDLUtil
                 case SDL_FINGERDOWN:
                 case SDL_FINGERUP:
                 case SDL_FINGERMOTION:
+                    mMouseListener->touchEvent(evt.tfinger);
+                    break;
                 case SDL_DOLLARGESTURE:
                 case SDL_DOLLARRECORD:
                 case SDL_MULTIGESTURE:
@@ -458,3 +461,4 @@ namespace SDLUtil
         return packEvt;
     }
 }
+

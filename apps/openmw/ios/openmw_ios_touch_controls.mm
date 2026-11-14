@@ -6,7 +6,8 @@
 #import "openmw_ios_touch_model.hpp"
 #import "openmw_ios_use_gesture.hpp"
 #import "openmw_ios_parry_gesture.hpp"
-#import "openmw_ios_menu_touch.hpp"
+#import "openmw_ios_touch_targets.hpp"
+#include <mutex>
 #include <atomic>
 
 #import <Foundation/Foundation.h>
@@ -20,6 +21,20 @@
 #include <cmath>
 #include <cstdint>
 #include <string>
+
+namespace OpenMWIOS::Touch
+{
+    namespace { std::atomic<std::uint32_t> sGeneration{1}; std::mutex sHudMutex; HudTargets sHudTargets; }
+    std::uint32_t inputGeneration() { return sGeneration.load(); }
+    void invalidateInput() { ++sGeneration; }
+    void publishHudTargets(HudTargets targets)
+    { std::lock_guard<std::mutex> lock(sHudMutex); targets.generation = inputGeneration(); sHudTargets = targets; }
+    HudTargets hudTargets()
+    {
+        std::lock_guard<std::mutex> lock(sHudMutex);
+        return sHudTargets.generation == inputGeneration() ? sHudTargets : HudTargets{};
+    }
+}
 
 namespace
 {
@@ -240,48 +255,20 @@ namespace
         SDL_PushEvent(&event);
     }
 
-    void pushMenuPointer(float x, float y, float viewWidth, float viewHeight, float wheel, bool click, int dragEdge = 0, bool dragging = false)
+    void pushMenuFinger(Uint32 type, std::uint64_t token, CGPoint point, CGSize view, bool cancelled = false)
     {
-        SDL_Window* window = currentSDLWindow();
-        if (!window || viewWidth <= 0 || viewHeight <= 0) return;
-        int width = 0, height = 0;
-        SDL_GetWindowSize(window, &width, &height);
-        const int px = static_cast<int>(std::lround(x * width / viewWidth));
-        const int py = static_cast<int>(std::lround(y * height / viewHeight));
+        if (view.width <= 0 || view.height <= 0) return;
         SDL_Event event{};
-        event.type = SDL_MOUSEMOTION;
-        event.motion.timestamp = SDL_GetTicks();
-        event.motion.windowID = SDL_GetWindowID(window);
-        event.motion.x = px; event.motion.y = py;
-        event.motion.state = dragging ? SDL_BUTTON_LMASK : 0;
+        event.type = type;
+        event.tfinger.timestamp = SDL_GetTicks();
+        event.tfinger.windowID = currentSDLWindowId();
+        event.tfinger.touchId = OpenMWIOS::Touch::MenuDevice;
+        event.tfinger.fingerId = static_cast<SDL_FingerID>(token);
+        event.tfinger.x = point.x / view.width; event.tfinger.y = point.y / view.height;
+        // Synthetic-event protocol: normalized position plus UIKit dimensions in points.
+        event.tfinger.dx = view.width; event.tfinger.dy = view.height;
+        event.tfinger.pressure = cancelled ? -1.f : 1.f;
         SDL_PushEvent(&event);
-        if (wheel != 0)
-        {
-            event = {};
-            event.type = SDL_MOUSEWHEEL;
-            event.wheel.timestamp = SDL_GetTicks();
-            event.wheel.windowID = SDL_GetWindowID(window);
-            event.wheel.preciseY = wheel;
-            event.wheel.direction = SDL_MOUSEWHEEL_NORMAL;
-            event.wheel.mouseX = px; event.wheel.mouseY = py;
-            SDL_PushEvent(&event);
-        }
-        if (click || dragEdge)
-        {
-            for (bool down : {true, false})
-            {
-                if (!click && down != (dragEdge > 0)) continue;
-                event = {};
-                event.type = down ? SDL_MOUSEBUTTONDOWN : SDL_MOUSEBUTTONUP;
-                event.button.timestamp = SDL_GetTicks();
-                event.button.windowID = SDL_GetWindowID(window);
-                event.button.button = SDL_BUTTON_LEFT;
-                event.button.state = down ? SDL_PRESSED : SDL_RELEASED;
-                event.button.clicks = 1;
-                event.button.x = px; event.button.y = py;
-                SDL_PushEvent(&event);
-            }
-        }
     }
 
     void pushMouseButton(Uint8 button, bool down)
@@ -335,7 +322,15 @@ namespace
     BOOL _editorResizing;
     OpenMWIOS::Touch::Point _editorLastPoint;
     OpenMWIOS::Touch::MenuGesture _menu;
-    OpenMWIOS::Touch::MenuTouch _guiTouch;
+    std::uintptr_t _guiTouchId;
+    std::uint64_t _guiTouchToken;
+    std::uint32_t _fingerSequence;
+    CGPoint _guiLastPoint;
+    OpenMWIOS::Touch::TapHold _hudTouch, _weaponTouch, _inventoryTouch;
+    OpenMWIOS::Touch::TargetRect _hudRect;
+    Action _hudTap, _hudHold;
+    std::uint32_t _hudGeneration;
+    std::uint32_t _hiddenActions;
     OpenMWIOS::Touch::UseGesture _useGesture;
     OpenMWIOS::Touch::ParryGesture _parryGesture;
     std::uintptr_t _consumedMenuLongPressId;
@@ -682,8 +677,47 @@ namespace
         _inputReady && _gameplayMode && !_editing && sWeaponReady.load())];
     if (_inputReady && _gameplayMode && !_editing && _useGesture.update(CACurrentMediaTime()))
         [self setPhysicsGrab:YES];
+    if (_inputReady && _gameplayMode && !_editing)
+    {
+        const auto targets = OpenMWIOS::Touch::hudTargets();
+        const auto target = _hudTap == Action::Inventory ? targets.mouse
+            : (_hudTap == Action::Journal ? targets.stats : targets.weapon);
+        if (_hudGeneration != OpenMWIOS::Touch::inputGeneration() || !(_hudRect == target)) _hudTouch.cancel();
+        if (_hudTap != Action::Inventory && _hudTouch.update(CACurrentMediaTime()) == OpenMWIOS::Touch::TapHold::Result::Hold)
+            [self pulseAction:_hudHold haptic:true];
+        if (_weaponTouch.update(CACurrentMediaTime()) == OpenMWIOS::Touch::TapHold::Result::Hold)
+            [self pulseAction:Action::ReadyMagic haptic:true];
+    }
+    const auto hidden = [self hiddenHudActions];
+    if (hidden != _hiddenActions) { _hiddenActions = hidden; [self setNeedsDisplay]; }
     if (_inputReady && !_editing && _menu.expired(CACurrentMediaTime()))
         [self enterEditor];
+}
+
+- (std::uint32_t)hiddenHudActions
+{
+    if (!_gameplayMode || _editing) return 0;
+    const auto targets = OpenMWIOS::Touch::hudTargets();
+    const auto bit = [](Action action) { return 1u << static_cast<unsigned>(action); };
+    std::uint32_t hidden = bit(Action::ReadyMagic); // available by holding Ready Weapon, including fallback
+    if (targets.stats.valid()) hidden |= bit(Action::Journal) | bit(Action::Wait);
+    if (targets.weapon.valid()) hidden |= bit(Action::ReadyWeapon);
+    if (targets.mouse.valid()) hidden |= bit(Action::Inventory);
+    return hidden;
+}
+
+- (void)pulseAction:(Action)action haptic:(bool)haptic
+{
+    if (haptic)
+    {
+        UIImpactFeedbackGenerator* feedback = [[UIImpactFeedbackGenerator alloc] initWithStyle:UIImpactFeedbackStyleMedium];
+        [feedback impactOccurred];
+        [feedback release];
+    }
+    [self setAction:action pressed:true];
+    SDL_JoystickUpdate();
+    [self setAction:action pressed:false];
+    SDL_JoystickUpdate();
 }
 
 - (BOOL)ensureVirtualController
@@ -831,9 +865,10 @@ namespace
     _useGesture.cancel();
     _parryGesture.cancel();
     _menu.cancel();
-    if (_guiTouch.dragging())
-        pushMenuPointer(_guiTouch.currentX(), _guiTouch.currentY(), self.bounds.size.width, self.bounds.size.height, 0, false, -1, true);
-    _guiTouch.cancel();
+    if (_guiTouchId)
+        pushMenuFinger(SDL_FINGERUP, _guiTouchToken, _guiLastPoint, self.bounds.size, true);
+    _guiTouchId = 0;
+    _hudTouch.cancel(); _weaponTouch.cancel(); _inventoryTouch.cancel();
     for (const auto& [identifier, binding] : _ownership.bindings())
     {
         (void)identifier;
@@ -911,11 +946,37 @@ namespace
         if (menuHit)
             continue;
 
-        const auto binding = _ownership.begin(touchId(touch), point, _layout, _gameplayMode);
+        const auto targets = OpenMWIOS::Touch::hudTargets();
+        const auto hidden = [self hiddenHudActions];
+        bool overlayHit = false;
+        for (const auto& button : _layout.buttons)
+            if (!(hidden & (1u << static_cast<unsigned>(button.action)))
+                && OpenMWIOS::Touch::visibleInMode(button.action, _gameplayMode) && button.bounds.contains(point, 1.15f))
+                overlayHit = true;
+        if (_gameplayMode && !overlayHit && self.bounds.size.width > 0 && self.bounds.size.height > 0)
+        {
+            const float x = point.x/self.bounds.size.width, y = point.y/self.bounds.size.height;
+            OpenMWIOS::Touch::TargetRect target;
+            Action tap = Action::Inventory, hold = Action::Inventory;
+            if (targets.mouse.contains(x,y)) target = targets.mouse;
+            else if (targets.stats.contains(x,y)) { target = targets.stats; tap = Action::Journal; hold = Action::Wait; }
+            else if (targets.weapon.contains(x,y)) { target = targets.weapon; tap = Action::ReadyWeapon; hold = Action::ReadyMagic; }
+            if (target.valid())
+            {
+                if (_hudTouch.begin(touchId(touch), point.x, point.y, CACurrentMediaTime()))
+                { _hudRect = target; _hudTap = tap; _hudHold = hold; _hudGeneration = targets.generation; }
+                continue; // a second finger in a HUD target never falls through to camera input
+            }
+        }
+        const auto binding = _ownership.begin(touchId(touch), point, _layout, _gameplayMode, hidden);
         if (!binding)
         {
-            if (!_gameplayMode && _guiTouch.begin(touchId(touch), point.x, point.y, CACurrentMediaTime()))
-                pushMenuPointer(point.x, point.y, self.bounds.size.width, self.bounds.size.height, 0, false);
+            if (!_gameplayMode && !_guiTouchId)
+            {
+                _guiTouchId = touchId(touch); _guiLastPoint = location;
+                _guiTouchToken = (std::uint64_t(OpenMWIOS::Touch::inputGeneration()) << 32) | ++_fingerSequence;
+                pushMenuFinger(SDL_FINGERDOWN, _guiTouchToken, location, self.bounds.size);
+            }
             continue;
         }
 
@@ -938,7 +999,11 @@ namespace
         }
         else if (binding->role == Role::Button && binding->action)
         {
-            if (*binding->action == Action::Activate && _gameplayMode && [self ensureVirtualController])
+            if (*binding->action == Action::Inventory)
+                _inventoryTouch.begin(touchId(touch), point.x, point.y, CACurrentMediaTime());
+            else if (*binding->action == Action::ReadyWeapon && _gameplayMode)
+                _weaponTouch.begin(touchId(touch), point.x, point.y, CACurrentMediaTime());
+            else if (*binding->action == Action::Activate && _gameplayMode && [self ensureVirtualController])
                 _useGesture.begin(touchId(touch), CACurrentMediaTime());
             else
                 [self setAction:*binding->action pressed:true];
@@ -996,20 +1061,22 @@ namespace
             _menu.move(touchId(touch), point);
             continue;
         }
-        if (_guiTouch.owns(touchId(touch)))
+        if (_hudTouch.owns(touchId(touch)))
         {
-            const bool wasDragging = _guiTouch.dragging();
-            const float wheel = _guiTouch.move(touchId(touch), point.x, point.y, CACurrentMediaTime());
-            if (_guiTouch.dragging())
-            {
-                if (!wasDragging)
-                    pushMenuPointer(_guiTouch.x(), _guiTouch.y(), self.bounds.size.width, self.bounds.size.height, 0, false, 1);
-                pushMenuPointer(point.x, point.y, self.bounds.size.width, self.bounds.size.height, 0, false, 0, true);
-            }
-            else if (wheel != 0)
-                pushMenuPointer(_guiTouch.x(), _guiTouch.y(), self.bounds.size.width, self.bounds.size.height, wheel, false);
+            _hudTouch.move(touchId(touch), point.x, point.y,
+                _hudRect.contains(point.x/self.bounds.size.width, point.y/self.bounds.size.height));
             continue;
         }
+        if (_guiTouchId == touchId(touch))
+        {
+            _guiLastPoint = location;
+            pushMenuFinger(SDL_FINGERMOTION, _guiTouchToken, location, self.bounds.size);
+            continue;
+        }
+        if (_weaponTouch.owns(touchId(touch)))
+            _weaponTouch.move(touchId(touch), point.x, point.y, true);
+        if (_inventoryTouch.owns(touchId(touch)))
+            _inventoryTouch.move(touchId(touch), point.x, point.y, true);
         const auto previous = _ownership.move(touchId(touch), point);
         if (!previous)
             continue;
@@ -1060,13 +1127,21 @@ namespace
             }
             continue;
         }
-        if (_guiTouch.owns(identifier))
+        if (_hudTouch.owns(identifier))
         {
-            const float x = _guiTouch.x(), y = _guiTouch.y();
-            if (_guiTouch.dragging())
-                pushMenuPointer(_guiTouch.currentX(), _guiTouch.currentY(), self.bounds.size.width, self.bounds.size.height, 0, false, -1, true);
-            if (_guiTouch.finish(identifier, cancelled == YES))
-                pushMenuPointer(x, y, self.bounds.size.width, self.bounds.size.height, 0, true);
+            const CGPoint end = [touch locationInView:self];
+            _hudTouch.move(identifier, end.x, end.y,
+                _hudRect.contains(end.x/self.bounds.size.width, end.y/self.bounds.size.height));
+            const auto result = _hudTouch.finish(identifier, CACurrentMediaTime(),
+                cancelled || _hudGeneration != OpenMWIOS::Touch::inputGeneration(), _hudTap != Action::Inventory);
+            if (result == OpenMWIOS::Touch::TapHold::Result::Tap) [self pulseAction:_hudTap haptic:false];
+            else if (result == OpenMWIOS::Touch::TapHold::Result::Hold) [self pulseAction:_hudHold haptic:true];
+            continue;
+        }
+        if (_guiTouchId == identifier)
+        {
+            pushMenuFinger(SDL_FINGERUP, _guiTouchToken, [touch locationInView:self], self.bounds.size, cancelled == YES);
+            _guiTouchId = 0;
             continue;
         }
         const auto binding = _ownership.end(touchId(touch));
@@ -1085,7 +1160,23 @@ namespace
         }
         else if (binding->role == Role::Button && binding->action)
         {
-            if (touchId(touch) == _useGesture.touch())
+            if (_inventoryTouch.owns(identifier))
+            {
+                const CGPoint end = [touch locationInView:self];
+                _inventoryTouch.move(identifier, end.x, end.y, true);
+                if (_inventoryTouch.finish(identifier, CACurrentMediaTime(), cancelled == YES, false)
+                    == OpenMWIOS::Touch::TapHold::Result::Tap)
+                    [self pulseAction:Action::Inventory haptic:false];
+            }
+            else if (_weaponTouch.owns(identifier))
+            {
+                const CGPoint end = [touch locationInView:self];
+                _weaponTouch.move(identifier, end.x, end.y, true);
+                const auto result = _weaponTouch.finish(identifier, CACurrentMediaTime(), cancelled == YES);
+                if (result == OpenMWIOS::Touch::TapHold::Result::Tap) [self pulseAction:Action::ReadyWeapon haptic:false];
+                else if (result == OpenMWIOS::Touch::TapHold::Result::Hold) [self pulseAction:Action::ReadyMagic haptic:true];
+            }
+            else if (touchId(touch) == _useGesture.touch())
             {
                 const auto result = _useGesture.finish(touchId(touch), CACurrentMediaTime(), cancelled == YES);
                 [self setPhysicsGrab:NO];
@@ -1163,7 +1254,8 @@ namespace
     for (const auto& button : _layout.buttons)
     {
         if (button.action == Action::Parry) continue; // legacy profile slot, no standalone button
-        if (!_editing && !OpenMWIOS::Touch::visibleInMode(button.action, _gameplayMode))
+        if (!_editing && ((!OpenMWIOS::Touch::visibleInMode(button.action, _gameplayMode))
+            || ([self hiddenHudActions] & (1u << static_cast<unsigned>(button.action)))))
             continue;
         const bool pressed = _pressedActions[static_cast<std::size_t>(button.action)];
         UIImage* icon = imageForAction(button.action);
@@ -1330,3 +1422,4 @@ extern "C" void openmw_ios_set_weapon_ready(bool ready)
 {
     sWeaponReady.store(ready);
 }
+

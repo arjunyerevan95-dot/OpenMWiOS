@@ -4,10 +4,11 @@
 
 namespace OpenMWIOS::Touch
 {
-// Ordinary GUI taps defer mouse-down until release and quick swipes scroll.
-// Holding stationary before moving explicitly opts into desktop mouse dragging.
+// The game thread selects the route from the actual MyGUI mouse-focus widget.
+// Taps stay deferred; map motion starts a direct drag without a long hold.
 class MenuTouch
 {
+    bool mDirect = false;
     std::uintptr_t mId = 0;
     float mStartX = 0, mStartY = 0, mLast = 0;
     int mAxis = 0;
@@ -15,11 +16,11 @@ class MenuTouch
     bool mDragging = false;
     float mCurrentX = 0, mCurrentY = 0;
 public:
-    bool begin(std::uintptr_t id, float x, float y, double now = 0)
+    bool begin(std::uintptr_t id, float x, float y, double now = 0, bool direct = false)
     {
         if (!id || mId) return false;
         mId = id; mStartX = x; mStartY = y; mAxis = 0; mLast = 0;
-        mStarted = now; mDragging = false; mCurrentX = x; mCurrentY = y;
+        mDirect = direct; mStarted = now; mDragging = false; mCurrentX = x; mCurrentY = y;
         return true;
     }
     bool owns(std::uintptr_t id) const { return mId && id == mId; }
@@ -37,7 +38,7 @@ public:
         if (!mAxis)
         {
             if (std::hypot(dx, dy) < 8.f) return 0;
-            if (now - mStarted >= 0.4)
+            if (mDirect || now - mStarted >= 0.4)
             {
                 mDragging = true;
                 return 0;
@@ -61,3 +62,4 @@ public:
     void cancel() { mId = 0; mAxis = 0; mLast = 0; mDragging = false; }
 };
 }
+

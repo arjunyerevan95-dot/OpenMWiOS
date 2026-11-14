@@ -46,6 +46,26 @@ namespace MWInput
         mGuiCursorY = h / (2.f * uiScale);
     }
 
+#if defined(__APPLE__) && TARGET_OS_IPHONE
+    void MouseManager::touchEvent(const SDL_TouchFingerEvent& arg)
+    {
+        auto* windows = MWBase::Environment::get().getWindowManager();
+        auto* input = MWBase::Environment::get().getInputManager();
+        const int oldWheel = mMouseWheel;
+        mMenuInput.handle(arg, mGuiCursorX, mGuiCursorY, mMouseWheel,
+            windows->isGuiMode() && !input->controlsDisabled() && !mBindingsManager->isDetectingBindingState());
+        if (mMouseWheel != oldWheel)
+            if (auto* widget = MyGUI::InputManager::getInstance().getMouseFocusWidget())
+                LuaUi::dispatchMouseWheel(widget, mGuiCursorX, mGuiCursorY, 0.f, (mMouseWheel-oldWheel)/120.f);
+        if (arg.touchId == OpenMWIOS::Touch::MenuDevice)
+        {
+            input->setJoystickLastUsed(false);
+            input->resetIdleTime();
+            windows->setCursorActive(true);
+        }
+    }
+#endif
+
     void MouseManager::mouseMoved(const SDLUtil::MouseMotionEvent& arg)
     {
         mBindingsManager->mouseMoved(arg);
@@ -303,3 +323,4 @@ namespace MWInput
     }
 
 }
+

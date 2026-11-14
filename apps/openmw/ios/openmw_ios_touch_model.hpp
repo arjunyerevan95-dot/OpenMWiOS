@@ -312,14 +312,15 @@ namespace OpenMWIOS::Touch
     {
     public:
         std::optional<Binding> begin(std::uintptr_t touchId, Point point, const Layout& layout,
-            bool gameplayMode = true)
+            bool gameplayMode = true, std::uint32_t hiddenActions = 0)
         {
             if (mBindings.find(touchId) != mBindings.end())
                 return std::nullopt;
 
             for (const Button& button : layout.buttons)
             {
-                if (visibleInMode(button.action, gameplayMode) && button.bounds.contains(point, 1.15f)
+                if (!(hiddenActions & (1u << static_cast<unsigned>(button.action)))
+                    && visibleInMode(button.action, gameplayMode) && button.bounds.contains(point, 1.15f)
                     && !actionOwned(button.action))
                     return add(touchId, { Role::Button, button.action, point, point });
             }
@@ -394,3 +395,4 @@ namespace OpenMWIOS::Touch
         }
     };
 }
+
