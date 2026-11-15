@@ -116,7 +116,7 @@ targets:
         LIBRARY_SEARCH_PATHS: ["$(inherited)", "$(OPENMW_BUILD_DIR)/lib"]
         # as OpenMW links on Apple (OSG plugins register themselves in static initializers). Release dead-strips
         # unreferenced objects, and ld ignores unresolved/duplicate symbols that only stripped code references
-        OTHER_LDFLAGS: ["$(inherited)", "-all_load", "-lopenmw", "-lopenmw-lib", "-lcomponents",
+        OTHER_LDFLAGS: ["$(inherited)", "-all_load", "-lopenmw", "-lopenmw-lib", "-lcomponents", "-lmaskedoc",
                         "-losg-ffmpeg-videoplayer", "-loics", "-llocal_tinyxml", "-lsmhasher", "$(METALFX_LDFLAGS)"]
         # MetalFX upscaling (apps/openmw/ios/metalfx.mm); the simulator SDK has no MetalFX
         "METALFX_LDFLAGS[sdk=iphoneos*]": ["-framework", "MetalFX"]
