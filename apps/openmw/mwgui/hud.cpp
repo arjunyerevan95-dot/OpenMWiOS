@@ -328,7 +328,8 @@ namespace MWGui
                         std::max({h.right,m.right,f.right}), std::max({h.bottom,m.bottom,f.bottom}) };
             }
             targets.weapon = rect(mWeapBox);
-            targets.mouse = rect(mMouseEmulationCursor);
+            targets.magic = rect(mSpellBox);
+            targets.map = rect(mMinimapButton);
         }
         OpenMWIOS::Touch::publishHudTargets(targets);
 #endif

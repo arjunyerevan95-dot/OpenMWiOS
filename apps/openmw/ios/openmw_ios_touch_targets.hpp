@@ -1,4 +1,5 @@
 #pragma once
+#include "openmw_ios_touch_model.hpp"
 #include <cstdint>
 #include <cmath>
 
@@ -14,7 +15,33 @@ namespace OpenMWIOS::Touch
         bool operator==(const TargetRect& other) const
         { return left == other.left && top == other.top && right == other.right && bottom == other.bottom; }
     };
-    struct HudTargets { TargetRect stats, weapon, mouse; std::uint32_t generation = 0; };
+    struct HudTargets { TargetRect stats, weapon, magic, map; std::uint32_t generation = 0; };
+    inline TargetRect hudTarget(const HudTargets& targets, Action action)
+    {
+        switch (action)
+        {
+            case Action::Inventory: return targets.map;
+            case Action::Journal: return targets.stats;
+            case Action::ReadyWeapon: return targets.weapon;
+            case Action::ReadyMagic: return targets.magic;
+            default: return {};
+        }
+    }
+    inline std::optional<Action> hudActionAt(const HudTargets& targets, float x, float y)
+    {
+        for (Action action : {Action::Inventory, Action::Journal, Action::ReadyWeapon, Action::ReadyMagic})
+            if (hudTarget(targets, action).contains(x, y)) return action;
+        return std::nullopt;
+    }
+    inline bool hudHasHold(Action action) { return action == Action::Journal; }
+    inline std::uint32_t hudHiddenActions(const HudTargets& targets)
+    {
+        std::uint32_t hidden = 0;
+        for (Action action : {Action::Inventory, Action::Journal, Action::ReadyWeapon, Action::ReadyMagic})
+            if (hudTarget(targets, action).valid()) hidden |= 1u << static_cast<unsigned>(action);
+        if (targets.stats.valid()) hidden |= 1u << static_cast<unsigned>(Action::Wait);
+        return hidden;
+    }
     // Only value snapshots cross between the engine and UIKit threads.
     std::uint32_t inputGeneration();
     void invalidateInput();

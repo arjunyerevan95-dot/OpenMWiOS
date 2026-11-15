@@ -1,4 +1,8 @@
 #include "objectpaging.hpp"
+#include "occlusionculling.hpp"
+
+#include <components/sceneutil/occlusionculling.hpp>
+
 
 #include <limits>
 #include <unordered_map>
@@ -475,6 +479,11 @@ namespace MWRender
     {
     }
 
+    void ObjectPaging::setOcclusionCuller(SceneUtil::OcclusionCuller* culler)
+    {
+        mOcclusionCuller = culler;
+    }
+
     namespace
     {
         struct PagedCellRef
@@ -790,6 +799,22 @@ namespace MWRender
         std::vector<osg::ref_ptr<const osg::Node>> templateRefs;
         osgUtil::StateToCompile stateToCompile(0, nullptr);
         CopyOp copyop(activeGrid, copyMask);
+
+        const bool buildOccluders = Settings::camera().mOcclusionCulling && Settings::camera().mOcclusionCullingStatics;
+        osg::ref_ptr<PagedOccluderData> pagedOccluderData;
+        float occluderMinRadius = 0;
+        int occluderMeshRes = 6;
+        int occluderMaxMeshRes = 24;
+        float occluderShrinkFactor = 0.9f;
+        if (buildOccluders)
+        {
+            pagedOccluderData = new PagedOccluderData;
+            occluderMinRadius = Settings::camera().mOcclusionOccluderMinRadius;
+            occluderMeshRes = Settings::camera().mOcclusionOccluderMeshResolution;
+            occluderMaxMeshRes = Settings::camera().mOcclusionOccluderMaxMeshResolution;
+            occluderShrinkFactor = Settings::camera().mOcclusionOccluderShrinkFactor;
+        }
+
         for (const auto& pair : nodes)
         {
             const osg::Node* cnode = pair.first;
@@ -852,6 +877,36 @@ namespace MWRender
                                           : osg::CopyOp::DEEP_COPY_NODES);
                 copyop.mDistances = lodDistances / ref.mScale;
                 copyop.copy(cnode, trans);
+                // Build occluder mesh for building-sized objects
+                if (buildOccluders)
+                {
+                    float scaledRadius = cnode->getBound().radius() * ref.mScale;
+                    if (scaledRadius >= occluderMinRadius)
+                    {
+                        // Scale grid resolution with object size so grid cell size stays ~constant.
+                        // A small building (radius 300) uses base resolution, a canton (radius 3000+)
+                        // gets proportionally higher resolution to preserve shape detail.
+                        int adaptiveRes = occluderMeshRes;
+                        if (scaledRadius > occluderMinRadius)
+                        {
+                            float scale = scaledRadius / occluderMinRadius;
+                            adaptiveRes = std::clamp(
+                                static_cast<int>(occluderMeshRes * scale), occluderMeshRes, occluderMaxMeshRes);
+                        }
+                        auto occMesh = buildSimplifiedMesh(trans, adaptiveRes, occluderShrinkFactor);
+                        if (!occMesh.indices.empty())
+                        {
+                            // Offset from chunk-relative to world-space
+                            for (auto& v : occMesh.vertices)
+                                v += worldCenter;
+                            occMesh.aabb = osg::BoundingBox();
+                            for (const auto& v : occMesh.vertices)
+                                occMesh.aabb.expandBy(v);
+                            pagedOccluderData->mOccluderMeshes.push_back(std::move(occMesh));
+                        }
+                    }
+                }
+
 
                 if (activeGrid)
                 {
@@ -937,6 +992,15 @@ namespace MWRender
                 std::unique(refnumSet->mRefnums.begin(), refnumSet->mRefnums.end()), refnumSet->mRefnums.end());
             udc->addUserObject(refnumSet);
             group->addCullCallback(new SceneUtil::LightListCallback);
+        }
+        if (pagedOccluderData && !pagedOccluderData->mOccluderMeshes.empty())
+        {
+            udc->addUserObject(pagedOccluderData);
+            if (mOcclusionCuller)
+            {
+                float maxDist = Settings::camera().mOcclusionOccluderMaxDistance;
+                group->addCullCallback(new PagedOccluderCallback(mOcclusionCuller, maxDist));
+            }
         }
         for (const auto& ref : templateRefs)
             SceneUtil::addTemplateRef(*group, ref.get());

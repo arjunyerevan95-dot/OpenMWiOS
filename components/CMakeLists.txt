@@ -141,7 +141,7 @@ add_component_dir (sceneutil
     lightmanager lightutil positionattitudetransform workqueue pathgridutil waterutil writescene serialize optimizer
     detourdebugdraw navmesh agentpath animblendrules shadow mwshadowtechnique recastmesh shadowsbin osgacontroller rtt
     screencapture depth color riggeometryosgaextension extradata unrefqueue lightcommon clearcolor
-    cullsafeboundsvisitor keyframe nodecallback templateref textkeymap glextensions fog texmat material
+    cullsafeboundsvisitor keyframe nodecallback templateref textkeymap glextensions fog texmat material occlusionculling
     )
 
 add_component_dir (nif
@@ -345,7 +345,7 @@ add_component_dir (translation
 
 add_component_dir (terrain
     storage world buffercache defs terraingrid material terraindrawable texturemanager chunkmanager compositemaprenderer
-    quadtreeworld quadtreenode viewdata cellborder view heightcull
+    quadtreeworld quadtreenode viewdata cellborder view heightcull terrainoccluder
     )
 
 add_component_dir (loadinglistener
@@ -637,6 +637,7 @@ else()
 endif()
 
 target_link_libraries(components ${BULLET_LIBRARIES})
+target_link_libraries(components maskedoc)
 
 if (USE_QT)
     add_library(components_qt STATIC ${COMPONENT_QT_FILES})

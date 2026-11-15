@@ -1,0 +1,75 @@
+#include "apps/openmw/ios/openmw_ios_touch_targets.hpp"
+#include <cassert>
+#include <iostream>
+namespace MyGUI
+{
+    struct Coord { int left,top,width,height; int right() const{return left+width;} int bottom() const{return top+height;} };
+    struct Widget
+    {
+        Coord coord; Widget* parent=nullptr; bool visible=true,enabled=true;
+        bool getVisible() const{return visible;} bool getEnabled() const{return enabled;}
+        Widget* getParent() const{return parent;}
+        Coord getAbsoluteCoord() const
+        {
+            auto c=coord;
+            for(auto* p=parent;p;p=p->parent){c.left+=p->coord.left;c.top+=p->coord.top;}
+            return c;
+        }
+    };
+    struct RenderManager
+    {
+        struct Size{int width=1000,height=500;} size;
+        static RenderManager& getInstance(){static RenderManager r;return r;}
+        Size getViewSize() const{return size;}
+    };
+}
+namespace MWBase
+{
+    struct WindowManager{bool gui=false;bool isGuiMode() const{return gui;}};
+    struct Environment
+    {
+        WindowManager windows;
+        static Environment& get(){static Environment e;return e;}
+        WindowManager* getWindowManager(){return &windows;}
+    };
+}
+namespace OpenMWIOS::Touch
+{
+    HudTargets published;
+    void publishHudTargets(HudTargets targets){published=targets;}
+}
+struct Hud
+{
+    MyGUI::Widget root{{0,0,1000,500}},healthFrame{{30,400,100,10},&root},
+        magickaFrame{{30,415,100,10},&root},staminaFrame{{30,430,100,10},&root},
+        health{{0,0,100,10},&healthFrame},magicka{{0,0,100,10},&magickaFrame},stamina{{0,0,100,10},&staminaFrame},
+        weapon{{150,400,40,40},&root},spell{{200,400,40,40},&root},minimap{{880,380,100,100},&root},
+        cursor{{500,250,16,16},&root};
+    MyGUI::Widget *mHealthFrame=&healthFrame,*mHealth=&health,*mMagicka=&magicka,*mStamina=&stamina,
+        *mWeapBox=&weapon,*mSpellBox=&spell,*mMinimapButton=&minimap;
+    void publish()
+    {
+// PRODUCTION_HUD_PUBLICATION
+    }
+};
+int main()
+{
+    using namespace OpenMWIOS::Touch;
+    Hud hud;hud.publish();
+    assert(hudActionAt(published,.9f,.9f)==Action::Inventory);
+    assert(hudActionAt(published,.22f,.84f)==Action::ReadyMagic);
+    assert(hudActionAt(published,.17f,.84f)==Action::ReadyWeapon);
+    assert(!hudActionAt(published,.505f,.51f)); // moving cursor is not an Inventory target
+    hud.minimap.coord={700,300,150,150};hud.spell.coord={250,350,60,60};hud.publish();
+    assert(!hudActionAt(published,.9f,.9f)); // moved HUD has no stale corner zone
+    assert(hudActionAt(published,.75f,.7f)==Action::Inventory);
+    assert(hudActionAt(published,.28f,.75f)==Action::ReadyMagic);
+    hud.minimap.visible=false;hud.spell.enabled=false;hud.publish();
+    assert(!published.map.valid()&&!published.magic.valid());
+    hud.root.visible=false;hud.publish();assert(hudHiddenActions(published)==0);
+    hud.root.visible=true;MWBase::Environment::get().windows.gui=true;hud.publish();
+    assert(hudHiddenActions(published)==0); // gameplay targets disappear in menus/modal UI
+    MWBase::Environment::get().windows.gui=false;
+    MyGUI::RenderManager::getInstance().size={0,0};hud.publish();assert(hudHiddenActions(published)==0);
+    std::cout<<"PASS actual HUD publication: minimap/spell identity, moved/scaled widgets, visibility, GUI mode and empty viewport\n";
+}

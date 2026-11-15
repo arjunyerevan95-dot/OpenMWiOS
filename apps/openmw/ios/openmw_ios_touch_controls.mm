@@ -680,13 +680,10 @@ namespace
     if (_inputReady && _gameplayMode && !_editing)
     {
         const auto targets = OpenMWIOS::Touch::hudTargets();
-        const auto target = _hudTap == Action::Inventory ? targets.mouse
-            : (_hudTap == Action::Journal ? targets.stats : targets.weapon);
+        const auto target = OpenMWIOS::Touch::hudTarget(targets, _hudTap);
         if (_hudGeneration != OpenMWIOS::Touch::inputGeneration() || !(_hudRect == target)) _hudTouch.cancel();
-        if (_hudTap != Action::Inventory && _hudTouch.update(CACurrentMediaTime()) == OpenMWIOS::Touch::TapHold::Result::Hold)
+        if (OpenMWIOS::Touch::hudHasHold(_hudTap) && _hudTouch.update(CACurrentMediaTime()) == OpenMWIOS::Touch::TapHold::Result::Hold)
             [self pulseAction:_hudHold haptic:true];
-        if (_weaponTouch.update(CACurrentMediaTime()) == OpenMWIOS::Touch::TapHold::Result::Hold)
-            [self pulseAction:Action::ReadyMagic haptic:true];
     }
     const auto hidden = [self hiddenHudActions];
     if (hidden != _hiddenActions) { _hiddenActions = hidden; [self setNeedsDisplay]; }
@@ -697,13 +694,7 @@ namespace
 - (std::uint32_t)hiddenHudActions
 {
     if (!_gameplayMode || _editing) return 0;
-    const auto targets = OpenMWIOS::Touch::hudTargets();
-    const auto bit = [](Action action) { return 1u << static_cast<unsigned>(action); };
-    std::uint32_t hidden = bit(Action::ReadyMagic); // available by holding Ready Weapon, including fallback
-    if (targets.stats.valid()) hidden |= bit(Action::Journal) | bit(Action::Wait);
-    if (targets.weapon.valid()) hidden |= bit(Action::ReadyWeapon);
-    if (targets.mouse.valid()) hidden |= bit(Action::Inventory);
-    return hidden;
+    return OpenMWIOS::Touch::hudHiddenActions(OpenMWIOS::Touch::hudTargets());
 }
 
 - (void)pulseAction:(Action)action haptic:(bool)haptic
@@ -956,15 +947,14 @@ namespace
         if (_gameplayMode && !overlayHit && self.bounds.size.width > 0 && self.bounds.size.height > 0)
         {
             const float x = point.x/self.bounds.size.width, y = point.y/self.bounds.size.height;
-            OpenMWIOS::Touch::TargetRect target;
-            Action tap = Action::Inventory, hold = Action::Inventory;
-            if (targets.mouse.contains(x,y)) target = targets.mouse;
-            else if (targets.stats.contains(x,y)) { target = targets.stats; tap = Action::Journal; hold = Action::Wait; }
-            else if (targets.weapon.contains(x,y)) { target = targets.weapon; tap = Action::ReadyWeapon; hold = Action::ReadyMagic; }
-            if (target.valid())
+            const auto action = OpenMWIOS::Touch::hudActionAt(targets, x, y);
+            if (action)
             {
                 if (_hudTouch.begin(touchId(touch), point.x, point.y, CACurrentMediaTime()))
-                { _hudRect = target; _hudTap = tap; _hudHold = hold; _hudGeneration = targets.generation; }
+                {
+                    _hudRect = OpenMWIOS::Touch::hudTarget(targets, *action);
+                    _hudTap = *action; _hudHold = Action::Wait; _hudGeneration = targets.generation;
+                }
                 continue; // a second finger in a HUD target never falls through to camera input
             }
         }
@@ -1133,7 +1123,9 @@ namespace
             _hudTouch.move(identifier, end.x, end.y,
                 _hudRect.contains(end.x/self.bounds.size.width, end.y/self.bounds.size.height));
             const auto result = _hudTouch.finish(identifier, CACurrentMediaTime(),
-                cancelled || _hudGeneration != OpenMWIOS::Touch::inputGeneration(), _hudTap != Action::Inventory);
+                cancelled || _hudGeneration != OpenMWIOS::Touch::inputGeneration()
+                    || !(_hudRect == OpenMWIOS::Touch::hudTarget(OpenMWIOS::Touch::hudTargets(), _hudTap)),
+                OpenMWIOS::Touch::hudHasHold(_hudTap));
             if (result == OpenMWIOS::Touch::TapHold::Result::Tap) [self pulseAction:_hudTap haptic:false];
             else if (result == OpenMWIOS::Touch::TapHold::Result::Hold) [self pulseAction:_hudHold haptic:true];
             continue;
@@ -1172,9 +1164,8 @@ namespace
             {
                 const CGPoint end = [touch locationInView:self];
                 _weaponTouch.move(identifier, end.x, end.y, true);
-                const auto result = _weaponTouch.finish(identifier, CACurrentMediaTime(), cancelled == YES);
+                const auto result = _weaponTouch.finish(identifier, CACurrentMediaTime(), cancelled == YES, false);
                 if (result == OpenMWIOS::Touch::TapHold::Result::Tap) [self pulseAction:Action::ReadyWeapon haptic:false];
-                else if (result == OpenMWIOS::Touch::TapHold::Result::Hold) [self pulseAction:Action::ReadyMagic haptic:true];
             }
             else if (touchId(touch) == _useGesture.touch())
             {
