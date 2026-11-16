@@ -329,7 +329,9 @@ namespace MWGui
             }
             targets.weapon = rect(mWeapBox);
             targets.magic = rect(mSpellBox);
-            targets.map = rect(mMinimapButton);
+            // MiniMapButton stretches across the scrolling canvas, not the visible map.
+            // Its offscreen bounds must never steal right-side swipe-look touches.
+            targets.map = rect(mMinimap);
         }
         OpenMWIOS::Touch::publishHudTargets(targets);
 #endif
