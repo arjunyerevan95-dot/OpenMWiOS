@@ -44,9 +44,10 @@ struct Hud
         magickaFrame{{30,415,100,10},&root},staminaFrame{{30,430,100,10},&root},
         health{{0,0,100,10},&healthFrame},magicka{{0,0,100,10},&magickaFrame},stamina{{0,0,100,10},&staminaFrame},
         weapon{{150,400,40,40},&root},spell{{200,400,40,40},&root},minimap{{880,380,100,100},&root},
-        cursor{{500,250,16,16},&root};
+        canvas{{-600,-600,1800,1800},&minimap},
+        mapButton{{0,0,1800,1800},&canvas},cursor{{500,250,16,16},&root};
     MyGUI::Widget *mHealthFrame=&healthFrame,*mHealth=&health,*mMagicka=&magicka,*mStamina=&stamina,
-        *mWeapBox=&weapon,*mSpellBox=&spell,*mMinimapButton=&minimap;
+        *mWeapBox=&weapon,*mSpellBox=&spell,*mMinimap=&minimap,*mMinimapButton=&mapButton;
     void publish()
     {
 // PRODUCTION_HUD_PUBLICATION
@@ -57,6 +58,14 @@ int main()
     using namespace OpenMWIOS::Touch;
     Hud hud;hud.publish();
     assert(hudActionAt(published,.9f,.9f)==Action::Inventory);
+    // Real minimap content canvas is much larger than its clipped viewport.
+    // Camera swipes outside the visible map must not acquire Inventory.
+    for (float x : {.55f,.7f,.85f,.99f})
+        for (float y : {.1f,.3f,.5f,.7f})
+            assert(hudActionAt(published,x,y)!=Action::Inventory);
+    hud.canvas.coord.left=-1100;hud.canvas.coord.top=-900;hud.publish();
+    assert(hudActionAt(published,.9f,.9f)==Action::Inventory);
+    assert(!hudActionAt(published,.7f,.5f));
     assert(hudActionAt(published,.22f,.84f)==Action::ReadyMagic);
     assert(hudActionAt(published,.17f,.84f)==Action::ReadyWeapon);
     assert(!hudActionAt(published,.505f,.51f)); // moving cursor is not an Inventory target
@@ -73,3 +82,4 @@ int main()
     MyGUI::RenderManager::getInstance().size={0,0};hud.publish();assert(hudHiddenActions(published)==0);
     std::cout<<"PASS actual HUD publication: minimap/spell identity, moved/scaled widgets, visibility, GUI mode and empty viewport\n";
 }
+
