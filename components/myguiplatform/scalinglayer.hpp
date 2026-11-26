@@ -24,9 +24,13 @@ namespace MyGUIPlatform
         void resizeView(const MyGUI::IntSize& viewSize) override;
 
         static float getScaleFactor(const MyGUI::IntSize& layerViewSize);
+        void setViewportScale(float scale);
+        float getViewportScale() const { return mViewportScale; }
 
     private:
         void screenToLayerCoords(int& left, int& top) const;
+        bool mScaleViewport = false;
+        float mViewportScale = 1.f;
     };
 
 }

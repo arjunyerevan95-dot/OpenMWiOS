@@ -16,6 +16,7 @@
 #include <components/esm3/loadgmst.hpp>
 #include <components/esm3/loadmgef.hpp>
 #include <components/misc/resourcehelpers.hpp>
+#include <components/myguiplatform/scalinglayer.hpp>
 #include <components/resource/resourcesystem.hpp>
 #include <components/settings/values.hpp>
 
@@ -110,6 +111,9 @@ namespace MWGui
         mMainWidget->eventMouseLostFocus += MyGUI::newDelegate(this, &HUD::onWorldMouseLostFocus);
 
         mSpellIcons = std::make_unique<SpellIcons>();
+#if defined(__APPLE__) && TARGET_OS_IPHONE
+        setIosScale(Settings::hud().mIosScale);
+#endif
     }
 
     HUD::~HUD()
@@ -309,13 +313,15 @@ namespace MWGui
 #if defined(__APPLE__) && TARGET_OS_IPHONE
         // Resolve the real widgets every frame: UI mods, visibility and scale all apply.
         const auto view = MyGUI::RenderManager::getInstance().getViewSize();
+        const auto* layer = mMainWidget->getLayer()->castType<MyGUIPlatform::ScalingLayer>(false);
+        const float scale = layer ? layer->getViewportScale() : 1.f;
         const auto rect = [&](MyGUI::Widget* widget) -> OpenMWIOS::Touch::TargetRect {
             if (view.width <= 0 || view.height <= 0) return {};
             for (auto* ancestor = widget; ancestor; ancestor = ancestor->getParent())
                 if (!ancestor->getVisible() || !ancestor->getEnabled()) return {};
             const auto c = widget->getAbsoluteCoord();
-            return { float(c.left)/view.width, float(c.top)/view.height,
-                float(c.right())/view.width, float(c.bottom())/view.height };
+            return { c.left * scale / view.width, c.top * scale / view.height,
+                c.right() * scale / view.width, c.bottom() * scale / view.height };
         };
         OpenMWIOS::Touch::HudTargets targets;
         if (!MWBase::Environment::get().getWindowManager()->isGuiMode())
@@ -588,8 +594,6 @@ namespace MWGui
         mSpellBox->setPosition(mSpellBoxBaseLeft - spellDx, mSpellBox->getTop());
         mSneakBox->setPosition(mSneakBoxBaseLeft - sneakDx, mSneakBox->getTop());
 
-        const MyGUI::IntSize& viewSize = MyGUI::RenderManager::getInstance().getViewSize();
-
         // effect box can have variable width -> variable left coordinate
         int effectsDx = 0;
         if (!mMinimapBox->getVisible())
@@ -600,7 +604,25 @@ namespace MWGui
             mCellNameBox->setVisible(false);
 
         mEffectBox->setPosition(
-            (viewSize.width - mEffectBoxBaseRight) - mEffectBox->getWidth() + effectsDx, mEffectBox->getTop());
+            (mMainWidget->getWidth() - mEffectBoxBaseRight) - mEffectBox->getWidth() + effectsDx, mEffectBox->getTop());
+    }
+
+    float HUD::iosViewportScale(int percent)
+    {
+        // Match the stock iOS HUD at the shipped GUI scale, compensating for user menu scaling.
+        constexpr float stockIosGuiScale = 1.2f;
+        return (percent / 100.f) * (stockIosGuiScale / Settings::gui().mScalingFactor.get());
+    }
+
+    void HUD::setIosScale(int percent)
+    {
+        const float scale = iosViewportScale(percent);
+        for (auto* root : { mMainWidget, mDrowningBar })
+        {
+            if (auto* layer = root->getLayer()->castType<MyGUIPlatform::ScalingLayer>(false))
+                layer->setViewportScale(scale);
+        }
+        updatePositions();
     }
 
     void HUD::updateEnemyHealthBar()

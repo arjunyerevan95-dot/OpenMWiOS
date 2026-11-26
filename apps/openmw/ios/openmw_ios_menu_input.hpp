@@ -4,9 +4,12 @@
 #include <MyGUI_InputManager.h>
 #include <MyGUI_LayerManager.h>
 #include <MyGUI_RenderManager.h>
+#include <MyGUI_ScrollBar.h>
 #include <MyGUI_WidgetManager.h>
 #include <SDL_events.h>
 #include <SDL_timer.h>
+
+#include <algorithm>
 
 namespace OpenMWIOS::Touch
 {
@@ -19,6 +22,28 @@ namespace OpenMWIOS::Touch
         float mWidth = 0, mHeight = 0, mWheelRemainder = 0;
         int mStartX = 0, mStartY = 0;
         bool mPressed = false;
+
+        static MyGUI::ScrollBar* touchSlider(MyGUI::Widget* widget)
+        {
+            for (; widget; widget = widget->getParent())
+                if (widget->getUserString("OpenMWTouchSlider") == "true")
+                    return widget->castType<MyGUI::ScrollBar>(false);
+            return nullptr;
+        }
+
+        static void moveSlider(MyGUI::ScrollBar& slider, int x)
+        {
+            const float fraction = std::clamp(
+                static_cast<float>(x - slider.getAbsoluteCoord().left - 20) / std::max(1, slider.getWidth() - 40),
+                0.f, 1.f);
+            const auto position = static_cast<size_t>(std::lround(fraction * (slider.getScrollRange() - 1)));
+            if (position != slider.getScrollPosition())
+            {
+                slider.setScrollPosition(position);
+                slider.eventScrollChangePosition(&slider, position);
+            }
+        }
+
         void _unlinkWidget(MyGUI::Widget* widget) override
         {
             if (widget == mTarget) { mTarget = nullptr; cancel(); }
@@ -63,23 +88,35 @@ namespace OpenMWIOS::Touch
                 input.injectMouseMove(x, y, wheel); // MyGUI performs clipping, z-order and modal filtering.
                 auto* target = input.getMouseFocusWidget();
                 if (!target || !target->getInheritedEnabled()) return;
-                const bool direct = target->getUserString("OpenMWTouchDrag") == "true";
+                auto* slider = touchSlider(target);
+                const bool direct = slider || target->getUserString("OpenMWTouchDrag") == "true";
                 if (!mGesture.begin(id, pointX, pointY, now, direct)) return;
-                mTarget = target; mStartX = x; mStartY = y; mView = view;
+                mTarget = slider ? slider : target;
+                mStartX = x; mStartY = y; mView = view;
                 mWidth = event.dx; mHeight = event.dy;
                 return;
             }
             if (!mGesture.owns(id)) return;
             if (!visible() || view != mView || event.dx != mWidth || event.dy != mHeight
                 || (mPressed && input.getMouseFocusWidget() != mTarget)) { cancel(); return; }
-            if (!mPressed)
+            auto* slider = touchSlider(mTarget);
+            if (!mPressed && (!slider || !mGesture.dragging()))
             {
                 // Revalidate a deferred tap/scroll against any newly overlapping/modal window.
                 input.injectMouseMove(mStartX, mStartY, wheel);
-                if (input.getMouseFocusWidget() != mTarget) { cancel(); return; }
+                auto* focused = input.getMouseFocusWidget();
+                if (slider ? touchSlider(focused) != slider : focused != mTarget) { cancel(); return; }
             }
             if (event.type == SDL_FINGERUP && event.pressure < 0) { cancel(); return; }
             const float delta = mGesture.move(id, pointX, pointY, now);
+            if (slider)
+            {
+                if (mGesture.dragging() || event.type == SDL_FINGERUP)
+                    moveSlider(*slider, x);
+                if (event.type == SDL_FINGERUP)
+                    cancel();
+                return;
+            }
             if (mGesture.dragging())
             {
                 if (!mPressed)

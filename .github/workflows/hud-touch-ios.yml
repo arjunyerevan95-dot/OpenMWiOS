@@ -1,0 +1,89 @@
+name: OpenMW iOS HUD and touch inventory trial
+on:
+  push:
+    branches: [codex/hud-deck-touch-1126]
+permissions:
+  contents: read
+concurrency:
+  group: openmw-hud-deck-touch-1126
+  cancel-in-progress: true
+jobs:
+  build:
+    if: github.repository == 'arjunyerevan95-dot/OpenMWiOS' && contains(github.event.head_commit.message, '[hud-touch-build]')
+    runs-on: xcode-27
+    timeout-minutes: 150
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_27.1.app/Contents/Developer
+      HOMEBREW_NO_AUTO_UPDATE: '1'
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - name: Verify baseline and runner
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(uname -m)" = arm64
+          xcodebuild -version
+          xcrun --sdk iphoneos --show-sdk-version
+          git merge-base --is-ancestor 4246357006c3a96fac91a2d84910fcb86549502c HEAD
+          git diff --exit-code 4246357 HEAD -- ios-deps build-ios.sh ios/project.yml
+      - name: Install build tools
+        shell: bash
+        run: |
+          brew install cmake ninja meson xcodegen pkgconf python@3.14 bison@3.8
+          echo "$(brew --prefix python@3.14)/libexec/bin" >> "$GITHUB_PATH"
+      - name: Build and verify unsigned arm64 IPA
+        shell: bash
+        run: |
+          set -euo pipefail
+          printf '%s\n' 'APP_NAME=OpenMW HUD Trial' 'BUNDLE_ID=org.openmw.ios.hudtrial' > ios/build.config
+          ./build-ios.sh build device --release --unsigned
+          ./build-ios.sh ipa --release --unsigned
+          app=DerivedData/Build/Products/Release-iphoneos/OpenMW.app
+          test "$(/usr/libexec/PlistBuddy -c 'Print CFBundleIdentifier' "$app/Info.plist")" = org.openmw.ios.hudtrial
+          test "$(lipo -archs "$app/OpenMW")" = arm64
+          test ! -e "$app/embedded.mobileprovision"
+          test ! -e "$app/_CodeSignature"
+          ipa=(DerivedData/ipa/*-unsigned.ipa)
+          test "${#ipa[@]}" = 1
+          test -f "${ipa[0]}"
+          mkdir -p hud-artifact
+          shasum -a 256 "${ipa[0]}" | awk '{print $1}' > hud-artifact/ipa.sha256
+          git rev-parse HEAD > hud-artifact/source.txt
+          cat > "$RUNNER_TEMP/hud-recipient.pem" <<'PEM'
+          -----BEGIN CERTIFICATE-----
+          MIIEKzCCApOgAwIBAgIUTAb0mqBbHlwOix8F2y6BgnCK3Q4wDQYJKoZIhvcNAQEL
+          BQAwJTEjMCEGA1UEAwwaT3Blbk1XIEhVRCBCdWlsZCBUcmFuc3BvcnQwHhcNMjYx
+          MTI2MTUwNzQ0WhcNMjYxMjAzMTUwNzQ0WjAlMSMwIQYDVQQDDBpPcGVuTVcgSFVE
+          IEJ1aWxkIFRyYW5zcG9ydDCCAaIwDQYJKoZIhvcNAQEBBQADggGPADCCAYoCggGB
+          AL9XtXMre4UiohD6X9dKl5JD45Uws8yHWSD20cH8L3nE7SEK0tRr920J3Kx3DWpx
+          f8e4C70EVDJqICD7nJiHm6Mwre+6c368+eTYAjDmvbSNO5ROc9zmq8ICt/vY+pr4
+          LLWMdg4949kQ5EAfoi4AiCUUCD/L1RFM/t4jCZCArQy/J9HAB9256ysJ491dZg+n
+          VYu0mMVGMZwXnbypCzfe9vlT0HSfKtaG7V6cG1aZnBEPyxF1v4RPMM8cccl1WwKQ
+          a0HWSrncNWSKWhGVQ3H8FnruCm61f5qONmBF9OCIuOme+qNlDYZoqWo6hMN1ptRZ
+          cwgpd9Q8IDCLTa3T7kLx9EXqnTG2QABoITsI/EIY3+2Nd5I7ZCalGxebOdhh57yk
+          xFX2yG9wAltufj9p4td5evKCi2PppH5yToKL8hR51kuHURK9eLUPRG5Sp8dAlQrg
+          JXmtiUr9CH4LFEBbYq2Xn79Rh1w7aNaNjWO9UbDaiOXOhCrg1FZys+7L65W2ja42
+          2QIDAQABo1MwUTAdBgNVHQ4EFgQUtMo5WJ9OKiV3cXIIcTbspxNBaFAwHwYDVR0j
+          BBgwFoAUtMo5WJ9OKiV3cXIIcTbspxNBaFAwDwYDVR0TAQH/BAUwAwEB/zANBgkq
+          hkiG9w0BAQsFAAOCAYEAmd9YG6oFNsdYpE2lz4SArDfFiznZEnPxvFBD2cRbsBKo
+          aAlhKkvdOtSQUnz5RpOJh/EbxnoWWawhlwCVShe09lBv1v30RuLPTSHyq4QD64o9
+          bI5vfcvKtU+UFCQ2a+BXb4ZqeJ+DpwrkHSEXcehKwW2SmOtZ3MmyvVR563/P6TU8
+          t3bp/oZYYgWPIEZ61bVgUrreU5ny+/XEBLHQqZsZdB1AFjSuNXcxJPxbqKfzRFEB
+          mlzPvEFTPr7SJsifC/iAL9VW/e+q9huPCNdph4BKGQbWpm9sls5HcTBDC/rT7t90
+          aNO+NIF+HtsaHYLuO2nJCSCOlY6LZD8qmWw0yxsi91hWT001QGzofCUVnWkLyQfD
+          Vw09dhaKakSwZFkrjwB6O+7Wwg+VLXzQ7HxtxnzK033n5OMvMsvoV/o6T+w7+Zu5
+          laJ4D2GnvYBF1Icer5o+GVrxMN2aEoQ69CZhjYBm1uQf9YgHyOIaLuJzyzUrzloV
+          6P0eYufqlb7j3unYOlh6
+          -----END CERTIFICATE-----
+          PEM
+          "$(brew --prefix openssl@3)/bin/openssl" cms -encrypt -aes-256-gcm -binary -stream -outform DER \
+            -in "${ipa[0]}" -out hud-artifact/OpenMW-HUD-Trial-unsigned.ipa.cms "$RUNNER_TEMP/hud-recipient.pem"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: OpenMW-HUD-Trial-Encrypted-${{ github.run_id }}
+          path: hud-artifact/
+          if-no-files-found: error
+          retention-days: 2
+          compression-level: 0

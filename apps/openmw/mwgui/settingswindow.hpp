@@ -1,6 +1,8 @@
 #ifndef MWGUI_SETTINGS_H
 #define MWGUI_SETTINGS_H
 
+#include <array>
+
 #include <components/files/configurationmanager.hpp>
 #include <components/lua_ui/adapter.hpp>
 
@@ -138,6 +140,15 @@ namespace MWGui
 
     private:
         void resetScrollbars();
+        void setupIosHudSettings();
+        void refreshIosHudSettings();
+        void onIosHudScaleChanged(MyGUI::ScrollBar* sender, size_t position);
+        void onIosHudScaleReset(MyGUI::Widget* sender);
+
+        MyGUI::ScrollBar* mIosHudSlider = nullptr;
+        MyGUI::TextBox* mIosHudScaleLabel = nullptr;
+        std::array<MyGUI::Widget*, 3> mIosHudDefaultBars{};
+        std::array<MyGUI::Widget*, 3> mIosHudPreviewBars{};
         Files::ConfigurationManager& mCfgMgr;
     };
 }

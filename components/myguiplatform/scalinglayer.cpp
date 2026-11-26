@@ -2,6 +2,7 @@
 
 #include <MyGUI_RenderManager.h>
 #include <algorithm>
+#include <cmath>
 
 namespace MyGUIPlatform
 {
@@ -11,13 +12,15 @@ namespace MyGUIPlatform
     {
     public:
         /// @param target The target to render to.
-        /// @param viewSize The size of the underlying layer node to render.
+        /// @param pixelScaleX The horizontal pixel scale of the underlying layer.
+        /// @param pixelScaleY The vertical pixel scale of the underlying layer.
         /// @param hoffset The horizontal rendering offset, specified as an offset from the left screen edge in range
         /// 0-1.
         /// @param voffset The vertical rendering offset, specified as an offset from the top screen edge in range 0-1.
-        ProxyRenderTarget(MyGUI::IRenderTarget* target, MyGUI::IntSize viewSize, float hoffset, float voffset)
+        ProxyRenderTarget(MyGUI::IRenderTarget* target, float pixelScaleX, float pixelScaleY, float hoffset, float voffset)
             : mTarget(target)
-            , mViewSize(viewSize)
+            , mPixelScaleX(pixelScaleX)
+            , mPixelScaleY(pixelScaleY)
             , mHOffset(hoffset)
             , mVOffset(voffset)
         {
@@ -37,14 +40,14 @@ namespace MyGUIPlatform
             mInfo = mTarget->getInfo();
             mInfo.hOffset = mHOffset;
             mInfo.vOffset = mVOffset;
-            mInfo.pixScaleX = 1.f / mViewSize.width;
-            mInfo.pixScaleY = 1.f / mViewSize.height;
+            mInfo.pixScaleX = mPixelScaleX;
+            mInfo.pixScaleY = mPixelScaleY;
             return mInfo;
         }
 
     private:
         MyGUI::IRenderTarget* mTarget;
-        MyGUI::IntSize mViewSize;
+        float mPixelScaleX, mPixelScaleY;
         float mHOffset, mVOffset;
         mutable MyGUI::RenderTargetInfo mInfo;
     };
@@ -58,6 +61,13 @@ namespace MyGUIPlatform
 
     void ScalingLayer::screenToLayerCoords(int& left, int& top) const
     {
+        if (mScaleViewport)
+        {
+            left = static_cast<int>(std::floor(left / mViewportScale));
+            top = static_cast<int>(std::floor(top / mViewportScale));
+            return;
+        }
+
         float scale = getScaleFactor(mViewSize);
         if (scale <= 0.f)
             return;
@@ -93,6 +103,17 @@ namespace MyGUIPlatform
 
     void ScalingLayer::renderToTarget(MyGUI::IRenderTarget* target, bool update)
     {
+        if (mScaleViewport)
+        {
+            if (mViewportScale == 1.f)
+                return MyGUI::OverlappedLayer::renderToTarget(target, update);
+
+            const auto& info = target->getInfo();
+            ProxyRenderTarget proxy(target, info.pixScaleX * mViewportScale, info.pixScaleY * mViewportScale,
+                info.hOffset, info.vOffset);
+            return MyGUI::OverlappedLayer::renderToTarget(&proxy, update);
+        }
+
         MyGUI::IntSize globalViewSize = MyGUI::RenderManager::getInstance().getViewSize();
         MyGUI::IntSize viewSize = globalViewSize;
         float scale = getScaleFactor(mViewSize);
@@ -104,14 +125,24 @@ namespace MyGUIPlatform
         float voffset = (globalViewSize.height - mViewSize.height * getScaleFactor(mViewSize)) / 2.f
             / static_cast<float>(globalViewSize.height);
 
-        ProxyRenderTarget proxy(target, viewSize, hoffset, voffset);
+        ProxyRenderTarget proxy(target, 1.f / viewSize.width, 1.f / viewSize.height, hoffset, voffset);
 
         MyGUI::OverlappedLayer::renderToTarget(&proxy, update);
     }
 
-    void ScalingLayer::resizeView(const MyGUI::IntSize& /*viewSize*/)
+    void ScalingLayer::resizeView(const MyGUI::IntSize& viewSize)
     {
-        // do nothing
+        if (mScaleViewport)
+            MyGUI::OverlappedLayer::resizeView({ static_cast<int>(std::lround(viewSize.width / mViewportScale)),
+                static_cast<int>(std::lround(viewSize.height / mViewportScale)) });
+    }
+
+    void ScalingLayer::setViewportScale(float scale)
+    {
+        if (!mScaleViewport || scale == mViewportScale)
+            return;
+        mViewportScale = scale;
+        resizeView(MyGUI::RenderManager::getInstance().getViewSize());
     }
 
     void ScalingLayer::deserialization(MyGUI::xml::ElementPtr node, MyGUI::Version version)
@@ -130,6 +161,8 @@ namespace MyGUIPlatform
                 {
                     mViewSize = MyGUI::IntSize::parse(value);
                 }
+                else if (key == "ScaleViewport")
+                    mScaleViewport = value == "true";
             }
         }
     }

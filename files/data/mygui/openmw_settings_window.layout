@@ -1082,6 +1082,43 @@
                     </Widget>
                 </Widget>
             </Widget>
+            <Widget type="TabItem" name="IosHudTab">
+                <Property key="Caption" value=" #{OMWEngine:IosHudTab} "/>
+                <Widget type="TextBox" skin="NormalText" position="12 8 215 24">
+                    <Property key="Caption" value="#{OMWEngine:IosHudScale}"/>
+                </Widget>
+                <Widget type="TextBox" skin="SandText" position="235 8 72 24" name="IosHudScaleLabel"/>
+                <Widget type="ScrollBar" skin="MW_HScroll" position="12 34 308 38" name="IosHudSlider">
+                    <Property key="Page" value="1"/>
+                    <Property key="WheelPage" value="1"/>
+                    <Property key="ViewPage" value="1"/>
+                    <UserString key="OpenMWTouchSlider" value="true"/>
+                </Widget>
+                <Widget type="Button" skin="MW_Button" position="330 34 115 38" name="IosHudReset">
+                    <Property key="Caption" value="#{Interface:Reset}"/>
+                </Widget>
+                <Widget type="TextBox" skin="SandText" position="12 79 140 22">
+                    <Property key="Caption" value="#{OMWEngine:IosHudDefaultPreview}"/>
+                </Widget>
+                <Widget type="TextBox" skin="SandText" position="172 79 160 22">
+                    <Property key="Caption" value="#{OMWEngine:IosHudCurrentPreview}"/>
+                </Widget>
+                <Widget type="Widget" skin="MW_Box" position="12 104 142 62"/>
+                <Widget type="Widget" skin="MW_Box" position="172 104 142 62"/>
+                <Widget type="Widget" position="24 106 118 56" name="IosHudDefaultPreview"/>
+                <Widget type="Widget" position="184 106 118 56" name="IosHudCurrentPreview"/>
+                <Widget type="TextBox" skin="NormalText" position="12 177 244 39">
+                    <Property key="Caption" value="#{OMWEngine:IosTouchInventoryList}"/>
+                </Widget>
+                <Widget type="Button" skin="MW_Button" position="259 177 102 39">
+                    <UserString key="SettingCategory" value="GUI"/>
+                    <UserString key="SettingName" value="ios touch inventory list"/>
+                    <UserString key="SettingType" value="CheckButton"/>
+                </Widget>
+                <Widget type="TextBox" skin="SandText" position="12 221 433 24">
+                    <Property key="Caption" value="#{OMWEngine:IosTouchInventoryHint}"/>
+                </Widget>
+            </Widget>
         </Widget>
         <Widget type="AutoSizedButton" skin="MW_Button" position="320 420 56 24" align="Right Bottom" name="OkButton">
             <Property key="ExpandDirection" value="Left"/>

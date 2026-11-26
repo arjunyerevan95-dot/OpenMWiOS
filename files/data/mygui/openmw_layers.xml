@@ -4,13 +4,17 @@
     <Layer name="Scene" overlapped="false" pick="false"/>
     <Layer name="FadeToBlack" overlapped="false" pick="false"/>
     <Layer name="HitOverlay" type="AdditiveLayer" pick="false"/>
-    <Layer name="HUD" overlapped="false" pick="true"/>
+    <Layer name="HUD" type="ScalingLayer" pick="true">
+        <Property key="ScaleViewport" value="true"/>
+    </Layer>
     <Layer name="JournalBooks" type="ScalingLayer" pick="true">
         <Property key="Size" value="600 520"/>
     </Layer>
     <Layer name="Windows" overlapped="true" pick="true"/>
     <Layer name="DragAndDrop" overlapped="false" pick="false"/>
-    <Layer name="DrowningBar" overlapped="false" pick="false"/>
+    <Layer name="DrowningBar" type="ScalingLayer" pick="false">
+        <Property key="ScaleViewport" value="true"/>
+    </Layer>
     <Layer name="MainMenuBackground" overlapped="true" pick="true"/>
     <Layer name="MainMenu" overlapped="true" pick="true"/>
     <Layer name="Settings" overlapped="true" pick="true"/>

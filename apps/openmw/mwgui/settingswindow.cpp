@@ -1,12 +1,14 @@
 #include "settingswindow.hpp"
 
 #include <array>
+#include <cmath>
 
 #include <unicode/locid.h>
 
 #include <MyGUI_ComboBox.h>
 #include <MyGUI_Gui.h>
 #include <MyGUI_LanguageManager.h>
+#include <MyGUI_ProgressBar.h>
 #include <MyGUI_ScrollBar.h>
 #include <MyGUI_ScrollView.h>
 #include <MyGUI_TabControl.h>
@@ -44,6 +46,7 @@
 #include "../mwlua/luamanagerimp.hpp"
 
 #include "confirmationdialog.hpp"
+#include "hud.hpp"
 #include "weightedsearch.hpp"
 
 namespace
@@ -309,6 +312,7 @@ namespace MWGui
         setTitle("#{OMWEngine:SettingsWindow}");
 
         getWidget(mSettingsTab, "SettingsTab");
+        setupIosHudSettings();
         getWidget(mOkButton, "OkButton");
         getWidget(mResolutionList, "ResolutionList");
         getWidget(mWindowModeList, "WindowModeList");
@@ -544,6 +548,67 @@ namespace MWGui
         mControllerButtons.mA = "#{Interface:Select}";
         mControllerButtons.mB = "#{Interface:OK}";
         mControllerButtons.mLStick = "#{Interface:Mouse}";
+    }
+
+    void SettingsWindow::setupIosHudSettings()
+    {
+        auto* tab = mSettingsTab->findWidget(mPrefix + "IosHudTab");
+        if (!tab)
+            return;
+#if defined(__APPLE__) && TARGET_OS_IPHONE
+        getWidget(mIosHudSlider, "IosHudSlider");
+        getWidget(mIosHudScaleLabel, "IosHudScaleLabel");
+        mIosHudSlider->setScrollRange(Settings::HUDCategory::sMaxScale - Settings::HUDCategory::sMinScale + 1);
+        mIosHudSlider->eventScrollChangePosition += MyGUI::newDelegate(this, &SettingsWindow::onIosHudScaleChanged);
+        getWidget("IosHudReset")->eventMouseButtonClick += MyGUI::newDelegate(this, &SettingsWindow::onIosHudScaleReset);
+
+        constexpr std::array skins{ "MW_EnergyBar_Red", "MW_EnergyBar_Blue", "MW_EnergyBar_Green" };
+        for (size_t i = 0; i < skins.size(); ++i)
+        {
+            const auto createBar = [&](const char* name) {
+                auto* bar = getWidget(name)->createWidget<MyGUI::ProgressBar>(
+                    skins[i], MyGUI::IntCoord(0, 0, 65, 12), MyGUI::Align::Left | MyGUI::Align::Bottom);
+                bar->setProgressRange(100);
+                bar->setProgressPosition(100 - i * 18);
+                bar->setNeedMouseFocus(false);
+                return bar;
+            };
+            mIosHudDefaultBars[i] = createBar("IosHudDefaultPreview");
+            mIosHudPreviewBars[i] = createBar("IosHudCurrentPreview");
+        }
+        refreshIosHudSettings();
+#else
+        mSettingsTab->removeItem(tab->castType<MyGUI::TabItem>());
+#endif
+    }
+
+    void SettingsWindow::refreshIosHudSettings()
+    {
+        if (!mIosHudSlider)
+            return;
+        const int percent = Settings::hud().mIosScale;
+        mIosHudSlider->setScrollPosition(percent - Settings::HUDCategory::sMinScale);
+        mIosHudScaleLabel->setCaption(std::to_string(percent) + "%");
+        const auto layoutBars = [](const auto& bars, int scale) {
+            const auto size = [scale](int pixels) { return static_cast<int>(std::lround(pixels * scale / 100.f)); };
+            for (size_t i = 0; i < bars.size(); ++i)
+                bars[i]->setCoord(0, 52 - size(42 - static_cast<int>(i) * 15), size(65), size(12));
+        };
+        layoutBars(mIosHudDefaultBars, Settings::HUDCategory::sDefaultScale);
+        layoutBars(mIosHudPreviewBars, percent);
+    }
+
+    void SettingsWindow::onIosHudScaleChanged(MyGUI::ScrollBar* /*sender*/, size_t position)
+    {
+        Settings::hud().mIosScale.set(Settings::HUDCategory::sMinScale + static_cast<int>(position));
+        if (auto* hud = MWBase::Environment::get().getWindowManager()->getHud())
+            hud->setIosScale(Settings::hud().mIosScale);
+        refreshIosHudSettings();
+    }
+
+    void SettingsWindow::onIosHudScaleReset(MyGUI::Widget* /*sender*/)
+    {
+        onIosHudScaleChanged(mIosHudSlider, Settings::HUDCategory::sDefaultScale - Settings::HUDCategory::sMinScale);
     }
 
     void SettingsWindow::onTabChanged(MyGUI::TabControl* /*sender*/, size_t /*index*/)
@@ -1205,6 +1270,7 @@ namespace MWGui
         updateWindowModeSettings();
         updateVSyncModeSettings();
         resetScrollbars();
+        refreshIosHudSettings();
         renderScriptSettings();
         MWBase::Environment::get().getWindowManager()->setKeyFocusWidget(mOkButton);
     }

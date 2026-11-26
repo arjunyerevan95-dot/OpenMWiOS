@@ -53,6 +53,8 @@ namespace MWGui
         void setMouseEmulationCursorPosition(int left, int top);
 
         void onFrame(float dt) override;
+        void setIosScale(int percent);
+        static float iosViewportScale(int percent);
 
         void setCellName(const std::string& cellName);
 
