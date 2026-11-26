@@ -2,7 +2,7 @@ name: Build and test
 
 on:
   push:
-    branches-ignore: [codex/wo40-zink-touch, codex/hud-deck-touch-1126, dot/current-frame-diagnostic, dot/main-current-frame, dot/parry-multitouch, dot/material-performance, dot/city-hud]
+    branches-ignore: [codex/wo40-zink-touch, codex/hud-deck-touch-1126, codex/deckwind-ios-1126, dot/current-frame-diagnostic, dot/main-current-frame, dot/parry-multitouch, dot/material-performance, dot/city-hud]
   pull_request:
     branches-ignore: [codex/wo40-zink-touch]
 

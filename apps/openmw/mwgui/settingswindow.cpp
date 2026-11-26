@@ -562,6 +562,10 @@ namespace MWGui
 #if defined(__APPLE__) && TARGET_OS_IPHONE
         getWidget(mIosHudSlider, "IosHudSlider");
         getWidget(mIosHudScaleLabel, "IosHudScaleLabel");
+        getWidget(mIosMenuSlider, "IosMenuSlider");
+        getWidget(mIosMenuScaleLabel, "IosMenuScaleLabel");
+        mIosMenuSlider->setScrollRange(101);
+        mIosMenuSlider->eventScrollChangePosition += MyGUI::newDelegate(this, &SettingsWindow::onIosMenuScaleChanged);
         mIosHudSlider->setScrollRange(Settings::HUDCategory::sMaxScale - Settings::HUDCategory::sMinScale + 1);
         mIosHudSlider->eventScrollChangePosition += MyGUI::newDelegate(this, &SettingsWindow::onIosHudScaleChanged);
         getWidget("IosHudReset")->eventMouseButtonClick += MyGUI::newDelegate(this, &SettingsWindow::onIosHudScaleReset);
@@ -593,6 +597,9 @@ namespace MWGui
         const int percent = Settings::hud().mIosScale;
         mIosHudSlider->setScrollPosition(percent - Settings::HUDCategory::sMinScale);
         mIosHudScaleLabel->setCaption(std::to_string(percent) + "%");
+        const int menuPercent = static_cast<int>(std::lround(Settings::gui().mScalingFactor.get() * 100.f));
+        mIosMenuSlider->setScrollPosition(std::clamp(menuPercent, 50, 150) - 50);
+        mIosMenuScaleLabel->setCaption(std::to_string(menuPercent) + "%");
         const auto layoutBars = [](const auto& bars, int scale) {
             const auto size = [scale](int pixels) { return static_cast<int>(std::lround(pixels * scale / 100.f)); };
             for (size_t i = 0; i < bars.size(); ++i)
@@ -613,6 +620,13 @@ namespace MWGui
     void SettingsWindow::onIosHudScaleReset(MyGUI::Widget* /*sender*/)
     {
         onIosHudScaleChanged(mIosHudSlider, Settings::HUDCategory::sDefaultScale - Settings::HUDCategory::sMinScale);
+    }
+
+    void SettingsWindow::onIosMenuScaleChanged(MyGUI::ScrollBar* /*sender*/, size_t position)
+    {
+        const int percent = 50 + static_cast<int>(position);
+        Settings::gui().mScalingFactor.set(percent / 100.f);
+        mIosMenuScaleLabel->setCaption(std::to_string(percent) + "%");
     }
 
     void SettingsWindow::fitIosSettingsToViewport()

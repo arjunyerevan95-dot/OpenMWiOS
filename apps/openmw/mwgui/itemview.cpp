@@ -2,29 +2,22 @@
 
 #include <cmath>
 
-#include <MyGUI_Button.h>
 #include <MyGUI_FactoryManager.h>
 #include <MyGUI_Gui.h>
 #include <MyGUI_ImageBox.h>
 #include <MyGUI_ScrollView.h>
-#include <MyGUI_TextBox.h>
 
 #include <components/settings/values.hpp>
 
 #include "../mwbase/environment.hpp"
 #include "../mwbase/inputmanager.hpp"
 #include "../mwbase/windowmanager.hpp"
-#include "../mwworld/class.hpp"
 
 #include "itemmodel.hpp"
 #include "itemwidget.hpp"
 
 namespace MWGui
 {
-    namespace
-    {
-        constexpr int touchRowHeight = 44;
-    }
 
     ItemView::ItemView()
         : mScrollView(nullptr)
@@ -58,11 +51,6 @@ namespace MWGui
         int x = 0;
         int y = 0;
         MyGUI::Widget* dragArea = mScrollView->getChildAt(0);
-        if (mTouchList)
-        {
-            layoutTouchRows(*dragArea);
-            return;
-        }
         int maxHeight = mScrollView->getHeight();
 
         mRows = std::max(maxHeight / 42, 1);
@@ -111,36 +99,8 @@ namespace MWGui
         dragArea->setSize(size);
     }
 
-    void ItemView::layoutTouchRows(MyGUI::Widget& dragArea)
-    {
-        mItemCount = static_cast<int>(dragArea.getChildCount());
-        mRows = std::max(1, mItemCount);
-        mControllerFocus = std::clamp(mControllerFocus, 0, mRows - 1);
-        mScrollView->setVisibleHScroll(false);
-        mScrollView->setVisibleVScroll(false);
-        const int height = std::max(mScrollView->getHeight(), mItemCount * touchRowHeight);
-        const int width = std::max(1, mScrollView->getWidth() - (height > mScrollView->getHeight() ? 18 : 0));
-        mScrollView->setCanvasSize({ width, height });
-        mScrollView->setVisibleVScroll(true);
-        dragArea.setSize(width, height);
-        for (int i = 0; i < mItemCount; ++i)
-            dragArea.getChildAt(i)->setCoord(0, i * touchRowHeight, width, touchRowHeight);
-        if (Settings::gui().mControllerMenus)
-            updateControllerFocus(-1, mControllerFocus);
-    }
-
-    void ItemView::setTouchList(bool enabled)
-    {
-        if (mTouchList == enabled)
-            return;
-        mTouchList = enabled;
-        update();
-        resetScrollBars();
-    }
-
     void ItemView::update()
     {
-        mSelectedTouchRow = nullptr;
         while (mScrollView->getChildCount())
             MyGUI::Gui::getInstance().destroyWidget(mScrollView->getChildAt(0));
 
@@ -159,19 +119,7 @@ namespace MWGui
         {
             const ItemStack& item = mModel->getItem(i);
 
-            MyGUI::Widget* parent = dragArea;
-            if (mTouchList)
-            {
-                auto* row = dragArea->createWidget<MyGUI::Button>(
-                    "MW_Button", MyGUI::IntCoord(0, 0, 100, touchRowHeight), MyGUI::Align::Default);
-                row->setNeedKeyFocus(false);
-                row->setUserString("ToolTipType", "ItemModelIndex");
-                row->setUserData(std::make_pair(i, mModel.get()));
-                row->eventMouseButtonClick += MyGUI::newDelegate(this, &ItemView::onSelectedItem);
-                row->eventMouseWheel += MyGUI::newDelegate(this, &ItemView::onMouseWheelMoved);
-                parent = row;
-            }
-            ItemWidget* itemWidget = parent->createWidget<ItemWidget>(
+            ItemWidget* itemWidget = dragArea->createWidget<ItemWidget>(
                 "MW_ItemIcon", MyGUI::IntCoord(0, 0, 42, 42), MyGUI::Align::Default);
             itemWidget->setUserString("ToolTipType", "ItemModelIndex");
             itemWidget->setUserData(std::make_pair(i, mModel.get()));
@@ -183,20 +131,8 @@ namespace MWGui
             itemWidget->setItem(item.mBase, state);
             itemWidget->setCount(static_cast<int>(item.mCount));
 
-            if (mTouchList)
-            {
-                itemWidget->setNeedMouseFocus(false);
-                auto* label = parent->createWidget<MyGUI::TextBox>(
-                    "SandText", MyGUI::IntCoord(46, 0, 50, touchRowHeight), MyGUI::Align::HStretch);
-                label->setCaption(MyGUI::UString(item.mBase.getClass().getName(item.mBase)));
-                label->setTextAlign(MyGUI::Align::Left | MyGUI::Align::VCenter);
-                label->setNeedMouseFocus(false);
-            }
-            else
-            {
-                itemWidget->eventMouseButtonClick += MyGUI::newDelegate(this, &ItemView::onSelectedItem);
-                itemWidget->eventMouseWheel += MyGUI::newDelegate(this, &ItemView::onMouseWheelMoved);
-            }
+            itemWidget->eventMouseButtonClick += MyGUI::newDelegate(this, &ItemView::onSelectedItem);
+            itemWidget->eventMouseWheel += MyGUI::newDelegate(this, &ItemView::onMouseWheelMoved);
         }
 
         layoutWidgets();
@@ -215,18 +151,6 @@ namespace MWGui
     void ItemView::onSelectedItem(MyGUI::Widget* sender)
     {
         ItemModel::ModelIndex index = (*sender->getUserData<std::pair<ItemModel::ModelIndex, ItemModel*>>()).first;
-        if (mTouchList)
-        {
-            const bool selected = mSelectedTouchRow == sender;
-            if (mSelectedTouchRow)
-                mSelectedTouchRow->castType<MyGUI::Button>()->setStateSelected(false);
-            mSelectedTouchRow = selected ? nullptr : sender;
-            if (!selected)
-            {
-                sender->castType<MyGUI::Button>()->setStateSelected(true);
-                return;
-            }
-        }
         eventItemClicked(index);
     }
 
@@ -237,13 +161,6 @@ namespace MWGui
 
     void ItemView::onMouseWheelMoved(MyGUI::Widget* /*sender*/, int rel)
     {
-        if (mTouchList)
-        {
-            const int maxScroll = std::max(0, mScrollView->getCanvasSize().height - mScrollView->getHeight());
-            const int position = mScrollView->getViewOffset().top + static_cast<int>(rel * 0.3f);
-            mScrollView->setViewOffset({ 0, std::clamp(position, -maxScroll, 0) });
-            return;
-        }
         if (mScrollView->getViewOffset().left + rel * 0.3f > 0)
             mScrollView->setViewOffset(MyGUI::IntPoint(0, 0));
         else
@@ -298,7 +215,10 @@ namespace MWGui
             case SDL_CONTROLLER_BUTTON_A:
                 // Select the focused item, if any.
                 if (mControllerFocus >= 0 && mControllerFocus < mItemCount)
-                    eventItemClicked(mControllerFocus);
+                {
+                    MyGUI::Widget* dragArea = mScrollView->getChildAt(0);
+                    onSelectedItem(dragArea->getChildAt(mControllerFocus));
+                }
                 break;
             case SDL_CONTROLLER_BUTTON_RIGHTSTICK:
                 // Toggle info tooltip
@@ -341,12 +261,6 @@ namespace MWGui
             updateControllerFocus(-1, mControllerFocus);
     }
 
-    ItemWidget* ItemView::itemWidgetAt(MyGUI::Widget& dragArea, int index) const
-    {
-        auto* child = dragArea.getChildAt(index);
-        return (mTouchList ? child->getChildAt(0) : child)->castType<ItemWidget>();
-    }
-
     void ItemView::updateControllerFocus(int prevFocus, int newFocus)
     {
         if (!mItemCount)
@@ -356,28 +270,24 @@ namespace MWGui
 
         if (prevFocus >= 0 && prevFocus < mItemCount)
         {
-            ItemWidget* prev = itemWidgetAt(*dragArea, prevFocus);
+            ItemWidget* prev = static_cast<ItemWidget*>(dragArea->getChildAt(prevFocus));
             if (prev)
                 prev->setControllerFocus(false);
         }
 
         if (mControllerActiveWindow && newFocus >= 0 && newFocus < mItemCount)
         {
-            ItemWidget* focused = itemWidgetAt(*dragArea, newFocus);
+            ItemWidget* focused = static_cast<ItemWidget*>(dragArea->getChildAt(newFocus));
             if (focused)
             {
                 focused->setControllerFocus(true);
 
                 // Scroll the list to keep the active item in view
-                if (mTouchList)
-                {
-                    const int rowTop = newFocus * touchRowHeight;
-                    const int previousTop = -mScrollView->getViewOffset().top;
-                    const int firstVisible = std::clamp(rowTop + touchRowHeight - mScrollView->getHeight(), 0, rowTop);
-                    mScrollView->setViewOffset({ 0, -std::clamp(previousTop, firstVisible, rowTop) });
-                }
+                int column = newFocus / mRows;
+                if (column <= 3)
+                    mScrollView->setViewOffset(MyGUI::IntPoint(0, 0));
                 else
-                    mScrollView->setViewOffset({ -42 * std::max(0, newFocus / mRows - 3), 0 });
+                    mScrollView->setViewOffset(MyGUI::IntPoint(-42 * (column - 3), 0));
 
                 MWBase::WindowManager* winMgr = MWBase::Environment::get().getWindowManager();
                 winMgr->restoreControllerTooltips();

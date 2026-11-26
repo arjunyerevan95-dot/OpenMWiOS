@@ -1107,16 +1107,15 @@
                 <Widget type="Widget" skin="MW_Box" position="172 104 142 62"/>
                 <Widget type="Widget" position="24 106 118 56" name="IosHudDefaultPreview"/>
                 <Widget type="Widget" position="184 106 118 56" name="IosHudCurrentPreview"/>
-                <Widget type="TextBox" skin="NormalText" position="12 177 244 39">
-                    <Property key="Caption" value="#{OMWEngine:IosTouchInventoryList}"/>
+                <Widget type="TextBox" skin="NormalText" position="12 171 305 22">
+                    <Property key="Caption" value="#{OMWEngine:IosMenuScale}"/>
                 </Widget>
-                <Widget type="Button" skin="MW_Button" position="259 177 102 39">
-                    <UserString key="SettingCategory" value="GUI"/>
-                    <UserString key="SettingName" value="ios touch inventory list"/>
-                    <UserString key="SettingType" value="CheckButton"/>
-                </Widget>
-                <Widget type="TextBox" skin="SandText" position="12 218 420 20">
-                    <Property key="Caption" value="#{OMWEngine:IosTouchInventoryHint}"/>
+                <Widget type="TextBox" skin="SandText" position="328 171 72 22" name="IosMenuScaleLabel"/>
+                <Widget type="ScrollBar" skin="MW_HScroll" position="12 194 308 38" name="IosMenuSlider">
+                    <Property key="Page" value="1"/>
+                    <Property key="WheelPage" value="1"/>
+                    <Property key="ViewPage" value="1"/>
+                    <UserString key="OpenMWTouchSlider" value="true"/>
                 </Widget>
             </Widget>
         </Widget>

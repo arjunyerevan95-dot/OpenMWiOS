@@ -112,6 +112,7 @@ namespace MWGui
 
         mSpellIcons = std::make_unique<SpellIcons>();
 #if defined(__APPLE__) && TARGET_OS_IPHONE
+        mIosMenuScaleAtStartup = Settings::gui().mScalingFactor.get();
         setIosScale(Settings::hud().mIosScale);
 #endif
     }
@@ -610,7 +611,7 @@ namespace MWGui
     {
         // Match the stock iOS HUD at the shipped GUI scale, compensating for user menu scaling.
         constexpr float stockIosGuiScale = 1.2f;
-        const float scale = (percent / 100.f) * (stockIosGuiScale / Settings::gui().mScalingFactor.get());
+        const float scale = (percent / 100.f) * (stockIosGuiScale / mIosMenuScaleAtStartup);
         for (auto* root : { mMainWidget, mDrowningBar })
         {
             if (auto* layer = root->getLayer())

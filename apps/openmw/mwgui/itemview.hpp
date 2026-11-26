@@ -7,7 +7,6 @@
 
 namespace MWGui
 {
-    class ItemWidget;
 
     class ItemView final : public MyGUI::Widget
     {
@@ -33,7 +32,6 @@ namespace MWGui
         void update();
 
         void resetScrollBars();
-        void setTouchList(bool enabled);
 
         void setActiveControllerWindow(bool active);
         int getControllerFocus() { return mControllerFocus; }
@@ -44,8 +42,6 @@ namespace MWGui
         void initialiseOverride() override;
 
         void layoutWidgets();
-        void layoutTouchRows(MyGUI::Widget& dragArea);
-        ItemWidget* itemWidgetAt(MyGUI::Widget& dragArea, int index) const;
 
         void setSize(const MyGUI::IntSize& value) override;
         void setCoord(const MyGUI::IntCoord& value) override;
@@ -61,8 +57,6 @@ namespace MWGui
         int mRows = 1;
         int mControllerFocus = 0;
         bool mControllerActiveWindow;
-        bool mTouchList = false;
-        MyGUI::Widget* mSelectedTouchRow = nullptr;
         void updateControllerFocus(int prevFocus, int newFocus);
     };
 

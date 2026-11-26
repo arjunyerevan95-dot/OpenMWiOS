@@ -100,6 +100,7 @@ namespace MWGui
         float mEnemyHealthTimer = -1;
         float mDrowningFlashTheta = 0.f;
         float mIosViewportScale = 1.f;
+        float mIosMenuScaleAtStartup = 1.2f;
 
         bool mMapVisible = true;
         bool mWeaponVisible = true;

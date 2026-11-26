@@ -145,9 +145,12 @@ namespace MWGui
         void fitIosSettingsToViewport();
         void onIosHudScaleChanged(MyGUI::ScrollBar* sender, size_t position);
         void onIosHudScaleReset(MyGUI::Widget* sender);
+        void onIosMenuScaleChanged(MyGUI::ScrollBar* sender, size_t position);
 
         MyGUI::ScrollBar* mIosHudSlider = nullptr;
         MyGUI::TextBox* mIosHudScaleLabel = nullptr;
+        MyGUI::ScrollBar* mIosMenuSlider = nullptr;
+        MyGUI::TextBox* mIosMenuScaleLabel = nullptr;
         std::array<MyGUI::Widget*, 3> mIosHudDefaultBars{};
         std::array<MyGUI::Widget*, 3> mIosHudPreviewBars{};
         MyGUI::IntSize mIosSettingsMinimum;

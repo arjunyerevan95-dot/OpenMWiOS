@@ -3,10 +3,6 @@
 #include <cmath>
 #include <stdexcept>
 
-#ifdef __APPLE__
-#include <TargetConditionals.h>
-#endif
-
 #include <MyGUI_Button.h>
 #include <MyGUI_EditBox.h>
 #include <MyGUI_ImageBox.h>
@@ -237,9 +233,6 @@ namespace MWGui
 
     void InventoryWindow::setGuiMode(GuiMode mode)
     {
-#if defined(__APPLE__) && TARGET_OS_IPHONE
-        mItemView->setTouchList(mode == GM_Inventory && Settings::gui().mIosTouchInventoryList);
-#endif
         if (Settings::gui().mControllerMenus && mGuiMode == mode && isVisible())
             return;
 
