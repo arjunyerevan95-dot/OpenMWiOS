@@ -63,5 +63,24 @@ int main()
     assert(gui.captured);
     event(SDL_FINGERUP,130,100,1710);
     assert(gui.modal && !gui.captured && modal.releases==1 && modal.clicks==0);
+    MyGUI::ScrollBar slider;
+    MyGUI::Widget thumb, track;
+    thumb.parent=&slider;track.parent=&slider;
+    gui.picked=&thumb;
+    event(SDL_FINGERDOWN,190,100,1800);
+    event(SDL_FINGERMOTION,110,100,1810);
+    assert(slider.position==0 && slider.changes==1 && !gui.captured);
+    gui.picked=&track; // The slider's children can change as its thumb moves.
+    event(SDL_FINGERMOTION,270,100,1820);
+    assert(slider.position==60 && slider.changes==2);
+    event(SDL_FINGERUP,190,100,1830,true);
+    assert(slider.position==60 && wheel==-240 && thumb.clicks==0 && track.clicks==0);
+    event(SDL_FINGERDOWN,190,100,1900);
+    event(SDL_FINGERUP,190,100,1910);
+    assert(slider.position==30 && slider.changes==3);
+    event(SDL_FINGERDOWN,110,100,2000);
+    gui.picked=&modal;
+    event(SDL_FINGERUP,110,100,2010);
+    assert(slider.position==30 && slider.changes==3 && modal.clicks==0);
     std::cout<<"PASS production menu routing: immediate pan, natural scroll, taps, cancel, modal/overlap, removal, scaling, disabled/stale input\n";
 }

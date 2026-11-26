@@ -9,9 +9,11 @@
 #include <MyGUI_Gui.h>
 #include <MyGUI_LanguageManager.h>
 #include <MyGUI_ProgressBar.h>
+#include <MyGUI_RenderManager.h>
 #include <MyGUI_ScrollBar.h>
 #include <MyGUI_ScrollView.h>
 #include <MyGUI_TabControl.h>
+#include <MyGUI_TabItem.h>
 #include <MyGUI_UString.h>
 #include <MyGUI_Window.h>
 
@@ -433,6 +435,8 @@ namespace MWGui
 
         computeMinimumWindowSize();
 
+        mIosSettingsMinimum = mMainWidget->castType<MyGUI::Window>()->getMinSize();
+        fitIosSettingsToViewport();
         center();
 
         mResetControlsButton->eventMouseButtonClick
@@ -609,6 +613,24 @@ namespace MWGui
     void SettingsWindow::onIosHudScaleReset(MyGUI::Widget* /*sender*/)
     {
         onIosHudScaleChanged(mIosHudSlider, Settings::HUDCategory::sDefaultScale - Settings::HUDCategory::sMinScale);
+    }
+
+    void SettingsWindow::fitIosSettingsToViewport()
+    {
+        if (!mIosHudSlider)
+            return;
+
+        auto* window = mMainWidget->castType<MyGUI::Window>();
+        const auto view = MyGUI::RenderManager::getInstance().getViewSize();
+        if (view.width <= 0 || view.height <= 0)
+            return;
+        const MyGUI::IntSize available(std::max(1, view.width - 24), std::max(1, view.height - 8));
+        const MyGUI::IntSize minimum(
+            std::min(mIosSettingsMinimum.width, available.width), std::min(mIosSettingsMinimum.height, available.height));
+        window->setMinSize(minimum);
+        window->setSize(std::clamp(window->getWidth(), minimum.width, available.width),
+            std::clamp(window->getHeight(), minimum.height, available.height));
+        clampWindowCoordinates(window);
     }
 
     void SettingsWindow::onTabChanged(MyGUI::TabControl* /*sender*/, size_t /*index*/)
@@ -934,6 +956,7 @@ namespace MWGui
 
     void SettingsWindow::onResChange(int /*width*/, int /*height*/)
     {
+        fitIosSettingsToViewport();
         center();
         highlightCurrentResolution();
     }
@@ -1264,6 +1287,7 @@ namespace MWGui
 
     void SettingsWindow::onOpen()
     {
+        fitIosSettingsToViewport();
         highlightCurrentResolution();
         updateControlsBox();
         updateLightSettings();

@@ -1,5 +1,6 @@
 #include "apps/openmw/ios/openmw_ios_touch_targets.hpp"
 #include <cassert>
+#include <cmath>
 #include <iostream>
 namespace MyGUI
 {
@@ -40,6 +41,7 @@ namespace OpenMWIOS::Touch
 }
 struct Hud
 {
+    float mIosViewportScale=1.f;
     MyGUI::Widget root{{0,0,1000,500}},healthFrame{{30,400,100,10},&root},
         magickaFrame{{30,415,100,10},&root},staminaFrame{{30,430,100,10},&root},
         health{{0,0,100,10},&healthFrame},magicka{{0,0,100,10},&magickaFrame},stamina{{0,0,100,10},&staminaFrame},
@@ -79,6 +81,24 @@ int main()
     hud.root.visible=true;MWBase::Environment::get().windows.gui=true;hud.publish();
     assert(hudHiddenActions(published)==0); // gameplay targets disappear in menus/modal UI
     MWBase::Environment::get().windows.gui=false;
+    for (auto view : {MyGUI::RenderManager::Size{741,328},MyGUI::RenderManager::Size{1024,768}})
+    {
+        MyGUI::RenderManager::getInstance().size=view;
+        hud.minimap.visible=true;
+        hud.spell.enabled=true;
+        hud.mIosViewportScale=1.f;
+        hud.minimap.coord={view.width-80,view.height-80,61,61};
+        hud.publish();
+        const float defaultSize=published.map.right-published.map.left;
+        hud.mIosViewportScale=.75f;
+        hud.minimap.coord.left=static_cast<int>(std::lround(view.width/.75f))-80;
+        hud.minimap.coord.top=static_cast<int>(std::lround(view.height/.75f))-80;
+        hud.publish();
+        const auto compact=published.map;
+        assert(std::abs((compact.right-compact.left)/defaultSize-.75f)<.001f);
+        assert(hudActionAt(published,(compact.left+compact.right)/2,(compact.top+compact.bottom)/2)==Action::Inventory);
+        assert(!hudActionAt(published,.85f,.6f));
+    }
     MyGUI::RenderManager::getInstance().size={0,0};hud.publish();assert(hudHiddenActions(published)==0);
     std::cout<<"PASS actual HUD publication: minimap/spell identity, moved/scaled widgets, visibility, GUI mode and empty viewport\n";
 }

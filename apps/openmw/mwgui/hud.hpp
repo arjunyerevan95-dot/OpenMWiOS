@@ -54,7 +54,6 @@ namespace MWGui
 
         void onFrame(float dt) override;
         void setIosScale(int percent);
-        static float iosViewportScale(int percent);
 
         void setCellName(const std::string& cellName);
 
@@ -100,6 +99,7 @@ namespace MWGui
         float mWeaponSpellTimer = 0.f;
         float mEnemyHealthTimer = -1;
         float mDrowningFlashTheta = 0.f;
+        float mIosViewportScale = 1.f;
 
         bool mMapVisible = true;
         bool mWeaponVisible = true;

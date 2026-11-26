@@ -10,7 +10,7 @@ with tempfile.TemporaryDirectory(prefix='openmw-menu-') as directory:
     end=source.index('\n#endif',start)
     bridge=d/'menu_bridge.cpp'
     bridge.write_text((root/'validation/current-frame/menu_bridge.cpp.in').read_text().replace('// PRODUCTION_BRIDGE',source[start:end]))
-    for name in ('MyGUI_InputManager.h','MyGUI_LayerManager.h','MyGUI_RenderManager.h','MyGUI_WidgetManager.h','SDL_events.h','SDL_timer.h'):
+    for name in ('MyGUI_InputManager.h','MyGUI_LayerManager.h','MyGUI_RenderManager.h','MyGUI_ScrollBar.h','MyGUI_WidgetManager.h','SDL_events.h','SDL_timer.h'):
         (d/name).write_text('#include "'+str(root/'validation/current-frame/menu_stubs.hpp').replace('\\','/')+'"\n')
     for source in ('validation/menu-touch/test.cpp','validation/current-frame/menu_input.cpp','validation/current-frame/hud_gestures.cpp',bridge):
         exe=d/('test.exe' if os.name=='nt' else 'test')

@@ -313,8 +313,7 @@ namespace MWGui
 #if defined(__APPLE__) && TARGET_OS_IPHONE
         // Resolve the real widgets every frame: UI mods, visibility and scale all apply.
         const auto view = MyGUI::RenderManager::getInstance().getViewSize();
-        const auto* layer = mMainWidget->getLayer()->castType<MyGUIPlatform::ScalingLayer>(false);
-        const float scale = layer ? layer->getViewportScale() : 1.f;
+        const float scale = mIosViewportScale;
         const auto rect = [&](MyGUI::Widget* widget) -> OpenMWIOS::Touch::TargetRect {
             if (view.width <= 0 || view.height <= 0) return {};
             for (auto* ancestor = widget; ancestor; ancestor = ancestor->getParent())
@@ -607,20 +606,22 @@ namespace MWGui
             (mMainWidget->getWidth() - mEffectBoxBaseRight) - mEffectBox->getWidth() + effectsDx, mEffectBox->getTop());
     }
 
-    float HUD::iosViewportScale(int percent)
+    void HUD::setIosScale(int percent)
     {
         // Match the stock iOS HUD at the shipped GUI scale, compensating for user menu scaling.
         constexpr float stockIosGuiScale = 1.2f;
-        return (percent / 100.f) * (stockIosGuiScale / Settings::gui().mScalingFactor.get());
-    }
-
-    void HUD::setIosScale(int percent)
-    {
-        const float scale = iosViewportScale(percent);
+        const float scale = (percent / 100.f) * (stockIosGuiScale / Settings::gui().mScalingFactor.get());
         for (auto* root : { mMainWidget, mDrowningBar })
         {
-            if (auto* layer = root->getLayer()->castType<MyGUIPlatform::ScalingLayer>(false))
-                layer->setViewportScale(scale);
+            if (auto* layer = root->getLayer())
+            {
+                if (auto* scalingLayer = layer->castType<MyGUIPlatform::ScalingLayer>(false))
+                {
+                    scalingLayer->setViewportScale(scale);
+                    if (root == mMainWidget)
+                        mIosViewportScale = scalingLayer->getViewportScale();
+                }
+            }
         }
         updatePositions();
     }

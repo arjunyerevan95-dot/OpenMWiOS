@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 #include <algorithm>
+#include <string_view>
 constexpr unsigned SDL_FINGERDOWN=1, SDL_FINGERMOTION=2, SDL_FINGERUP=3;
 struct SDL_TouchFingerEvent
 {
@@ -18,16 +19,34 @@ namespace MyGUI
         int width=1000,height=500;
         bool operator!=(IntSize other) const { return width!=other.width || height!=other.height; }
     };
+    struct ScrollBar;
     struct Widget
     {
-        bool visible=true,enabled=true,direct=false;
+        bool visible=true,enabled=true,direct=false,slider=false;
         Widget* parent=nullptr;
         int presses=0,releases=0,clicks=0,drags=0,wheels=0,lastX=0,lastY=0;
         Widget* getParent() { return parent; }
         bool getVisible() { return visible; }
         bool getEnabled() { return enabled; }
         bool getInheritedEnabled() { return enabled && (!parent || parent->getInheritedEnabled()); }
-        std::string getUserString(const char*) { return direct ? "true" : ""; }
+        std::string getUserString(std::string_view name)
+        {
+            return ((name=="OpenMWTouchDrag" && direct) || (name=="OpenMWTouchSlider" && slider)) ? "true" : "";
+        }
+        template<class T> T* castType(bool) { return slider ? static_cast<T*>(this) : nullptr; }
+    };
+    struct ScrollBar : Widget
+    {
+        struct Coord { int left=200; };
+        size_t position=30;
+        int changes=0;
+        ScrollBar() { slider=true; }
+        Coord getAbsoluteCoord() const { return {}; }
+        int getWidth() const { return 360; }
+        size_t getScrollRange() const { return 61; }
+        size_t getScrollPosition() const { return position; }
+        void setScrollPosition(size_t value) { position=value; }
+        void eventScrollChangePosition(ScrollBar*,size_t) { ++changes; }
     };
     struct IUnlinkWidget { virtual ~IUnlinkWidget()=default; virtual void _unlinkWidget(Widget*)=0; };
     struct WidgetManager
