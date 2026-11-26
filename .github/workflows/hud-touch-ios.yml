@@ -37,11 +37,11 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          printf '%s\n' 'APP_NAME=OpenMW HUD Trial' 'BUNDLE_ID=org.openmw.ios.hudtrial' > ios/build.config
+          printf '%s\n' 'APP_NAME=OpenMW Zink Touch' 'BUNDLE_ID=org.openmw.ios.zinktouch' > ios/build.config
           ./build-ios.sh build device --release --unsigned
           ./build-ios.sh ipa --release --unsigned
           app=DerivedData/Build/Products/Release-iphoneos/OpenMW.app
-          test "$(/usr/libexec/PlistBuddy -c 'Print CFBundleIdentifier' "$app/Info.plist")" = org.openmw.ios.hudtrial
+          test "$(/usr/libexec/PlistBuddy -c 'Print CFBundleIdentifier' "$app/Info.plist")" = org.openmw.ios.zinktouch
           test "$(lipo -archs "$app/OpenMW")" = arm64
           test ! -e "$app/embedded.mobileprovision"
           test ! -e "$app/_CodeSignature"
