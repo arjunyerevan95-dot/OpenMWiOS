@@ -1084,38 +1084,42 @@
             </Widget>
             <Widget type="TabItem" name="IosHudTab">
                 <Property key="Caption" value=" #{OMWEngine:IosHudTab} "/>
-                <Widget type="TextBox" skin="NormalText" position="12 8 215 24">
-                    <Property key="Caption" value="#{OMWEngine:IosHudScale}"/>
-                </Widget>
-                <Widget type="TextBox" skin="SandText" position="235 8 72 24" name="IosHudScaleLabel"/>
-                <Widget type="ScrollBar" skin="MW_HScroll" position="12 34 308 38" name="IosHudSlider">
-                    <Property key="Page" value="1"/>
-                    <Property key="WheelPage" value="1"/>
-                    <Property key="ViewPage" value="1"/>
-                    <UserString key="OpenMWTouchSlider" value="true"/>
-                </Widget>
-                <Widget type="Button" skin="MW_Button" position="330 34 115 38" name="IosHudReset">
-                    <Property key="Caption" value="#{Interface:Reset}"/>
-                </Widget>
-                <Widget type="TextBox" skin="SandText" position="12 79 140 22">
-                    <Property key="Caption" value="#{OMWEngine:IosHudDefaultPreview}"/>
-                </Widget>
-                <Widget type="TextBox" skin="SandText" position="172 79 160 22">
-                    <Property key="Caption" value="#{OMWEngine:IosHudCurrentPreview}"/>
-                </Widget>
-                <Widget type="Widget" skin="MW_Box" position="12 104 142 62"/>
-                <Widget type="Widget" skin="MW_Box" position="172 104 142 62"/>
-                <Widget type="Widget" position="24 106 118 56" name="IosHudDefaultPreview"/>
-                <Widget type="Widget" position="184 106 118 56" name="IosHudCurrentPreview"/>
-                <Widget type="TextBox" skin="NormalText" position="12 171 305 22">
-                    <Property key="Caption" value="#{OMWEngine:IosMenuScale}"/>
-                </Widget>
-                <Widget type="TextBox" skin="SandText" position="328 171 72 22" name="IosMenuScaleLabel"/>
-                <Widget type="ScrollBar" skin="MW_HScroll" position="12 194 308 38" name="IosMenuSlider">
-                    <Property key="Page" value="1"/>
-                    <Property key="WheelPage" value="1"/>
-                    <Property key="ViewPage" value="1"/>
-                    <UserString key="OpenMWTouchSlider" value="true"/>
+                <Widget type="ScrollView" skin="MW_ScrollViewVH" position_real="0 0 1 1" align="Stretch">
+                    <Property key="CanvasAlign" value="Left Top"/>
+                    <Property key="CanvasSize" value="495 134"/>
+                    <Widget type="TextBox" skin="NormalText" position="8 4 168 24">
+                        <Property key="Caption" value="#{OMWEngine:IosHudScale}"/>
+                    </Widget>
+                    <Widget type="TextBox" skin="SandText" position="184 4 56 24" name="IosHudScaleLabel"/>
+                    <Widget type="ScrollBar" skin="MW_HScroll" position="8 28 150 36" name="IosHudSlider">
+                        <Property key="Page" value="1"/>
+                        <Property key="WheelPage" value="1"/>
+                        <Property key="ViewPage" value="1"/>
+                        <UserString key="OpenMWTouchSlider" value="true"/>
+                    </Widget>
+                    <Widget type="Button" skin="MW_Button" position="164 28 73 36" name="IosHudReset">
+                        <Property key="Caption" value="#{Interface:Reset}"/>
+                    </Widget>
+                    <Widget type="TextBox" skin="NormalText" position="8 68 229 22">
+                        <Property key="Caption" value="#{OMWEngine:IosMenuScale}"/>
+                    </Widget>
+                    <Widget type="ScrollBar" skin="MW_HScroll" position="8 90 168 36" name="IosMenuSlider">
+                        <Property key="Page" value="1"/>
+                        <Property key="WheelPage" value="1"/>
+                        <Property key="ViewPage" value="1"/>
+                        <UserString key="OpenMWTouchSlider" value="true"/>
+                    </Widget>
+                    <Widget type="TextBox" skin="SandText" position="184 96 56 24" name="IosMenuScaleLabel"/>
+                    <Widget type="TextBox" skin="SandText" position="248 4 120 24">
+                        <Property key="Caption" value="#{OMWEngine:IosHudDefaultPreview}"/>
+                    </Widget>
+                    <Widget type="TextBox" skin="SandText" position="372 4 120 24">
+                        <Property key="Caption" value="#{OMWEngine:IosHudCurrentPreview}"/>
+                    </Widget>
+                    <Widget type="Widget" skin="MW_Box" position="248 28 120 62"/>
+                    <Widget type="Widget" skin="MW_Box" position="372 28 120 62"/>
+                    <Widget type="Widget" position="250 30 116 56" name="IosHudDefaultPreview"/>
+                    <Widget type="Widget" position="374 30 116 56" name="IosHudCurrentPreview"/>
                 </Widget>
             </Widget>
         </Widget>
