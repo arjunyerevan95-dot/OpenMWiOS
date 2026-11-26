@@ -9,5 +9,5 @@ OpenMW or the player's installed game. Deckwind's paper maps and third-party
 icon collection are excluded.
 
 Enable Deckwind in Settings > Scripts and restart OpenMW. Disable it there
-and restart to return to the stock menus. The bundled manifest remains
-registered either way so the content list stays the same across the toggle.
+and restart to return to the stock menus. Its bundled script manifest is
+registered without adding a content file dependency to saves.

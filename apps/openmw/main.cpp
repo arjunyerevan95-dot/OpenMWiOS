@@ -4,7 +4,6 @@
 #include <components/files/configurationmanager.hpp>
 #include <components/misc/osgpluginchecker.hpp>
 #include <components/misc/rng.hpp>
-#include <components/misc/strings/algorithm.hpp>
 #include <components/platform/platform.hpp>
 #include <components/version/version.hpp>
 
@@ -14,8 +13,6 @@
 #include "options.hpp"
 
 #include <boost/program_options/variables_map.hpp>
-
-#include <algorithm>
 
 #if defined(_WIN32)
 #include <components/misc/windows.hpp>
@@ -145,15 +142,6 @@ bool parseOptions(int argc, char** argv, OMW::Engine& engine, Files::Configurati
     {
         engine.addContentFile(file);
     }
-
-#if defined(__APPLE__) && TARGET_OS_IPHONE
-    // Keep the optional scripts registered across toggles so saves retain the same content list.
-    if (std::ranges::none_of(content, [](const std::string& file) {
-            return Misc::StringUtils::ciEqual(file, "Deckwind.omwscripts")
-                || Misc::StringUtils::ciEqual(file, "openmw-ios-deckwind.omwscripts");
-        }))
-        engine.addContentFile("openmw-ios-deckwind.omwscripts");
-#endif
 
     StringsVector groundcover = variables["groundcover"].as<StringsVector>();
     for (auto& file : groundcover)

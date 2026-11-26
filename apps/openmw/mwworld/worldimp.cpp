@@ -1,7 +1,12 @@
 #include "worldimp.hpp"
 
+#include <algorithm>
 #include <charconv>
 #include <vector>
+
+#if defined(__APPLE__)
+#include <TargetConditionals.h>
+#endif
 
 #include <osg/ComputeBoundsVisitor>
 #include <osg/Group>
@@ -35,6 +40,7 @@
 #include <components/misc/pathhelpers.hpp>
 #include <components/misc/resourcehelpers.hpp>
 #include <components/misc/rng.hpp>
+#include <components/misc/strings/algorithm.hpp>
 
 #include <components/files/collections.hpp>
 
@@ -2816,6 +2822,19 @@ namespace MWWorld
             }
             idx++;
         }
+
+#if defined(__APPLE__) && TARGET_OS_IPHONE
+        constexpr std::string_view bundledDeckwind = "openmw-ios-deckwind.omwscripts";
+        if (std::ranges::none_of(content, [bundledDeckwind](const std::string& file) {
+                return Misc::StringUtils::ciEqual(file, "Deckwind.omwscripts")
+                    || Misc::StringUtils::ciEqual(file, bundledDeckwind);
+            }))
+        {
+            // Register the shipped scripts without adding an extra dependency to saves.
+            const auto& scripts = fileCollections.getCollection(".omwscripts");
+            omwScriptsLoader.load(scripts.getPath(bundledDeckwind), idx, listener);
+        }
+#endif
 
         if (const auto v = esmLoader.getMasterFileFormat(); v.has_value() && *v == 0)
             ensureNeededRecords(); // Insert records that may not be present in all versions of master files.

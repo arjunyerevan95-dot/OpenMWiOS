@@ -527,7 +527,7 @@ local function renderGridIcon(item, selected, listMode, valx, valy, iw)
                 iw = iw,
             },
             events = {
-                mousePress = async:callback(mouseClick),
+                mouseClick = async:callback(mouseClick),
                 -- mouseRelease = async:callback(clickMeStop),
                 mouseMove = async:callback(mouseMove)
             },
@@ -550,7 +550,7 @@ local function renderGridIcon(item, selected, listMode, valx, valy, iw)
             iw = iw,
         },
         events = {
-            mousePress = async:callback(mouseClick),
+            mouseClick = async:callback(mouseClick),
             -- mouseRelease = async:callback(clickMeStop),
             mouseMove = async:callback(mouseMove)
         },
@@ -1108,7 +1108,7 @@ local function renderItemGrid(iw)
             else
                 if iw.selectedPosX == x and iw.selectedPosY == y and iw.selected then
                     iw.selectedInvItem = nil
-                    local itemLayout = renderGridIcon(nil, true, x, y, iw)
+                    local itemLayout = renderGridIcon(nil, true, false, x, y, iw)
                     itemLayout.template = I.MWUI.templates.padding
                     table.insert(content, itemLayout)
                 else

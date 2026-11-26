@@ -39,7 +39,7 @@ jobs:
           set -euo pipefail
           printf '%s\n' 'APP_NAME=OpenMW Zink Touch' 'BUNDLE_ID=org.openmw.ios.zinktouch' > ios/build.config
           ./build-ios.sh build device --release --unsigned
-          test -f DerivedData/Build/Products/Release-iphoneos/OpenMW.app/resources/vfs/openmw-ios-deckwind.omwscripts
+          test -f DerivedData/Build/Products/Release-iphoneos/OpenMW.app/engine/resources/vfs/openmw-ios-deckwind.omwscripts
           ./build-ios.sh ipa --release --unsigned
           app=DerivedData/Build/Products/Release-iphoneos/OpenMW.app
           test "$(/usr/libexec/PlistBuddy -c 'Print CFBundleIdentifier' "$app/Info.plist")" = org.openmw.ios.zinktouch
