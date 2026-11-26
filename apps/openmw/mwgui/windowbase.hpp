@@ -50,7 +50,7 @@ namespace MWGui
         virtual void setPtr(const MWWorld::Ptr& ptr) {}
 
         /// Called every frame if the window is in an active GUI mode
-        virtual void onFrame(float duration) {}
+        virtual void onFrame(float duration);
 
         /// Notify that window has been made visible
         virtual void onOpen() {}
@@ -69,7 +69,7 @@ namespace MWGui
         virtual void clear() {}
 
         /// Called when GUI viewport changes size
-        virtual void onResChange(int width, int height) {}
+        virtual void onResChange(int width, int height);
 
         /// Called when controller menus are switched at runtime
         virtual void onControllerMenusChanged() {}

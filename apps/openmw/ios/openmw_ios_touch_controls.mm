@@ -24,7 +24,8 @@
 
 namespace OpenMWIOS::Touch
 {
-    namespace { std::atomic<std::uint32_t> sGeneration{1}; std::mutex sHudMutex; HudTargets sHudTargets; }
+    namespace { std::atomic<std::uint32_t> sGeneration{1}; std::mutex sHudMutex; HudTargets sHudTargets; TargetRect sMenuSafeArea{0, 0, 1, 1}; }
+    TargetRect menuSafeArea() { std::lock_guard<std::mutex> lock(sHudMutex); return sMenuSafeArea; }
     std::uint32_t inputGeneration() { return sGeneration.load(); }
     void invalidateInput() { ++sGeneration; }
     void publishHudTargets(HudTargets targets)
@@ -461,6 +462,14 @@ namespace
     _layout = OpenMWIOS::Touch::makeLayout(CGRectGetWidth(self.bounds), CGRectGetHeight(self.bounds),
         { static_cast<float>(insets.top), static_cast<float>(insets.left), static_cast<float>(insets.bottom),
             static_cast<float>(insets.right) });
+    {
+        const float width = std::max(static_cast<float>(CGRectGetWidth(self.bounds)), 1.f);
+        const float height = std::max(static_cast<float>(CGRectGetHeight(self.bounds)), 1.f);
+        std::lock_guard<std::mutex> lock(OpenMWIOS::Touch::sHudMutex);
+        OpenMWIOS::Touch::sMenuSafeArea = { static_cast<float>(insets.left) / width,
+            static_cast<float>(insets.top) / height, 1.f - static_cast<float>(insets.right) / width,
+            1.f - static_cast<float>(insets.bottom) / height };
+    }
     OpenMWIOS::Touch::applyProfile(_layout, _profile);
     [self diagnose:"touch_layout_geometry"
              detail:[NSString stringWithFormat:@"bounds=%.1fx%.1f;safe=%.1f,%.1f,%.1f,%.1f;custom=%d",

@@ -42,6 +42,7 @@
 #include <components/myguiplatform/myguiplatform.hpp>
 #include <components/myguiplatform/myguirendermanager.hpp>
 #include <components/myguiplatform/scalinglayer.hpp>
+#include <components/myguiplatform/fittinglayer.hpp>
 
 #include <components/vfs/manager.hpp>
 
@@ -241,6 +242,7 @@ namespace MWGui
         MyGUI::FactoryManager::getInstance().registerFactory<BackgroundImage>("Widget");
         MyGUI::FactoryManager::getInstance().registerFactory<MyGUIPlatform::AdditiveLayer>("Layer");
         MyGUI::FactoryManager::getInstance().registerFactory<MyGUIPlatform::ScalingLayer>("Layer");
+        MyGUI::FactoryManager::getInstance().registerFactory<MyGUIPlatform::FittingLayer>("Layer");
         BookPage::registerMyGUIComponents();
         PostProcessorHud::registerMyGUIComponents();
         ItemView::registerComponents();

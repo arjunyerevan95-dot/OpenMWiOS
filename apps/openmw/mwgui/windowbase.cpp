@@ -8,6 +8,10 @@
 #include "../mwbase/windowmanager.hpp"
 
 #include <components/settings/values.hpp>
+#include <components/myguiplatform/fittinglayer.hpp>
+#if defined(__APPLE__) && TARGET_OS_IPHONE
+#include "../ios/openmw_ios_touch_targets.hpp"
+#endif
 #include <components/widgets/imagebutton.hpp>
 
 #include "draganddrop.hpp"
@@ -92,6 +96,17 @@ bool WindowBase::isVisible() const
 
 void WindowBase::center()
 {
+    // Only opt-in dialogs get a local fit. Normal windows and the HUD retain their coordinates and scale.
+    if (auto* layer = mMainWidget->getLayer(); layer && layer->isType<MyGUIPlatform::FittingLayer>())
+    {
+        MyGUIPlatform::SafeArea safe;
+#if defined(__APPLE__) && TARGET_OS_IPHONE
+        const auto area = OpenMWIOS::Touch::menuSafeArea();
+        safe = { area.left, area.top, area.right, area.bottom };
+#endif
+        layer->castType<MyGUIPlatform::FittingLayer>()->fit(mMainWidget->getSize(), safe);
+    }
+
     // Centre dialog
 
     MyGUI::IntSize layerSize = MyGUI::RenderManager::getInstance().getViewSize();
@@ -101,7 +116,21 @@ void WindowBase::center()
     MyGUI::IntCoord coord = mMainWidget->getCoord();
     coord.left = (layerSize.width - coord.width) / 2;
     coord.top = (layerSize.height - coord.height) / 2;
-    mMainWidget->setCoord(coord);
+    if (coord != mMainWidget->getCoord())
+        mMainWidget->setCoord(coord);
+}
+
+void WindowBase::onFrame(float /*duration*/)
+{
+    // UIKit can publish safe-area changes after SDL's resize event. Refit active dialogs from that snapshot.
+    if (auto* layer = mMainWidget->getLayer(); layer && layer->isType<MyGUIPlatform::FittingLayer>())
+        center();
+}
+
+void WindowBase::onResChange(int /*width*/, int /*height*/)
+{
+    if (auto* layer = mMainWidget->getLayer(); layer && layer->isType<MyGUIPlatform::FittingLayer>())
+        center();
 }
 
 void WindowBase::clampWindowCoordinates(MyGUI::Window* window)

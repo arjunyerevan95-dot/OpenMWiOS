@@ -47,6 +47,8 @@ namespace OpenMWIOS::Touch
     void invalidateInput();
     void publishHudTargets(HudTargets targets);
     HudTargets hudTargets();
+    // UIKit publishes normalized safe bounds; engine code never reads UIView across threads.
+    TargetRect menuSafeArea();
 
     class TapHold
     {
